@@ -35,10 +35,26 @@ const change = (modelSelect: ModelSelect) => {
   close();
 }
 
+const tabKey = ref('1')
+const tabKeyChange = (key: string | number) => {
+  tabKey.value = key as string;
+}
+
 watch(
     () => props.visible,
     () => {
       showModal.value = props.visible
+      if (props.visible) {
+        if (props.modelSelect?.modelType) {
+          if (props.modelSelect.modelType === 'edge-tts') {
+            tabKey.value = '2';
+          } else {
+            tabKey.value = '1';
+          }
+        } else {
+          tabKey.value = '1';
+        }
+      }
     },
     {immediate: true}
 );
@@ -58,14 +74,18 @@ watch(
     >
       <div style="display: flex; height: 600px; cursor: pointer">
         <div style="width: 60%">
-          <a-tabs default-active-key="1">
+          <a-tabs :active-key="tabKey" @change="tabKeyChange">
             <a-tab-pane key="1" title="GPT-SoVITS\fish-speech">
               <ref-audio-view
+                  v-model:visible="props.visible"
+                  v-model:model-select="props.modelSelect"
                   @change="refAudioChange"
               />
             </a-tab-pane>
             <a-tab-pane key="2" title="Edge-TTS">
               <et-voice-view
+                  v-model:visible="props.visible"
+                  v-model:model-select="props.modelSelect"
                   @change="refAudioChange"
               />
             </a-tab-pane>
@@ -81,6 +101,8 @@ watch(
           <a-divider style="margin-top: 15px; margin-bottom: 10px"/>
           <div style="padding-right: 20px; margin-top: 16px">
             <select-view
+                v-model:visible="props.visible"
+                v-model:model-select="props.modelSelect"
                 v-model:ref-audio="refAudio"
                 @change="change"
             />

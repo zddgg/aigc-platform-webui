@@ -8,9 +8,16 @@ import {TextContentConfig} from "@/views/text/novel/chapter-content/useChapterCo
 import TableContent from "@/views/text/novel/chapter-content/components/TableContent.vue";
 import {Message, Modal} from "@arco-design/web-vue";
 import WebSocketService from '@/services/websocketService.ts';
+import BatchChangeModal from "@/views/text/novel/chapter-content/components/BatchChangeModal.vue";
+import CombineExport from "@/views/text/novel/chapter-content/components/CombineExport.vue";
 
 const route = useRoute();
 const {loading, setLoading} = useLoading();
+
+const batchChangeModalVisible = ref(false);
+const combineExportModalVisible = ref(false);
+
+const selectedIndexes = ref<string[]>([])
 
 const textContentConfig = ref<TextContentConfig>({
   textViewType: 'table'
@@ -76,7 +83,23 @@ const onStartCreateAudio = (actionType: 'all' | 'modified') => {
   })
 }
 
+const textContentRef = ref<
+    {
+      playAllAudio: Function,
+      refresh: Function,
+    } | null
+>(null);
+
+const tableContentRef = ref<
+    {
+      playAllAudio: Function,
+      refresh: Function,
+    } | null
+>(null);
+
 const refresh = () => {
+  textContentRef.value?.refresh()
+  tableContentRef.value?.refresh()
 }
 
 defineExpose({refresh})
@@ -87,6 +110,22 @@ const scrollToTop = (id: string) => {
     targetElement.scrollIntoView({behavior: 'smooth'});
   }
 };
+
+const playAllAudio = () => {
+  textContentRef.value?.playAllAudio()
+  tableContentRef.value?.playAllAudio()
+}
+
+const onCombineExport = () => {
+  if (!selectedIndexes.value || !selectedIndexes.value.length) {
+    Modal.warning({
+      title: '没有选择导出内容',
+      content: '请选择需要导出的内容'
+    })
+  } else {
+    combineExportModalVisible.value = true;
+  }
+}
 
 onMounted(() => {
   connectWebSocket();
@@ -106,7 +145,7 @@ watch(
     () => route.query.chapter,
     () => {
       scrollToTop('text-content');
-
+      selectedIndexes.value = []
     },
     {immediate: true}
 );
@@ -128,7 +167,7 @@ watch(
             </div>
             <div>
               <a-dropdown-button type="primary">
-                批量生成音频
+                批量生成
                 <template #icon>
                   <icon-down/>
                 </template>
@@ -147,7 +186,28 @@ watch(
               </a-dropdown-button>
             </div>
             <div>
-              <a-button type="primary">顺序播放</a-button>
+              <a-button
+                  type="primary"
+                  @click="playAllAudio"
+              >
+                顺序播放
+              </a-button>
+            </div>
+            <div v-if="false">
+              <a-button
+                  type="primary"
+                  @click="() => (batchChangeModalVisible = true)"
+              >
+                批量处理
+              </a-button>
+            </div>
+            <div>
+              <a-button
+                  type="primary"
+                  @click="onCombineExport"
+              >
+                合并导出
+              </a-button>
             </div>
           </a-space>
           <div>
@@ -214,22 +274,32 @@ watch(
       </div>
     </a-affix>
     <n-scrollbar
-        style="max-height: calc(100vh - 74px); padding-right: 10px; overflow: auto;
-         border: 1px solid #CCCCCCFF; border-radius: 8px"
+        style="max-height: calc(100vh - 76px); padding-right: 10px; overflow: auto;
+         border-top: 1px solid #CCCCCCFF"
     >
       <div id="text-content">
         <div v-if="textContentConfig.textViewType === 'table'">
           <table-content
+              ref="tableContentRef"
               v-model:text-content-config="textContentConfig"
+              v-model:selected-indexes="selectedIndexes"
           />
         </div>
         <div v-else>
           <text-content
+              ref="textContentRef"
               v-model:text-content-config="textContentConfig"
           />
         </div>
       </div>
     </n-scrollbar>
+    <batch-change-modal
+        v-model:visible="batchChangeModalVisible"
+    />
+    <combine-export
+        v-model:visible="combineExportModalVisible"
+        v-model:selected-indexes="selectedIndexes"
+    />
   </div>
 </template>
 

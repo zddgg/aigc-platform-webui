@@ -296,6 +296,20 @@ watch(
         <a-form-item label="角色" field="role" required>
           <a-input v-model="currentRole.role"/>
         </a-form-item>
+        <a-form-item label="性别" field="gender">
+          <a-select v-model="currentRole.gender">
+            <a-option>男</a-option>
+            <a-option>女</a-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="年龄" field="ageGroup">
+          <a-select v-model="currentRole.ageGroup">
+            <a-option>少年</a-option>
+            <a-option>青年</a-option>
+            <a-option>中年</a-option>
+            <a-option>老年</a-option>
+          </a-select>
+        </a-form-item>
         <a-form-item label="modelType">
           <a-input v-model="currentRole.modelType" readonly/>
         </a-form-item>

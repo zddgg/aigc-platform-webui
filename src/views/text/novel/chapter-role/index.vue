@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import CommonRole from "@/views/text/novel/chapter-role/components/CommonRole.vue";
 import TextRole from "@/views/text/novel/chapter-role/components/TextRole.vue";
+import TextModel from "@/views/text/novel/chapter-role/components/TextModel.vue";
 
 const emits = defineEmits(['roleModelChange'])
 
@@ -11,32 +12,45 @@ const roleModelChange = () => {
 </script>
 
 <template>
-  <div style="margin-top: 42px; border: 1px #ccc solid; border-radius: 8px">
-    <n-scrollbar style="max-height: calc(100vh - 74px)">
-      <a-card :bordered="false" style="border-radius: 8px">
-        <n-tabs
-            default-value="1"
-            justify-content="space-evenly"
-            type="line"
-        >
-          <n-tab-pane
-              name="1"
-              tab="文本中的角色"
-              display-directive="show:lazy"
+  <div>
+    <div
+        id="text-space-header"
+        style="height: 32px; margin-bottom: 10px">
+    </div>
+    <div style="border-top: 1px #ccc solid">
+      <n-scrollbar style="max-height: calc(100vh - 76px)">
+        <a-card :bordered="false" style="border-radius: 8px" :body-style="{ padding: '0 10px 0 0' }">
+          <n-tabs
+              default-value="2"
+              justify-content="space-evenly"
+              type="line"
           >
-            <text-role @role-model-change="roleModelChange"/>
-          </n-tab-pane>
-          <n-tab-pane
-              name="2"
-              tab="预置角色"
-              display-directive="show"
-          >
-            <common-role @role-model-change="roleModelChange"/>
-          </n-tab-pane>
-        </n-tabs>
-      </a-card>
-    </n-scrollbar>
-
+            <n-tab-pane
+                v-if="false"
+                name="1"
+                tab="文中模型"
+                display-directive="show:lazy"
+            >
+              <text-model @role-model-change="roleModelChange"/>
+            </n-tab-pane>
+            <n-tab-pane
+                name="2"
+                tab="文中角色"
+                display-directive="show:lazy"
+            >
+              <text-role @role-model-change="roleModelChange"/>
+            </n-tab-pane>
+            <n-tab-pane
+                name="3"
+                tab="预置角色"
+                display-directive="show:lazy"
+            >
+              <common-role @role-model-change="roleModelChange"/>
+            </n-tab-pane>
+          </n-tabs>
+        </a-card>
+      </n-scrollbar>
+    </div>
   </div>
 </template>
 
@@ -48,5 +62,14 @@ const roleModelChange = () => {
   align-items: center;
   border-radius: 8px;
   margin-bottom: 10px;
+}
+:deep(.n-tabs-bar) {
+  background-color: #165dff !important;
+}
+:deep(.n-tabs-tab:hover) {
+  color: #165dff !important;
+}
+:deep(.n-tabs-tab--active) {
+  color: #165dff !important;
 }
 </style>

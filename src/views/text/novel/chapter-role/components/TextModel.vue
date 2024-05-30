@@ -114,7 +114,7 @@ watch(
       >
         <a-collapse-item v-for="(item, index) in roles" :key="index">
           <template #header>
-            <span>{{ `${item.role}(${item.roleCount})` }}</span>
+            <span>{{ item.role }}</span>
             <span style="margin-left: 10px; color: #707070">性别: </span>
             <span style="margin-left: 10px">
                     {{ item.gender ?? '未知' }}

@@ -25,6 +25,7 @@ export interface ChapterSplit extends ProjectParam {
 
 export interface ChapterParam extends ProjectParam {
     chapter: string;
+    indexes?: string[]
 }
 
 export function tmpChapterSplit(params: ChapterSplit) {
@@ -43,14 +44,19 @@ export interface Role extends ModelSelect {
     role: string;
     gender: string;
     ageGroup: string;
-    backup: string;
+    roleCount: number;
 }
 
 export interface ChapterInfo extends Role {
+    index: string;
     p: number;
     s: number;
     text: string;
     linesFlag: boolean;
+
+    volume: number;
+    speed: number;
+    interval: number;
     audioUrl: string;
 }
 

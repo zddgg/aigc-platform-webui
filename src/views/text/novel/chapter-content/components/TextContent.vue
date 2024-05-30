@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import ContextMenu from "@/components/ContextMenu.vue";
-import {computed, PropType, ref, watch} from "vue";
-import {ChapterInfo, queryChapterInfo, textModelChange, updateChapterText} from "@/api/text.ts";
+import {computed, inject, PropType, ref, watch} from "vue";
+import {ChapterInfo, createAudio, queryChapterInfo, textModelChange, updateChapterText} from "@/api/text.ts";
 import {useRoute} from "vue-router";
 import {voiceNameFormat} from "@/utils/model-util.ts";
 import {TextContentConfig} from "@/views/text/novel/chapter-content/useChapterContent.ts";
@@ -9,6 +9,9 @@ import {ModelSelect} from "@/api/ref-audio.ts";
 import {Message} from "@arco-design/web-vue";
 import RoleChangeModel from "@/views/text/novel/chapter-content/components/RoleChangeModel.vue";
 import AudioSelect from '@/views/audio-select/index.vue'
+import {scrollToTop} from '@/utils/view-utils.ts'
+import {IWebSocketService} from "@/services/websocketService.ts";
+import useLoading from "@/hooks/loading.ts";
 
 const route = useRoute();
 const props = defineProps({
@@ -19,6 +22,9 @@ const props = defineProps({
     } as TextContentConfig
   },
 })
+const {loading, setLoading} = useLoading();
+
+const audioElement = ref<HTMLAudioElement | null>(null); // ref 对象引用到 audio 元素
 
 const textContentConfig = ref<TextContentConfig>(props.textContentConfig)
 
@@ -149,18 +155,119 @@ const editEnd = async (chapterInfo: ChapterInfo) => {
   Message.success(msg);
 }
 
-const scrollToTop = (id: string) => {
-  const targetElement = document.getElementById(id);
-  if (targetElement) {
-    targetElement.scrollIntoView({behavior: 'smooth'});
+const playAll = ref(false);
+const activeAudioIndex = ref<number>(-1);
+
+const activeAudioKey = ref<string>('');
+const playAudio = (chapterInfo: ChapterInfo) => {
+  const url = chapterInfo.audioUrl;
+
+  activeAudioKey.value = `${chapterInfo.p}-${chapterInfo.s}`;
+  if (audioElement.value && url) {
+    audioElement.value.src = url;
+    audioElement.value.volume = chapterInfo.volume / 100;
+    audioElement.value.playbackRate = chapterInfo.speed;
+    audioElement.value.play();
   }
 };
 
+const stopAudio = () => {
+  if (audioElement.value) {
+    // 停止音频播放
+    audioElement.value.pause();
+    audioElement.value.currentTime = 0; // 将播放进度设置为音频开头
+  }
+  activeAudioKey.value = '';
+};
+
+const playNext = () => {
+  activeAudioIndex.value += 1;
+  const chapterInfo = chapterInfos.value[activeAudioIndex.value];
+  if (chapterInfo) {
+    setTimeout(() => {
+      playAudio(chapterInfo);
+    }, 500);
+  } else {
+    activeAudioIndex.value = -1;
+  }
+};
+
+const playAllAudio = () => {
+  playAll.value = true;
+  // if (playStartIndex.value) {
+  //   let start = -1;
+  //   roleSpeechConfigs.value.forEach((item, index) => {
+  //     if (item.linesIndex === playStartIndex.value) {
+  //       start = index - 1;
+  //     }
+  //   });
+  //   activeAudioIndex.value = start;
+  // }
+  activeAudioIndex.value = -1;
+  playNext();
+}
+
+const handleAudioEnded = () => {
+  if (playAll.value && activeAudioIndex.value < chapterInfos.value.length) {
+    playNext();
+  } else {
+    activeAudioKey.value = '';
+    playAll.value = false;
+  }
+};
+
+
+const handleChapterInfoUpdate = (data: ChapterInfo) => {
+  chapterInfos.value = chapterInfos.value.map((item) => {
+    if (item.p === data.p && item.s === data.s) {
+      return {
+        ...item,
+        audioUrl: data.audioUrl
+      }
+    }
+    return item;
+  })
+};
+const createAudioKey = ref<string>('');
+const handleCreateAudio = async (record: ChapterInfo) => {
+  if (loading.value && createAudioKey.value === `${record.p}-${record.s}`) {
+    return;
+  }
+  try {
+    createAudioKey.value = `${record.p}-${record.s}`;
+    setLoading(true);
+    const {data, msg} = await createAudio({
+      chapter: {
+        project: route.query.project as string,
+        chapter: route.query.chapter as string,
+      },
+      chapterInfo: record
+    })
+    handleChapterInfoUpdate({
+      ...data
+    })
+    Message.success(msg);
+  } finally {
+    createAudioKey.value = ''
+    setLoading(false);
+  }
+}
+
+const WebSocketService = inject<IWebSocketService>('WebSocketService') as IWebSocketService;
+
+defineExpose({playAllAudio, refresh})
+
 watch(
     () => route.query.chapter,
-    () => {
-      handleQueryChapterInfo();
+    async () => {
+      await handleQueryChapterInfo();
       scrollToTop('text-content')
+      stopAudio();
+      if (route.query.chapter as string) {
+        WebSocketService.addMessageHandler(
+            `${route.query.project as string}-${route.query.chapter as string}`, handleChapterInfoUpdate
+        );
+      }
     },
     {immediate: true}
 );
@@ -194,7 +301,7 @@ watch(
                 <span v-if="textContentConfig.showRole && item1.role">
                   <span
                       :id="`role-${index}-${index1}`"
-                      style="background-color: #c3f6f6; margin-right: 10px"
+                      style="background-color: #c3f6f6; margin-right: 5px"
                       :style="item1.s !==0 && textContentConfig.textViewType === 'text' && {marginLeft: '10px'}"
                   >
                     {{ item1.role }}
@@ -203,14 +310,37 @@ watch(
                 <span v-if="textContentConfig.showModal && textModelFormat(item1)">
                   <span
                       :id="`model-${index}-${index1}`"
-                      style="background-color: #f6dcc3; margin-right: 10px"
+                      style="background-color: #f6dcc3; margin-right: 5px"
                   >
                       {{ textModelFormat(item1) }}
                   </span>
                 </span>
                 <span v-if="textContentConfig.showAudio && item1.modelType">
-                  <a-tag color="blue" style="margin-right: 10px">
+                  <a-tag
+                      v-if="activeAudioKey === `${item1.p}-${item1.s}`"
+                      size="small"
+                      color="red"
+                      style="margin-right: 5px"
+                      @click="stopAudio"
+                  >
+                    <icon-mute-fill/>
+                  </a-tag>
+                  <a-tag
+                      v-else
+                      size="small"
+                      color="blue"
+                      style="margin-right: 5px"
+                      @click="playAudio(item1)"
+                  >
                     <icon-play-arrow/>
+                  </a-tag>
+                  <a-tag
+                      size="small"
+                      color="blue"
+                      style="margin-right: 5px"
+                      @click="handleCreateAudio(item1)"
+                  >
+                    <icon-refresh :spin="loading && createAudioKey === `${item1.p}-${item1.s}`"/>
                   </a-tag>
                 </span>
                 <span>
@@ -229,6 +359,7 @@ watch(
                         :editable="props.textContentConfig.textEdit"
                         @edit-start="editStart(item1)"
                         @edit-end="editEnd(item1)"
+                        :mark="activeAudioKey === `${item1.p}-${item1.s}`"
                         @click.right="textSelect"
                     >
                       {{ item1.text }}
@@ -249,6 +380,7 @@ watch(
         :chapter-info="currentChapterInfo"
         @success="refresh"
     />
+    <audio ref="audioElement" @ended="handleAudioEnded"></audio>
   </div>
 </template>
 

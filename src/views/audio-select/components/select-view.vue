@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {voiceNameFormat} from "@/utils/model-util.ts";
-import {onMounted, PropType, ref} from "vue";
+import {onMounted, PropType, ref, watch} from "vue";
 import {ModelSelect, Mood, MoodAudio, RefAudio} from "@/api/ref-audio.ts";
 import {CascaderOption} from "naive-ui";
 import {queryModels as queryGsvModels} from "@/api/gpt-sovits.ts";
@@ -10,11 +10,18 @@ import {queryVoiceAudioUrl} from "@/api/config.ts";
 import useLoading from "@/hooks/loading.ts";
 
 const props = defineProps({
+  visible: {
+    type: Boolean,
+    default: false,
+  },
+  modelSelect: {
+    type: Object as PropType<ModelSelect>
+  },
   refAudio: {
     type: Object as PropType<RefAudio>,
     default: () => {
     }
-  }
+  },
 })
 const emits = defineEmits(['change']);
 
@@ -160,6 +167,18 @@ const change = (mood: Mood) => {
 onMounted(() => {
   handleQueryModel();
 })
+
+watch(
+    () => props.visible,
+    async () => {
+      if (props.visible) {
+        if (props.modelSelect?.modelType) {
+          currentModel.value = [props.modelSelect?.modelType, props.modelSelect?.model[0], props.modelSelect?.model[1]];
+        }
+      }
+    },
+    {immediate: true}
+);
 
 </script>
 

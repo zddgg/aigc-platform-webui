@@ -14,10 +14,11 @@ const activeIndex = ref('');
           <div style="margin: 16px 0 20px 0">
             <img src="@/assets/logo.png" alt="" style="width: 44px; height: 44px;"/>
           </div>
-          <div class="nav-item"
-               :class="activeIndex === '文本' ? 'active-item' : ''"
-               style="padding: 10px 18px; border-radius: 8px; cursor: pointer"
-               @click="() => {
+          <div
+              class="nav-item"
+              :class="activeIndex === '文本' ? 'active-item' : ''"
+              style="padding: 10px 18px; border-radius: 8px; cursor: pointer"
+              @click="() => {
                  activeIndex = '文本';
                  router.push({ name: 'Text' });
                }"
@@ -29,10 +30,12 @@ const activeIndex = ref('');
               <span>文本</span>
             </div>
           </div>
-          <div class="nav-item"
-               :class="activeIndex === '音频' ? 'active-item' : ''"
-               style="padding: 10px 18px; border-radius: 8px; cursor: pointer"
-               @click="() => {activeIndex = '音频'}"
+          <div
+              v-if="false"
+              class="nav-item"
+              :class="activeIndex === '音频' ? 'active-item' : ''"
+              style="padding: 10px 18px; border-radius: 8px; cursor: pointer"
+              @click="() => {activeIndex = '音频'}"
           >
             <div>
               <icon-file-audio size="30"/>
@@ -41,10 +44,12 @@ const activeIndex = ref('');
               <span>音频</span>
             </div>
           </div>
-          <div class="nav-item"
-               :class="activeIndex === '图像' ? 'active-item' : ''"
-               style="padding: 10px 18px; border-radius: 8px; cursor: pointer"
-               @click="() => {activeIndex = '图像'}"
+          <div
+              v-if="false"
+              class="nav-item"
+              :class="activeIndex === '图像' ? 'active-item' : ''"
+              style="padding: 10px 18px; border-radius: 8px; cursor: pointer"
+              @click="() => {activeIndex = '图像'}"
           >
             <div>
               <icon-file-image size="30"/>
@@ -53,10 +58,12 @@ const activeIndex = ref('');
               <span>图像</span>
             </div>
           </div>
-          <div class="nav-item"
-               :class="activeIndex === '视频' ? 'active-item' : ''"
-               style="padding: 10px 18px; border-radius: 8px; cursor: pointer"
-               @click="() => {activeIndex = '视频'}"
+          <div
+              v-if="false"
+              class="nav-item"
+              :class="activeIndex === '视频' ? 'active-item' : ''"
+              style="padding: 10px 18px; border-radius: 8px; cursor: pointer"
+              @click="() => {activeIndex = '视频'}"
           >
             <div>
               <icon-file-video size="30"/>

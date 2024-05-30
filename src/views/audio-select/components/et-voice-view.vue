@@ -1,10 +1,19 @@
 <script setup lang="ts">
 import {voiceNameFormat} from "@/utils/model-util.ts";
-import {computed, onMounted, ref} from "vue";
+import {computed, onMounted, PropType, ref, watch} from "vue";
 import {SelectOptionData} from "@arco-design/web-vue/es/select/interface";
 import {EdgeTtsVoice, LangText, queryEdgeTtsConfig} from "@/api/config.ts";
-import {queryRefAudios, RefAudio} from "@/api/ref-audio.ts";
+import {ModelSelect, queryRefAudios, RefAudio} from "@/api/ref-audio.ts";
 
+const props = defineProps({
+  visible: {
+    type: Boolean,
+    default: false,
+  },
+  modelSelect: {
+    type: Object as PropType<ModelSelect>
+  }
+})
 const emits = defineEmits(['change']);
 
 const genderOptions = ref<SelectOptionData[]>([])
@@ -97,6 +106,22 @@ onMounted(() => {
   handleQueryVoices();
   handleQueryRefAudio();
 })
+
+watch(
+    () => props.visible,
+    async () => {
+      if (props.visible) {
+        if (props.modelSelect?.modelType) {
+          const find = voices.value.find(item => item.shortName === props.modelSelect?.model[0]);
+          if (find) {
+            voiceSelect(find);
+          }
+        }
+      }
+    },
+    {immediate: true}
+);
+
 
 </script>
 

@@ -7,6 +7,9 @@ import ChapterSplitModal from "@/views/text/novel/chapter-title/components/Chapt
 const route = useRoute();
 const router = useRouter();
 
+const emits = defineEmits(['toggleCollapse'])
+
+const collapsed = ref(false);
 const chapterSplitModalVisible = ref(false);
 
 const activeChapterIndex = ref(0)
@@ -35,6 +38,11 @@ const computedChapterTitles = computed(() => {
   return chapterTitles.value && chapterTitles.value.length > 0 ? chapterTitles.value : tmpChapterTitles.value
 })
 
+const toggleCollapse = () => {
+  collapsed.value = !collapsed.value;
+  emits('toggleCollapse', collapsed.value);
+}
+
 onMounted(async () => {
   await handleQueryChapters();
   await router.push({
@@ -52,14 +60,23 @@ onMounted(async () => {
     <a-affix>
       <div class="text-space-header">
         <a-button
+            v-if="!collapsed"
             type="outline"
             @click="() => (chapterSplitModalVisible = true)"
         >
           章节解析
         </a-button>
+        <a-button
+            v-if="computedChapterTitles && computedChapterTitles.length !== 0"
+            type="outline"
+            @click="toggleCollapse"
+        >
+          <icon-menu-unfold v-if="collapsed"/>
+          <icon-menu-fold v-else/>
+        </a-button>
       </div>
     </a-affix>
-    <n-scrollbar style="max-height: calc(100vh - 74px); padding-right: 10px">
+    <n-scrollbar style="max-height: calc(100vh - 76px); padding-right: 10px">
       <a-space direction="vertical" style="width: 100%">
         <a-card v-if="!computedChapterTitles || computedChapterTitles.length === 0">
           <a-empty description="先完成章节解析"/>
@@ -73,36 +90,41 @@ onMounted(async () => {
             :style="index == activeChapterIndex && {backgroundColor: '#c3f6f6'}"
             @click="chapterSelect(item, index)"
         >
-          <a-descriptions :column="1" size="small">
-            <template #title>
+          <div v-if="collapsed" style="text-align: center">
+            {{ index }}
+          </div>
+          <div v-else>
+            <a-descriptions :column="1" size="small">
+              <template #title>
               <span style="font-size: 18px; font-weight: 500">
                 {{ item.split('--')[1] }}
               </span>
-            </template>
-            <a-descriptions-item>
-              <template #label>
+              </template>
+              <a-descriptions-item>
+                <template #label>
                 <span style="color: #000">
                   文本数量
                 </span>
-              </template>
-              70
-            </a-descriptions-item>
-            <a-descriptions-item>
-              <template #label>
+                </template>
+                70
+              </a-descriptions-item>
+              <a-descriptions-item>
+                <template #label>
                 <span style="color: #000">
                 角色数量
               </span>
-              </template>
-              8
-            </a-descriptions-item>
-          </a-descriptions>
-          <a-button
-              type="outline"
-              size="mini"
-              style="margin-top: 5px"
-          >
-            台词解析
-          </a-button>
+                </template>
+                8
+              </a-descriptions-item>
+            </a-descriptions>
+            <a-button
+                type="outline"
+                size="mini"
+                style="margin-top: 5px"
+            >
+              台词解析
+            </a-button>
+          </div>
         </a-card>
       </a-space>
     </n-scrollbar>
