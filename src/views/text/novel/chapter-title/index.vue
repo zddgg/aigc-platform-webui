@@ -43,6 +43,10 @@ const toggleCollapse = () => {
   emits('toggleCollapse', collapsed.value);
 }
 
+const refresh = () => {
+  handleQueryChapters();
+}
+
 onMounted(async () => {
   await handleQueryChapters();
   await router.push({
@@ -130,6 +134,7 @@ onMounted(async () => {
     </n-scrollbar>
     <chapter-split-modal
         v-model:visible="chapterSplitModalVisible"
+        @refresh="refresh"
     />
   </div>
 </template>

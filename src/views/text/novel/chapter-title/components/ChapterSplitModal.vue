@@ -15,7 +15,7 @@ const props = defineProps({
   }
 });
 
-const emits = defineEmits(['update:visible'])
+const emits = defineEmits(['update:visible', 'refresh'])
 const {loading, setLoading} = useLoading();
 
 const chapterPatternOptions = [
@@ -72,6 +72,7 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
         linesPattern: form.value.linesPattern,
       });
       Message.success(msg);
+      emits('refresh')
       done(true);
     }
   } else {

@@ -292,81 +292,81 @@ watch(
             :key="index"
             :class="{'text': textContentConfig.textViewType === 'text'}"
         >
+          <span
+              v-for="(item1, index1) in item"
+              :id="`sentence-${item1.p}-${item1.s}`"
+              :key="index1"
+              :class="{'text-list': textContentConfig.textViewType === 'text-list'}"
+          >
+            <span v-if="textContentConfig.showRole && item1.role">
               <span
-                  v-for="(item1, index1) in item"
-                  :id="`sentence-${item1.p}-${item1.s}`"
-                  :key="index1"
-                  :class="{'text-list': textContentConfig.textViewType === 'text-list'}"
+                  :id="`role-${index}-${index1}`"
+                  style="background-color: #c3f6f6; margin-right: 5px"
+                  :style="item1.s !==0 && textContentConfig.textViewType === 'text' && {marginLeft: '10px'}"
               >
-                <span v-if="textContentConfig.showRole && item1.role">
-                  <span
-                      :id="`role-${index}-${index1}`"
-                      style="background-color: #c3f6f6; margin-right: 5px"
-                      :style="item1.s !==0 && textContentConfig.textViewType === 'text' && {marginLeft: '10px'}"
-                  >
-                    {{ item1.role }}
-                  </span>
-                </span>
-                <span v-if="textContentConfig.showModal && textModelFormat(item1)">
-                  <span
-                      :id="`model-${index}-${index1}`"
-                      style="background-color: #f6dcc3; margin-right: 5px"
-                  >
-                      {{ textModelFormat(item1) }}
-                  </span>
-                </span>
-                <span v-if="textContentConfig.showAudio && item1.modelType">
-                  <a-tag
-                      v-if="activeAudioKey === `${item1.p}-${item1.s}`"
-                      size="small"
-                      color="red"
-                      style="margin-right: 5px"
-                      @click="stopAudio"
-                  >
-                    <icon-mute-fill/>
-                  </a-tag>
-                  <a-tag
-                      v-else
-                      size="small"
-                      color="blue"
-                      style="margin-right: 5px"
-                      @click="playAudio(item1)"
-                  >
-                    <icon-play-arrow/>
-                  </a-tag>
-                  <a-tag
-                      size="small"
-                      color="blue"
-                      style="margin-right: 5px"
-                      @click="handleCreateAudio(item1)"
-                  >
-                    <icon-refresh :spin="loading && createAudioKey === `${item1.p}-${item1.s}`"/>
-                  </a-tag>
-                </span>
-                <span>
-                  <context-menu
-                      :menu="[
-                      { label: '改角色', value: 'changeRole' },
-                      { label: '改模型', value: 'changeModel' }
-                    ]"
-                      @select="contextMenuSelect"
-                  >
-                    <a-typography-text
-                        :id="`text-${index}-${index1}`"
-                        :type="item1.modelType ? 'normal' : 'danger'"
-                        :class="{'lines-color': textContentConfig.showLines && item1.linesFlag}"
-                        v-model:edit-text="item1.text"
-                        :editable="props.textContentConfig.textEdit"
-                        @edit-start="editStart(item1)"
-                        @edit-end="editEnd(item1)"
-                        :mark="activeAudioKey === `${item1.p}-${item1.s}`"
-                        @click.right="textSelect"
-                    >
-                      {{ item1.text }}
-                    </a-typography-text>
-                  </context-menu>
-                </span>
+                {{ item1.role }}
               </span>
+            </span>
+            <span v-if="textContentConfig.showModal && textModelFormat(item1)">
+              <span
+                  :id="`model-${index}-${index1}`"
+                  style="background-color: #f6dcc3; margin-right: 5px"
+              >
+                {{ textModelFormat(item1) }}
+              </span>
+            </span>
+            <span v-if="textContentConfig.showAudio && item1.modelType">
+              <a-tag
+                  v-if="activeAudioKey === `${item1.p}-${item1.s}`"
+                  size="small"
+                  color="red"
+                  style="margin-right: 5px"
+                  @click="stopAudio"
+              >
+                <icon-mute-fill/>
+              </a-tag>
+              <a-tag
+                  v-else
+                  size="small"
+                  color="blue"
+                  style="margin-right: 5px"
+                  @click="playAudio(item1)"
+              >
+                <icon-play-arrow/>
+              </a-tag>
+              <a-tag
+                  size="small"
+                  color="blue"
+                  style="margin-right: 5px"
+                  @click="handleCreateAudio(item1)"
+              >
+                <icon-refresh :spin="loading && createAudioKey === `${item1.p}-${item1.s}`"/>
+              </a-tag>
+            </span>
+            <span>
+              <context-menu
+                  :menu="[
+                     { label: '改角色', value: 'changeRole' },
+                     { label: '改模型', value: 'changeModel' }
+                   ]"
+                  @select="contextMenuSelect"
+              >
+                <a-typography-text
+                    :id="`text-${index}-${index1}`"
+                    :type="item1.modelType ? 'normal' : 'danger'"
+                    :class="{'lines-color': textContentConfig.showLines && item1.linesFlag}"
+                    v-model:edit-text="item1.text"
+                    :editable="props.textContentConfig.textEdit"
+                    @edit-start="editStart(item1)"
+                    @edit-end="editEnd(item1)"
+                    :mark="activeAudioKey === `${item1.p}-${item1.s}`"
+                    @click.right="textSelect"
+                >
+                  {{ item1.text }}
+                </a-typography-text>
+              </context-menu>
+            </span>
+          </span>
         </p>
       </div>
     </a-card>
