@@ -9,12 +9,14 @@ const handleQueryAudioServerConfig = async () => {
   audioServers.value = data;
 }
 
-const backupText = ref<string>('');
-const editStart = (value: string) => {
-  backupText.value = value;
+const backupUrl = ref<string>('');
+const backupVersion = ref<string>('');
+const editStart = (value: AudioServerConfig) => {
+  backupUrl.value = value.serverUrl;
+  backupVersion.value = value.apiVersion;
 }
 const editEnd = async (config: AudioServerConfig) => {
-  if (config.serverUrl === backupText.value) {
+  if (config.serverUrl === backupUrl.value && config.apiVersion === backupVersion.value) {
     return;
   }
   const {msg} = await updateAudioServerConfig(config);
@@ -41,12 +43,21 @@ onMounted(() => {
                   <a-typography-text
                       v-model:edit-text="item.serverUrl"
                       editable
-                      @edit-start="editStart(item.serverUrl)"
+                      @edit-start="editStart(item)"
                       @edit-end="editEnd(item)"
                   >
 
                     {{ item.serverUrl }}
                   </a-typography-text>
+                </a-descriptions-item>
+                <a-descriptions-item label="serverUrl">
+                  <a-select
+                      v-model="item.apiVersion"
+                      @change="() => editEnd(item)"
+                  >
+                    <a-option>v1</a-option>
+                    <a-option>v2</a-option>
+                  </a-select>
                 </a-descriptions-item>
               </a-descriptions>
             </a-card>

@@ -1,27 +1,51 @@
 <script setup lang="ts">
-import {onMounted, onUnmounted, provide, ref, watch} from "vue";
+import {inject, onMounted, onUnmounted, provide, ref, watch} from "vue";
 import {useRoute} from "vue-router";
-import {aiInference, startCreateAudio} from "@/api/text.ts";
+import {aiInference, checkAiResult, loadAiResult, startCreateAudio, stopCreateAudio} from "@/api/text.ts";
 import useLoading from "@/hooks/loading.ts";
 import TextContent from "@/views/text/novel/chapter-content/components/TextContent.vue";
 import {TextContentConfig} from "@/views/text/novel/chapter-content/useChapterContent.ts";
 import TableContent from "@/views/text/novel/chapter-content/components/TableContent.vue";
 import {Message, Modal} from "@arco-design/web-vue";
-import WebSocketService from '@/services/websocketService.ts';
 import BatchChangeModal from "@/views/text/novel/chapter-content/components/BatchChangeModal.vue";
-import CombineExport from "@/views/text/novel/chapter-content/components/CombineExport.vue";
+import WebSocketService from "@/services/websocketService.ts";
+import {ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {EventBus} from "@/vite-env";
 
 const route = useRoute();
 const {loading, setLoading} = useLoading();
 
+const emits = defineEmits(['refresh']);
+const eventBus = inject<EventBus>('eventBus');
+
 const batchChangeModalVisible = ref(false);
-const combineExportModalVisible = ref(false);
 
 const selectedIndexes = ref<string[]>([])
 
 const textContentConfig = ref<TextContentConfig>({
   textViewType: 'table'
 } as TextContentConfig)
+
+const textContentRef = ref<
+    {
+      playAllAudio: Function,
+      refresh: Function,
+      onCombineExport: Function,
+    } | null
+>(null);
+
+const tableContentRef = ref<
+    {
+      playAllAudio: Function,
+      refresh: Function,
+      onCombineExport: Function,
+    } | null
+>(null);
+
+const refresh = () => {
+  eventBus?.emit(ROLE_CHANGE);
+}
+
 
 const aiResultText = ref<string>('')
 
@@ -32,6 +56,9 @@ const handleAiInferenceMessage = (data: string[], index: number) => {
 
 const handleAiInferenceDone = () => {
   setLoading(false);
+  setTimeout(() => {
+    refresh();
+  }, 500)
   console.log('Request done', aiResultText.value);
 };
 
@@ -59,10 +86,41 @@ const handleAiInference = () => {
         handleAiInferenceError,
         handleAiInferenceTimeout
     )
+    aiResultModalVisible.value = false;
   } catch (err) {
     setLoading(false);
   }
 };
+
+const aiResultBool = ref<boolean>(false);
+const onCheckAiResult = async () => {
+  const {data} = await checkAiResult({
+    project: route.query.project as string,
+    chapter: route.query.chapter as string,
+  });
+  aiResultBool.value = data;
+  return data;
+}
+
+const handleUseCache = async () => {
+  await loadAiResult({
+    project: route.query.project as string,
+    chapter: route.query.chapter as string,
+  });
+  aiResultModalVisible.value = false;
+  refresh();
+};
+
+const aiResultModalVisible = ref<boolean>(false);
+const onAiInference = () => {
+  onCheckAiResult().then(data => {
+    if (data) {
+      aiResultModalVisible.value = true;
+    } else {
+      handleAiInference()
+    }
+  });
+}
 
 const handleStartCreateAudio = async (actionType: 'all' | 'modified') => {
   const {msg} = await startCreateAudio({
@@ -83,24 +141,6 @@ const onStartCreateAudio = (actionType: 'all' | 'modified') => {
   })
 }
 
-const textContentRef = ref<
-    {
-      playAllAudio: Function,
-      refresh: Function,
-    } | null
->(null);
-
-const tableContentRef = ref<
-    {
-      playAllAudio: Function,
-      refresh: Function,
-    } | null
->(null);
-
-const refresh = () => {
-  textContentRef.value?.refresh()
-  tableContentRef.value?.refresh()
-}
 
 defineExpose({refresh})
 
@@ -117,19 +157,15 @@ const playAllAudio = () => {
 }
 
 const onCombineExport = () => {
-  if (!selectedIndexes.value || !selectedIndexes.value.length) {
-    Modal.warning({
-      title: '没有选择导出内容',
-      content: '请选择需要导出的内容'
-    })
-  } else {
-    combineExportModalVisible.value = true;
-  }
+  tableContentRef.value?.onCombineExport();
+  // do something
 }
 
-onMounted(() => {
-  connectWebSocket();
-});
+const stopLoading = ref<boolean>(false);
+const handleStopCreateAudio = async () => {
+  await stopCreateAudio();
+  stopLoading.value = true;
+}
 
 onUnmounted(() => {
   WebSocketService.disconnect();
@@ -141,11 +177,28 @@ function connectWebSocket() {
 
 provide('WebSocketService', WebSocketService);
 
+const taskNum = ref(0);
+const stageHandler = (data: number) => {
+  taskNum.value = data;
+  if (data === 0) {
+    stopLoading.value = false;
+  }
+}
+
+onMounted(() => {
+  connectWebSocket();
+  WebSocketService.addStageHandler(stageHandler)
+});
+
+
 watch(
     () => route.query.chapter,
     () => {
       scrollToTop('text-content');
-      selectedIndexes.value = []
+      selectedIndexes.value = [];
+      if (route.query.chapter) {
+        onCheckAiResult();
+      }
     },
     {immediate: true}
 );
@@ -160,7 +213,7 @@ watch(
             <div>
               <a-button type="primary"
                         :loading="loading"
-                        @click="handleAiInference"
+                        @click="onAiInference"
               >
                 角色推理
               </a-button>
@@ -210,6 +263,19 @@ watch(
               </a-button>
             </div>
           </a-space>
+          <div v-if="taskNum">
+            <a-space>
+              <span>任务队列: {{ taskNum }}</span>
+              <a-button
+                  size="small"
+                  status="danger"
+                  :loading="stopLoading"
+                  @click="handleStopCreateAudio"
+              >
+                停止
+              </a-button>
+            </a-space>
+          </div>
           <div>
             <a-space size="small">
               <a-trigger
@@ -228,7 +294,7 @@ watch(
                       <div v-if="textContentConfig.textViewType !== 'table'">
                         <a-checkbox v-model="textContentConfig.showModal">模型</a-checkbox>
                       </div>
-                      <div v-if="textContentConfig.textViewType !== 'table'">
+                      <div>
                         <a-checkbox v-model="textContentConfig.showLines">台词</a-checkbox>
                       </div>
                       <div v-if="textContentConfig.textViewType !== 'table'">
@@ -296,10 +362,19 @@ watch(
     <batch-change-modal
         v-model:visible="batchChangeModalVisible"
     />
-    <combine-export
-        v-model:visible="combineExportModalVisible"
-        v-model:selected-indexes="selectedIndexes"
-    />
+    <a-modal
+        v-model:visible="aiResultModalVisible"
+        title="检测到推理结果缓存"
+        :footer="false"
+    >
+      <div style="display: flex; justify-content: center; align-items: center;">
+        <a-space size="large">
+          <a-button @click="handleAiInference">重新推理</a-button>
+          <a-button type="primary" @click="handleUseCache">使用缓存</a-button>
+        </a-space>
+      </div>
+    </a-modal>
+
   </div>
 </template>
 
@@ -311,5 +386,10 @@ watch(
   align-items: center;
   border-radius: 8px;
   margin-bottom: 10px;
+}
+
+.buttons-right {
+  display: flex;
+  justify-content: center;
 }
 </style>

@@ -40,6 +40,7 @@ const chatTemplates = ref<ChatModelParam[]>([]);
 const handleChatTemplate = async () => {
   const {data} = await queryChatConfig();
   chatTemplates.value = data.templates;
+  console.log(chatTemplates.value)
 }
 
 const chatTemplateChange = (value: any) => {
@@ -91,8 +92,9 @@ watch(
                          :label-col-props="{ span: 12 }"
                          :wrapper-col-props="{ span: 12 }"
                          required>
-              <a-select v-model="form.interfaceType">
-                <a-option>OpenAI</a-option>
+              <a-select v-model="form.interfaceType"
+                        :options="Array.from(new Set(chatTemplates.map(item => item.interfaceType).filter(item => !!item)))"
+              >
               </a-select>
             </a-form-item>
           </a-col>
@@ -101,7 +103,7 @@ watch(
                          :label-col-props="{ span: 12 }"
                          :wrapper-col-props="{ span: 12 }"
             >
-              <a-select :options="chatTemplates.map(item => item.templateName)"
+              <a-select :options="chatTemplates.map(item => item.templateName).filter(item => !!item)"
                         allow-clear
                         @change="chatTemplateChange"
               >
@@ -112,8 +114,17 @@ watch(
         <a-form-item field="host" label="host" required>
           <a-input v-model="form.host"/>
         </a-form-item>
+        <a-form-item field="path" label="path" required>
+          <a-input v-model="form.path"/>
+        </a-form-item>
         <a-form-item field="apiKey" label="apiKey" required>
           <a-input-password v-model="form.apiKey"/>
+        </a-form-item>
+        <a-form-item v-if="form.interfaceType === 'Spark'" field="apiSecret" label="apiSecret" required>
+          <a-input-password v-model="form.apiSecret"/>
+        </a-form-item>
+        <a-form-item v-if="form.interfaceType === 'Spark'" field="appId" label="appId" required>
+          <a-input-password v-model="form.appId"/>
         </a-form-item>
         <a-form-item field="model" label="model" required>
           <a-input v-model="form.model"/>

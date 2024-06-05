@@ -8,8 +8,8 @@ const activeIndex = ref('');
 
 <template>
   <div style="display: flex">
-    <div style="width: 90px; height: 100vh; background-color: #ECECEE">
-      <div style="width: 100%; display: flex; justify-content: center">
+    <div style="width: 90px; height: 100vh; background-color: #ECECEE; display: flex; flex-direction: column;">
+      <div style="width: 100%; display: flex; justify-content: center;">
         <a-space direction="vertical" align="center">
           <div style="margin: 16px 0 20px 0">
             <img src="@/assets/logo.png" alt="" style="width: 44px; height: 44px;"/>
@@ -88,6 +88,19 @@ const activeIndex = ref('');
             </div>
           </div>
         </a-space>
+      </div>
+      <div style="margin-top: auto; display: flex; flex-direction: column; align-items: center;">
+        <div class="nav-item"
+             :class="activeIndex === '设置' ? 'active-item' : ''"
+             style="padding: 10px 18px; border-radius: 8px; cursor: pointer; margin-bottom: 20px"
+        >
+          <div>
+            <icon-settings size="30"/>
+          </div>
+          <div style="text-align: center">
+            <span>设置</span>
+          </div>
+        </div>
       </div>
     </div>
     <n-scrollbar style="max-height: 100vh">

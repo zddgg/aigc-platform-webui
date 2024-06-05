@@ -2,12 +2,23 @@
 import CommonRole from "@/views/text/novel/chapter-role/components/CommonRole.vue";
 import TextRole from "@/views/text/novel/chapter-role/components/TextRole.vue";
 import TextModel from "@/views/text/novel/chapter-role/components/TextModel.vue";
+import {ref} from "vue";
 
 const emits = defineEmits(['roleModelChange'])
+
+const textRoleRef = ref<{
+  refreshInner: Function
+}>(null)
 
 const roleModelChange = () => {
   emits('roleModelChange')
 }
+
+const refreshTextRole = () => {
+  textRoleRef.value?.refreshInner()
+}
+
+defineExpose({refreshTextRole})
 
 </script>
 
@@ -38,7 +49,7 @@ const roleModelChange = () => {
                 tab="文中角色"
                 display-directive="show:lazy"
             >
-              <text-role @role-model-change="roleModelChange"/>
+              <text-role ref="textRoleRef" @role-model-change="roleModelChange"/>
             </n-tab-pane>
             <n-tab-pane
                 name="3"

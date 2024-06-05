@@ -18,7 +18,6 @@ const emits = defineEmits(['change']);
 
 const genderOptions = ref<SelectOptionData[]>([])
 const selectGender = ref<string>('')
-const languageOptions = ref<string[]>([])
 const selectLanguage = ref<string>('')
 const nameSearchInput = ref<string>('')
 
@@ -30,18 +29,10 @@ const refAudios = ref<RefAudio[]>([])
 const computedVoices = computed(() => {
   let tmp = voices.value;
   if (selectGender.value) {
-    tmp = tmp.filter(item => (item.gender === 'Male' ? '男' : item.gender === 'Female' ? '女' : item.gender) === selectGender.value)
+    tmp = tmp.filter(item => item.gender === selectGender.value)
   }
   if (selectLanguage.value) {
-    tmp = tmp.filter(item => {
-      const language = item.locale.substring(0, item.locale.indexOf('-'));
-      const lang = language === 'zh' ? '中文' :
-          language === 'en' ? '英文' :
-              language === 'ja' ? '日文' :
-                  language === 'ko' ? '韩文' :
-                      language;
-      return lang === selectLanguage.value
-    })
+    tmp = tmp.filter(item => item.locale.startsWith(selectLanguage.value))
   }
   if (nameSearchInput.value) {
     tmp = tmp.filter(item => item.shortName.substring(item.shortName.lastIndexOf('-') + 1)
@@ -95,6 +86,11 @@ const handleQueryVoices = async () => {
   const {data} = await queryEdgeTtsConfig()
   voices.value = data.voices
   langTexts.value = data.langTexts
+  genderOptions.value = Array.from(new Set(data.voices.map(item => item.gender)))
+      .map(gender => ({
+        label: gender === 'Male' ? '男' : gender === 'Female' ? '女' : gender,
+        value: gender
+      }));
 }
 
 const handleQueryRefAudio = async () => {
@@ -135,7 +131,8 @@ watch(
                 style="width: 100px"
       />
       <a-select v-model="selectLanguage"
-                :options="languageOptions"
+                :options="langTexts"
+                :field-names="{value: 'enName', label: 'zhName'}"
                 allow-clear
                 placeholder="语言"
                 style="width: 100px"

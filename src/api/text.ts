@@ -18,14 +18,21 @@ export function projectList() {
     return axios.post<string[]>('/api/text/project/list');
 }
 
-export interface ChapterSplit extends ProjectParam {
-    chapterPattern: string;
-    linesPattern: string;
+export interface ChapterParam extends ProjectParam {
+    chapter?: string;
 }
 
-export interface ChapterParam extends ProjectParam {
+export interface Chapter extends ChapterParam {
     chapter: string;
-    indexes?: string[]
+    textNum?: number;
+    roleNum?: number;
+    stage?: string;
+}
+
+export interface ChapterSplit extends ChapterParam {
+    chapterPattern?: string;
+    linesPattern?: string;
+    textContent?: string;
 }
 
 export function tmpChapterSplit(params: ChapterSplit) {
@@ -37,7 +44,19 @@ export function chapterSplit(params: ChapterSplit) {
 }
 
 export function queryChapters(params: ProjectParam) {
-    return axios.post<string[]>('/api/text/chapter/queryChapters', params);
+    return axios.post<Chapter[]>('/api/text/chapter/queryChapters', params);
+}
+
+export function queryChapterText(params: ChapterParam) {
+    return axios.post<string>('/api/text/chapter/queryChapterText', params);
+}
+
+export function tmpLinesParse(params: ChapterSplit) {
+    return axios.post<string[]>('/api/text/chapter/tmpLinesParse', params);
+}
+
+export function linesParse(params: ChapterSplit) {
+    return axios.post('/api/text/chapter/linesParse', params);
 }
 
 export interface Role extends ModelSelect {
@@ -57,15 +76,12 @@ export interface ChapterInfo extends Role {
     volume: number;
     speed: number;
     interval: number;
+    export: boolean;
     audioUrl: string;
 }
 
 export function queryChapterInfo(params: ChapterParam) {
     return axios.post<ChapterInfo[]>('/api/text/chapter/queryChapterInfo', params);
-}
-
-export function linesParse(params: ChapterParam) {
-    return axios.post('/api/text/chapter/linesParse', params);
 }
 
 export interface ProjectConfig {
@@ -99,6 +115,14 @@ export function aiInference(url: string,
     const fetchStream = new FetchStream(fetchOptions);
 
     fetchStream.startRequest();
+}
+
+export function checkAiResult(params: ChapterParam) {
+    return axios.post<boolean>('/api/text/chapter/checkAiResult', params);
+}
+
+export function loadAiResult(params: ChapterParam) {
+    return axios.post<boolean>('/api/text/chapter/loadAiResult', params);
 }
 
 export function queryRoles(params: ChapterParam) {
@@ -171,4 +195,38 @@ export function createAudio(params: {
     chapterInfo: ChapterInfo,
 }) {
     return axios.post<ChapterInfo>('/api/text/chapter/createAudio', params);
+}
+
+export function stopCreateAudio() {
+    return axios.post('/api/text/chapter/stopCreateAudio');
+}
+
+export function updateVolume(params: {
+    chapter: ChapterParam,
+    chapterInfo: ChapterInfo,
+}) {
+    return axios.post<ChapterInfo>('/api/text/chapter/updateVolume', params);
+}
+
+export function updateSpeed(params: {
+    chapter: ChapterParam,
+    chapterInfo: ChapterInfo,
+}) {
+    return axios.post<ChapterInfo>('/api/text/chapter/updateSpeed', params);
+}
+
+export function updateInterval(params: {
+    chapter: ChapterParam,
+    chapterInfo: ChapterInfo,
+}) {
+    return axios.post<ChapterInfo>('/api/text/chapter/updateInterval', params);
+}
+
+export function chapterExpose(params: {
+    chapter: ChapterParam,
+    indexes: string[],
+    combineAudio: boolean;
+    subtitle: boolean;
+}) {
+    return axios.post<ChapterInfo>('/api/text/chapter/chapterExpose', params);
 }

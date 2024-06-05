@@ -81,8 +81,8 @@ onMounted(() => {
                 <a-descriptions-item label="类型">
                   章节小说
                 </a-descriptions-item>
-                <a-descriptions-item label="当前状态">
-                  语音合成
+                <a-descriptions-item label="章节">
+                  1304
                 </a-descriptions-item>
               </a-descriptions>
               <div style="display: flex; justify-content: right; margin-top: 10px">
@@ -107,7 +107,7 @@ onMounted(() => {
           </a-space>
         </div>
       </a-tab-pane>
-      <a-tab-pane key="2">
+      <a-tab-pane v-if="false" key="2">
         <template #title>
           <icon-clock-circle/>
           短文本

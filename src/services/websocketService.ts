@@ -1,19 +1,24 @@
 export interface IWebSocketService {
     connect(project: string): void;
-    addMessageHandler(key: string, handler: (data: any) => void): void;
-    removeMessageHandler(key: string): void;
-    sendMessage(message: any): void;
+
+    addResultHandler(key: string, handler: (data: any) => void): void;
+
+    addResultHandler(key: string, handler: (data: any) => void): void;
+
     disconnect(): void;
 }
 
 class WebSocketService implements IWebSocketService {
     private socket: WebSocket | null;
-    private messageHandlers: Map<string, (data: any) => void>;
+    private resultHandlers: Map<string, (data: any) => void>;
+    private stageHandler: (data: any) => void;
     private reconnectInterval: number;
 
     constructor() {
         this.socket = null;
-        this.messageHandlers = new Map();
+        this.resultHandlers = new Map();
+        this.stageHandler = () => {
+        };
         this.reconnectInterval = 5000; // 5秒重连间隔
     }
 
@@ -27,11 +32,14 @@ class WebSocketService implements IWebSocketService {
 
             this.socket.onmessage = (event: MessageEvent) => {
                 const data = JSON.parse(event.data);
-                const handler = this.messageHandlers.get(`${data.project}-${data.chapter}`);
-                if (handler) {
-                    handler(data.chapterInfo);
-                } else {
-                    console.warn(`No handler found for ${data.project}-${data.chapter}`);
+                if (data.type === 'result') {
+                    const handler = this.resultHandlers.get(`${data.project}-${data.chapter}`);
+                    if (handler) {
+                        handler(data.chapterInfo);
+                    }
+                }
+                if (data.type === 'stage') {
+                    this.stageHandler(data.taskNum)
                 }
             };
 
@@ -50,22 +58,14 @@ class WebSocketService implements IWebSocketService {
         }
     }
 
-    addMessageHandler(key: string, handler: (data: any) => void) {
+    addResultHandler(key: string, handler: (data: any) => void) {
         if (key) {
-            this.messageHandlers.set(key, handler);
+            this.resultHandlers.set(key, handler);
         }
     }
 
-    removeMessageHandler(key: string) {
-        this.messageHandlers.delete(key);
-    }
-
-    sendMessage(message: any) {
-        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify(message));
-        } else {
-            console.error('WebSocket is not open. ReadyState:', this.socket?.readyState);
-        }
+    addStageHandler(handler: (data: any) => void) {
+        this.stageHandler = handler
     }
 
     disconnect() {
@@ -73,7 +73,7 @@ class WebSocketService implements IWebSocketService {
             this.socket.close();
             this.socket = null;
         }
-        this.messageHandlers.clear();
+        this.resultHandlers.clear();
     }
 }
 

@@ -13,7 +13,6 @@ const langTexts = ref<LangText[]>([])
 const selectGender = ref<string>('')
 const genderOptions = ref<SelectOptionData[]>([])
 const selectLanguage = ref<string>('')
-const localeOptions = ref<string[]>([])
 const voiceNameInput = ref<string>('')
 
 const handleVoices = async () => {
@@ -25,12 +24,6 @@ const handleVoices = async () => {
         label: gender === 'Male' ? '男' : gender === 'Female' ? '女' : gender,
         value: gender
       }));
-  localeOptions.value = [...new Set(data.voices.map((item) => item.locale.substring(0, item.locale.indexOf('-'))))]
-      .sort((a: string, b: string) => {
-        const wa = a.startsWith('zh') ? 0 : 1;
-        const wab = b.startsWith('zh') ? 0 : 1;
-        return wa - wab;
-      });
 }
 
 const computedVoices = computed(() => {

@@ -2,7 +2,7 @@
 import {onMounted, ref} from "vue";
 import ChatParamDetail from "@/views/model/chat/components/ChatParamDetail.vue";
 import {Message} from "@arco-design/web-vue";
-import {ChatModelParam, deleteChatConfig, queryChatConfig} from "@/api/config.ts";
+import {activeChatConfig, ChatModelParam, deleteChatConfig, queryChatConfig} from "@/api/config.ts";
 
 const visible = ref(false);
 const chatServices = ref<ChatModelParam[]>([]);
@@ -31,6 +31,13 @@ const editConfig = (item: ChatModelParam) => {
   visible.value = true
 }
 
+
+const activeConfig = async (item: ChatModelParam) => {
+  const {msg} = await activeChatConfig(item);
+  Message.success(msg);
+  await handleQueryChatConfig();
+}
+
 onMounted(() => {
   handleQueryChatConfig();
 })
@@ -54,6 +61,7 @@ onMounted(() => {
                   {{ item.name }}
                 </a-typography-text>
                 <a-tag
+                    v-if="item.active"
                     size="small"
                     color="green"
                     style="margin-left: 20px"
@@ -88,6 +96,7 @@ onMounted(() => {
           </a-descriptions>
           <div style="margin-top: 20px; text-align: right">
             <a-space size="large">
+              <a-button v-if="!item.active" type="primary" @click="activeConfig(item)">激活</a-button>
               <a-button type="primary" @click="editConfig(item)">修改</a-button>
               <a-popconfirm type="error"
                             content="确认删除？"

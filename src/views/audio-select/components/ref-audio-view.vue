@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {voiceNameFormat} from "@/utils/model-util.ts";
 import {computed, onMounted, PropType, ref, watch} from "vue";
-import {SelectOptionData} from "@arco-design/web-vue/es/select/interface";
 import {ModelSelect, queryRefAudios, RefAudio} from "@/api/ref-audio.ts";
 
 const props = defineProps({
@@ -17,7 +16,7 @@ const emits = defineEmits(['change']);
 
 const groupOptions = ref<string[]>([])
 const selectGroup = ref<string>('')
-const genderOptions = ref<SelectOptionData[]>([])
+const genderOptions = ref<string[]>([])
 const selectGender = ref<string>('')
 const ageGroupOptions = ref<string[]>([])
 const selectAgeGroup = ref<string>('')
@@ -62,6 +61,17 @@ const refAudioSelect = (refAudio: RefAudio) => {
 const handleQueryRefAudio = async () => {
   const {data} = await queryRefAudios();
   refAudios.value = data;
+  groupOptions.value = Array.from(new Set(data.map(item => item.group).filter(item => !!item)))
+  genderOptions.value = Array.from(new Set(data.map(item => item.gender).filter(item => !!item)))
+  ageGroupOptions.value = Array.from(new Set(data.map(item => item.ageGroup).filter(item => !!item)))
+  languageOptions.value = Array.from(new Set(data.map(item => item.language).filter(item => !!item)))
+  const audioTags = data.flatMap(item => item.tags).filter(item => !!item);
+  const moodAudioTags = data
+      .flatMap(item => item.moods
+          .flatMap(mood => mood.moodAudios
+              .flatMap(moodAudio => moodAudio.tags))).filter(item => !!item);
+  const res = [...audioTags, ...moodAudioTags]
+  tagOptions.value = [...new Set(res)]
 }
 
 onMounted(() => {

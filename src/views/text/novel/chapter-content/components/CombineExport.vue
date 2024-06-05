@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import {h, PropType, ref, watch} from "vue";
-import {ChapterInfo, queryChapterInfo} from "@/api/text.ts";
+import {PropType, ref, watch} from "vue";
 import {useRoute} from "vue-router";
-import {TableColumnData} from "@arco-design/web-vue";
-import {IconSearch} from '@arco-design/web-vue/es/icon';
+import {chapterExpose} from "@/api/text.ts";
+import {Message} from "@arco-design/web-vue";
 
 const route = useRoute();
 const props = defineProps({
@@ -19,67 +18,32 @@ const props = defineProps({
 const emits = defineEmits(['update:visible']);
 
 const showModal = ref(false)
-const chapterInfos = ref<ChapterInfo[]>([])
+const combineAudio = ref(true);
+const subtitle = ref(false);
 
-const columns: TableColumnData[] = [
-  {
-    title: 'index',
-    dataIndex: 'index',
-  },
-  {
-    title: '台词',
-    slotName: 'text'
-  },
-  {
-    title: '合并间隔(毫秒)',
-    slotName: 'interval',
-    filterable: {
-      filter: (value, record) => record.name.includes(value),
-      slotName: 'interval-filter',
-      icon: () => h(IconSearch)
-    }
-  },
-];
 const handleBeforeOk = async (done: (closed: boolean) => void) => {
-  // const res = await formRef.value?.validate();
-  // if (!res) {
-  //   done(false);
-  // } else {
-  //   done(false);
-  // }
-  done(true);
-}
-
-const handleQueryChapterInfo = async () => {
-  const {data} = await queryChapterInfo({
-    project: route.query.project as string,
-    chapter: route.query.chapter as string,
+  if (!combineAudio.value && !subtitle.value) {
+    done(true);
+  }
+  const {msg} = await chapterExpose({
+    chapter: {
+      project: route.query.project as string,
+      chapter: route.query.chapter as string,
+    },
     indexes: props.selectedIndexes,
+    combineAudio: combineAudio.value,
+    subtitle: subtitle.value,
   })
-  chapterInfos.value = data;
+  Message.success(msg);
+  done(true);
 }
 
 const close = () => {
   emits('update:visible', false);
 }
 
-const allInterval = ref(0)
-const updateAllInterval = () => {
-  chapterInfos.value = chapterInfos.value.map((item: ChapterInfo) => {
-    return {
-      ...item,
-      interval: allInterval.value
-    }
-  });
-  allInterval.value = 0;
-}
-
 watch(() => props.visible,
     () => {
-      if (props.visible) {
-        console.log(props.selectedIndexes)
-        handleQueryChapterInfo();
-      }
       showModal.value = props.visible
     },
     {immediate: true}
@@ -97,58 +61,59 @@ watch(() => props.visible,
         @close="close"
         @cancel="close"
     >
-      <n-scrollbar style="height: 300px">
-        <div style="padding-right: 10px">
-          <a-table
-              row-key="index"
-              :data="chapterInfos"
-              :columns="columns"
-              :bordered="{cell:true}"
-              :pagination="false"
-              size="small"
-          >
-            <template #text="{ record }">
-              <a-typography-text>
-                {{ record.text }}
-              </a-typography-text>
-            </template>
-            <template #interval="{ record }">
-              <a-input-number
-                  v-model="record.interval"
-                  mode="button"
-                  size="mini"
-                  :step="100"
-                  :min="0"
-                  style="width: 120px"
-              />
-            </template>
-            <template #interval-filter>
-              <div class="custom-filter">
-                <a-space direction="vertical">
-                  <a-input-number
-                      v-model="allInterval"
-                      mode="button"
-                      size="mini"
-                      :step="100"
-                      :min="0"
-                      style="width: 120px"
-                  />
-                  <div class="custom-filter-footer">
-                    <a-button
-                        type="outline" size="mini"
-                              @click="updateAllInterval"
-                    >更新全部
-                    </a-button>
-                  </div>
-                </a-space>
-              </div>
-            </template>
-          </a-table>
-        </div>
-      </n-scrollbar>
-      <div style="margin-top: 10px; display: flex; justify-content: right">
-        <a-checkbox>生成字幕文件</a-checkbox>
-      </div>
+      <!--      <n-scrollbar style="height: 300px">-->
+      <!--        <div style="padding-right: 10px">-->
+      <!--          <a-table-->
+      <!--              row-key="index"-->
+      <!--              :data="chapterInfos"-->
+      <!--              :columns="columns"-->
+      <!--              :bordered="{cell:true}"-->
+      <!--              :pagination="false"-->
+      <!--              size="small"-->
+      <!--          >-->
+      <!--            <template #text="{ record }">-->
+      <!--              <a-typography-text>-->
+      <!--                {{ record.text }}-->
+      <!--              </a-typography-text>-->
+      <!--            </template>-->
+      <!--            <template #interval="{ record }">-->
+      <!--              <a-input-number-->
+      <!--                  v-model="record.interval"-->
+      <!--                  mode="button"-->
+      <!--                  size="mini"-->
+      <!--                  :step="100"-->
+      <!--                  :min="0"-->
+      <!--                  style="width: 120px"-->
+      <!--              />-->
+      <!--            </template>-->
+      <!--            <template #interval-filter>-->
+      <!--              <div class="custom-filter">-->
+      <!--                <a-space direction="vertical">-->
+      <!--                  <a-input-number-->
+      <!--                      v-model="allInterval"-->
+      <!--                      mode="button"-->
+      <!--                      size="mini"-->
+      <!--                      :step="100"-->
+      <!--                      :min="0"-->
+      <!--                      style="width: 120px"-->
+      <!--                  />-->
+      <!--                  <div class="custom-filter-footer">-->
+      <!--                    <a-button-->
+      <!--                        type="outline" size="mini"-->
+      <!--                              @click="updateAllInterval"-->
+      <!--                    >更新全部-->
+      <!--                    </a-button>-->
+      <!--                  </div>-->
+      <!--                </a-space>-->
+      <!--              </div>-->
+      <!--            </template>-->
+      <!--          </a-table>-->
+      <!--        </div>-->
+      <!--      </n-scrollbar>-->
+      <a-space size="large">
+        <a-checkbox v-model="combineAudio">合并音频</a-checkbox>
+        <a-checkbox v-model="subtitle">生成字幕</a-checkbox>
+      </a-space>
     </a-modal>
   </div>
 </template>

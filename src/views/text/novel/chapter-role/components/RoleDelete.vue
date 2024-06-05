@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import {PropType, ref, watch} from "vue";
+import {inject, PropType, ref, watch} from "vue";
 import {queryCommonRoles, queryRoles, Role, roleCombine} from "@/api/text.ts";
 import {FormInstance, Message} from "@arco-design/web-vue";
 import {useRoute} from "vue-router";
+import {EventBus} from "@/vite-env";
+import {ROLE_CHANGE} from "@/services/eventTypes.ts";
 
 const route = useRoute();
 const props = defineProps({
@@ -18,7 +20,9 @@ const props = defineProps({
   }
 })
 
-const emits = defineEmits(['update:visible', 'success']);
+const emits = defineEmits(['update:visible']);
+const eventBus = inject<EventBus>('eventBus');
+
 const showModal = ref<boolean>(false);
 
 const roles = ref<Role[]>([]);
@@ -40,7 +44,7 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
       roleType: props.roleType as string,
     })
     Message.success(msg);
-    emits('success')
+    eventBus?.emit(ROLE_CHANGE);
     done(true);
   }
   done(false)

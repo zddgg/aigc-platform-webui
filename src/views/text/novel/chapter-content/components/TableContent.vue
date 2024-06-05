@@ -1,8 +1,15 @@
 <script setup lang="ts">
-import {computed, inject, PropType, ref, watch} from "vue";
+import {computed, h, inject, onBeforeUnmount, onMounted, PropType, ref, watch} from "vue";
 import {useRoute} from "vue-router";
-import {Message, TableColumnData, TableRowSelection} from "@arco-design/web-vue";
-import {ChapterInfo, createAudio, queryChapterInfo, textModelChange, updateChapterText} from "@/api/text.ts";
+import {Message, Modal, TableColumnData, TableRowSelection} from "@arco-design/web-vue";
+import {
+  ChapterInfo,
+  createAudio,
+  queryChapterInfo,
+  textModelChange,
+  updateChapterText, updateInterval, updateSpeed,
+  updateVolume
+} from "@/api/text.ts";
 import {audioNameFormat, modelNameFormat, voiceNameFormat} from "@/utils/model-util.ts";
 import {ModelSelect} from "@/api/ref-audio.ts";
 import {TextContentConfig} from "@/views/text/novel/chapter-content/useChapterContent.ts";
@@ -10,6 +17,10 @@ import RoleChangeModel from "@/views/text/novel/chapter-content/components/RoleC
 import AudioSelect from '@/views/audio-select/index.vue'
 import useLoading from "@/hooks/loading.ts";
 import {IWebSocketService} from '@/services/websocketService.ts';
+import {IconSettings} from "@arco-design/web-vue/es/icon";
+import CombineExport from "@/views/text/novel/chapter-content/components/CombineExport.vue";
+import {EventBus} from "@/vite-env";
+import {ROLE_CHANGE} from "@/services/eventTypes.ts";
 
 const route = useRoute();
 const props = defineProps({
@@ -24,13 +35,12 @@ const props = defineProps({
     default: []
   }
 });
-
-const emits = defineEmits(['update:selectedIndexes']);
-
+const eventBus = inject<EventBus>('eventBus');
 
 const audioElement = ref<HTMLAudioElement | null>(null); // ref 对象引用到 audio 元素
 const {loading, setLoading} = useLoading();
 const chapterInfos = ref<ChapterInfo[]>([]);
+const combineExportModalVisible = ref(false);
 
 const computedFilterRole = computed(() => {
   return Array.from(new Set(chapterInfos.value.map(item => item.role))).map(item => {
@@ -63,16 +73,21 @@ const columns: TableColumnData[] = [
     }
   },
   {
-    title: '模型',
-    slotName: 'model',
-  },
-  {
     title: '台词',
     slotName: 'text'
   },
   {
+    title: '模型',
+    slotName: 'model',
+  },
+  {
     title: '控制',
     slotName: 'controls',
+    filterable: {
+      filter: (value, record) => record.name.includes(value),
+      slotName: 'controls-filter',
+      icon: () => h(IconSettings)
+    }
   },
   {
     title: '操作',
@@ -89,12 +104,12 @@ const rowSelection = ref<TableRowSelection>({
 const computedChapterInfos = computed(() => {
   let tmp = chapterInfos.value;
   if (roleFilter.value && roleFilter.value.length > 0) {
-    tmp =  tmp.filter(item => {
+    tmp = tmp.filter(item => {
       return roleFilter.value.includes(item.role)
     });
   }
   if (props.selectedIndexes && props.selectedIndexes.length > 0) {
-    tmp =  tmp.filter(item => {
+    tmp = tmp.filter(item => {
       return props.selectedIndexes.includes(item.index)
     });
   }
@@ -105,26 +120,22 @@ const modelSelectVisible = ref<boolean>(false);
 const roleChangeModelVisible = ref<boolean>(false)
 const currentChapterInfo = ref<ChapterInfo>({} as ChapterInfo);
 
-const onChangeRole = (chapterInfo: ChapterInfo) => {
-  currentChapterInfo.value = chapterInfo;
-  roleChangeModelVisible.value = true;
-}
-
-const onChangeModel = (chapterInfo: ChapterInfo) => {
-  currentChapterInfo.value = chapterInfo;
-  modelSelectVisible.value = true;
-}
-
+const selectedIndexes = ref<string[]>([]);
 const handleQueryChapterInfo = async () => {
   const {data} = await queryChapterInfo({
     project: route.query.project as string,
     chapter: route.query.chapter as string,
   })
   chapterInfos.value = data;
+  selectedIndexes.value = data.filter(item => item.export).map(item => item.index)
 }
 
 const refresh = () => {
   handleQueryChapterInfo();
+}
+
+const onRoleChange = () => {
+  eventBus?.emit(ROLE_CHANGE);
 }
 
 const modelSelect = async (modelSelect: ModelSelect) => {
@@ -150,7 +161,7 @@ const modelSelect = async (modelSelect: ModelSelect) => {
     },
   });
   Message.success(msg);
-  refresh();
+  await handleQueryChapterInfo();
 }
 
 const backupText = ref<string>('');
@@ -267,39 +278,73 @@ const handleAudioEnded = () => {
   }
 };
 
-const onVolumeChange = (number: number, chapterInfo: ChapterInfo) => {
+const onVolumeChangeEnd = async (chapterInfo: ChapterInfo) => {
   if (audioElement.value && activeAudioKey.value === `${chapterInfo.p}-${chapterInfo.s}`) {
-    audioElement.value.volume = number / 100;
+    audioElement.value.volume = chapterInfo.volume / 100;
+  }
+  await updateVolume({
+    chapter: {
+      project: route.query.project as string,
+      chapter: route.query.chapter as string,
+    },
+    chapterInfo: chapterInfo,
+  })
+}
+
+const onSpeedChange = async (chapterInfo: ChapterInfo) => {
+  if (audioElement.value && activeAudioKey.value === `${chapterInfo.p}-${chapterInfo.s}`) {
+    audioElement.value.playbackRate = chapterInfo.speed;
+  }
+  await updateSpeed({
+    chapter: {
+      project: route.query.project as string,
+      chapter: route.query.chapter as string,
+    },
+    chapterInfo: chapterInfo,
+  })
+}
+
+const onIntervalChange = async (chapterInfo: ChapterInfo) => {
+  await updateInterval({
+    chapter: {
+      project: route.query.project as string,
+      chapter: route.query.chapter as string,
+    },
+    chapterInfo: chapterInfo,
+  })
+}
+
+const onCombineExport = () => {
+  if (!selectedIndexes.value.length) {
+    Modal.warning({
+      title: '没有选择导出内容',
+      content: '请选择导出内容'
+    })
+  } else {
+    combineExportModalVisible.value = true;
   }
 }
 
-const onSpeedChange = (number: number, chapterInfo: ChapterInfo) => {
-  if (audioElement.value && activeAudioKey.value === `${chapterInfo.p}-${chapterInfo.s}`) {
-    audioElement.value.playbackRate = number;
-  }
+const roleChangeEvent = () => {
+  handleQueryChapterInfo();
 }
 
-const onVolumeChangeEnd = (chapterInfo: ChapterInfo) => {
-  console.log(chapterInfo)
-}
+onMounted(() => {
+  eventBus?.on(ROLE_CHANGE, roleChangeEvent);
+});
 
-const onSpeedChangeEnd = (chapterInfo: ChapterInfo) => {
-  console.log(chapterInfo)
-}
+onBeforeUnmount(() => {
+  eventBus?.off(ROLE_CHANGE, roleChangeEvent);
+});
 
-const selectedIndexes = ref([]);
-const onSelectionChange = (rowKeys: (string | number)[]) => {
-  emits('update:selectedIndexes', rowKeys)
-}
-
-defineExpose({playAllAudio, refresh})
+defineExpose({playAllAudio, refresh, onCombineExport})
 
 watch(
     () => route.query.chapter,
     () => {
       handleQueryChapterInfo();
       if (route.query.chapter as string) {
-        WebSocketService.addMessageHandler(
+        WebSocketService.addResultHandler(
             `${route.query.project as string}-${route.query.chapter as string}`, handleChapterInfoUpdate
         );
       }
@@ -383,7 +428,6 @@ watch(
         :pagination="false"
         :row-selection="rowSelection"
         v-model:selected-keys="selectedIndexes"
-        @selectionChange="onSelectionChange"
     >
       <template #index="{ record }">
         {{ `${record.p}-${record.s}` }}
@@ -398,7 +442,13 @@ watch(
                 {{ record.role }}
               </a-button>
               <template #content>
-                <a-doption @click="onChangeRole(record)">改角色</a-doption>
+                <a-doption @click="() => {
+                    currentChapterInfo = record;
+                    roleChangeModelVisible = true;
+                }"
+                >
+                  改角色
+                </a-doption>
               </template>
             </a-dropdown>
           </div>
@@ -442,13 +492,20 @@ watch(
             </a-button>
           </div>
           <template #content>
-            <a-doption @click="onChangeModel(record)">改模型</a-doption>
+            <a-doption @click="() => {
+                currentChapterInfo = record;
+                modelSelectVisible = true;
+            }"
+            >
+              改模型
+            </a-doption>
           </template>
         </a-dropdown>
       </template>
       <template #text="{ record }">
         <a-typography-text
             v-model:edit-text="record.text"
+            :class="{'lines-color': textContentConfig.showLines && record.linesFlag}"
             :editable="props.textContentConfig.textEdit"
             @edit-start="editStart(record)"
             @edit-end="editEnd(record)"
@@ -457,41 +514,96 @@ watch(
         </a-typography-text>
       </template>
       <template #controls="{ record }">
-        <a-space direction="vertical" style="width: 80px;">
-          <div>
+        <a-space direction="vertical" style="width: 120px;">
+          <div style="display: flex; justify-content: center; align-items: center">
+            <span style="white-space: nowrap; font-size: 12px; margin-right: 10px">音量</span>
             <n-slider
                 v-model:value="record.volume"
                 :step="1"
-                :max="100"
-                :min="1"
+                :max="200"
+                :min="0"
                 :format-tooltip="(value: number) => `${value}%`"
-                @update:value="(value: number) => {onVolumeChange(value, record)}"
                 @dragend="onVolumeChangeEnd(record)"
             >
-              <template #thumb>
-                <icon-sound-fill/>
-              </template>
             </n-slider>
           </div>
-          <div>
+          <div style="display: flex; justify-content: center; align-items: center">
+            <span style="white-space: nowrap; font-size: 12px; margin-right: 10px">语速</span>
             <n-slider
                 v-model:value="record.speed"
                 :step="0.1"
                 :max="2"
                 :min="0.1"
-                @update:value="(value: number) => {onSpeedChange(value, record)}"
-                @dragend="onSpeedChangeEnd(record)"
+                :format-tooltip="(value: number) => `${value}x`"
+                @dragend="onSpeedChange(record)"
             >
-              <template #thumb>
-                <icon-forward/>
-              </template>
+            </n-slider>
+          </div>
+          <div style="display: flex; justify-content: center; align-items: center">
+            <span style="white-space: nowrap; font-size: 12px; margin-right: 10px">间隔</span>
+            <n-slider
+                v-model:value="record.interval"
+                :step="100"
+                :max="3000"
+                :min="0"
+                :format-tooltip="(value: number) => `${value}ms`"
+                @dragend="onIntervalChange(record)"
+            >
             </n-slider>
           </div>
         </a-space>
       </template>
+      <template #controls-filter>
+        <a-card>
+          <a-space direction="vertical" style="width: 200px;">
+            <div style="display: flex; justify-content: center; align-items: center">
+              <a-checkbox>
+                <span style="white-space: nowrap; margin-right: 10px">音量</span>
+              </a-checkbox>
+              <n-slider
+                  :default-value="100"
+                  :step="1"
+                  :max="200"
+                  :min="0"
+                  :format-tooltip="(value: number) => `${value}%`"
+              />
+            </div>
+            <div style="display: flex; justify-content: center; align-items: center">
+              <a-checkbox>
+                <span style="white-space: nowrap; margin-right: 10px">语速</span>
+              </a-checkbox>
+              <n-slider
+                  :default-value="1"
+                  :step="0.1"
+                  :max="2"
+                  :min="0.1"
+                  :format-tooltip="(value: number) => `${value}x`"
+              />
+            </div>
+            <div style="display: flex; justify-content: center; align-items: center">
+              <a-checkbox>
+                <span style="white-space: nowrap; margin-right: 10px">间隔</span>
+              </a-checkbox>
+              <n-slider
+                  :default-value="500"
+                  :step="100"
+                  :max="3000"
+                  :min="0"
+                  :format-tooltip="(value: number) => `${value}ms`"
+              />
+            </div>
+            <div style="display: flex; justify-content: right">
+              <a-button
+                  type="outline" size="mini"
+              >
+                批量更新
+              </a-button>
+            </div>
+          </a-space>
+        </a-card>
+      </template>
       <template #operations="{ record }">
         <a-space direction="vertical" size="small">
-
           <a-button
               v-if="activeAudioKey === `${record.p}-${record.s}`"
               type="outline"
@@ -505,6 +617,7 @@ watch(
               v-else
               type="outline"
               size="mini"
+              :disabled="!record.modelType"
               @click="playAudio(record)"
           >
             <icon-play-arrow/>
@@ -517,7 +630,7 @@ watch(
             <a-button
                 type="outline"
                 size="mini"
-                :disabled="loading && createAudioKey === `${record.p}-${record.s}`"
+                :disabled="!record.modelType || (loading && createAudioKey === `${record.p}-${record.s}`)"
             >
               <icon-refresh :spin="loading && createAudioKey === `${record.p}-${record.s}`"/>
             </a-button>
@@ -533,21 +646,19 @@ watch(
     <role-change-model
         v-model:visible="roleChangeModelVisible"
         :chapter-info="currentChapterInfo"
-        @success="refresh"
+        @change="onRoleChange"
+    />
+    <combine-export
+        v-model:visible="combineExportModalVisible"
+        v-model:selected-indexes="selectedIndexes"
     />
     <audio ref="audioElement" @ended="handleAudioEnded"></audio>
   </div>
 </template>
 
 <style scoped>
-.container {
-  ::v-deep(.n-slider .n-slider-rail .n-slider-rail__fill) {
-    background-color: #165dff;
-    --n-rail-height: 2px;
-  }
-
-  ::v-deep(.n-slider .n-slider-rail) {
-    --n-rail-height: 2px;
-  }
+.lines-color {
+  background-color: #3367D1;
+  color: #ffffff;
 }
 </style>

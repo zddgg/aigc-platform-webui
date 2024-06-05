@@ -6,10 +6,14 @@ export interface ChatModelParam {
     name: string;
     interfaceType: string;
     host: string;
+    path: string;
     apiKey: string;
+    apiSecret: string;
+    appId: string;
     model: string;
     temperature: number;
     maxTokens: number;
+    active: boolean;
 }
 
 export interface ChatConfig {
@@ -29,9 +33,15 @@ export function deleteChatConfig(params: ChatModelParam) {
     return axios.post('/api/config/chat/deleteChatConfig', params);
 }
 
+
+export function activeChatConfig(params: ChatModelParam) {
+    return axios.post('/api/config/chat/activeChatConfig', params);
+}
+
 export interface AudioServerConfig {
     name: string;
     serverUrl: string;
+    apiVersion: string;
 }
 
 export function queryAudioServerConfig() {

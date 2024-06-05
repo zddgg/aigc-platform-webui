@@ -16,7 +16,7 @@ const props = defineProps({
   }
 })
 
-const emits = defineEmits(['update:visible', 'success']);
+const emits = defineEmits(['update:visible', 'change']);
 
 const formRef = ref<FormInstance>()
 const form = ref({
@@ -90,6 +90,7 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
 
       Message.success(msg);
       done(true);
+      emits('change')
     }
   } else {
     done(false);

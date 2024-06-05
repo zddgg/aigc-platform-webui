@@ -264,7 +264,7 @@ watch(
       scrollToTop('text-content')
       stopAudio();
       if (route.query.chapter as string) {
-        WebSocketService.addMessageHandler(
+        WebSocketService.addResultHandler(
             `${route.query.project as string}-${route.query.chapter as string}`, handleChapterInfoUpdate
         );
       }
@@ -352,14 +352,14 @@ watch(
                   @select="contextMenuSelect"
               >
                 <a-typography-text
+                    v-model:edit-text="item1.text"
                     :id="`text-${index}-${index1}`"
                     :type="item1.modelType ? 'normal' : 'danger'"
                     :class="{'lines-color': textContentConfig.showLines && item1.linesFlag}"
-                    v-model:edit-text="item1.text"
+                    :mark="activeAudioKey === `${item1.p}-${item1.s}`"
                     :editable="props.textContentConfig.textEdit"
                     @edit-start="editStart(item1)"
                     @edit-end="editEnd(item1)"
-                    :mark="activeAudioKey === `${item1.p}-${item1.s}`"
                     @click.right="textSelect"
                 >
                   {{ item1.text }}

@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import {useRoute} from "vue-router";
-import {ref, watch} from "vue";
+import {inject, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import {queryRoles, Role, roleModelChange} from "@/api/text.ts";
 import {ModelSelect} from "@/api/ref-audio.ts";
 import {Message} from "@arco-design/web-vue";
 import AudioSelect from '@/views/audio-select/index.vue'
 import RoleRename from "@/views/text/novel/chapter-role/components/RoleRename.vue";
 import RoleDelete from "@/views/text/novel/chapter-role/components/RoleDelete.vue";
+import {EventBus} from "@/vite-env";
+import {ROLE_CHANGE} from "@/services/eventTypes.ts";
 
 const route = useRoute();
 
@@ -41,11 +43,6 @@ const roleSelectModel = (role: Role) => {
   modelSelectVisible.value = true
 }
 
-const refresh = () => {
-  handleQueryRoles();
-  emits('roleModelChange');
-}
-
 const modelSelect = async (modelSelect: ModelSelect) => {
 
   roles.value = roles.value.map(item => {
@@ -69,7 +66,7 @@ const modelSelect = async (modelSelect: ModelSelect) => {
     }
   })
   Message.success(msg);
-  refresh();
+  eventBus?.emit(ROLE_CHANGE);
 }
 
 const onRoleRename = (role: Role) => {
@@ -82,6 +79,25 @@ const onDeleteRole = (role: Role) => {
   roleDeleteModalVisible.value = true;
 }
 
+const refreshInner = () => {
+  handleQueryRoles();
+}
+
+defineExpose({refreshInner})
+
+const eventBus = inject<EventBus>('eventBus');
+
+const roleChangeEvent = () => {
+  handleQueryRoles();
+}
+
+onMounted(() => {
+  eventBus?.on(ROLE_CHANGE, roleChangeEvent);
+});
+
+onBeforeUnmount(() => {
+  eventBus?.off(ROLE_CHANGE, roleChangeEvent);
+});
 
 watch(
     () => route.query.chapter,
@@ -176,13 +192,11 @@ watch(
         v-model:visible="roleRenameModalVisible"
         :role="currentRole"
         :role-type="'role'"
-        @success="refresh"
     />
     <role-delete
         v-model:visible="roleDeleteModalVisible"
         :role="currentRole"
         :role-type="'role'"
-        @success="refresh"
     />
   </div>
 </template>

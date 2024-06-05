@@ -5,6 +5,7 @@ import {RefAudio, queryRefAudios} from "@/api/ref-audio.ts";
 
 const audioElement = ref<HTMLAudioElement | null>(null); // ref 对象引用到 audio 元素
 
+const activateKey = ref<string>('');
 const audioDetailVisible = ref(false);
 const audios = ref<RefAudio[]>([])
 const currentAudio = ref<RefAudio>({} as RefAudio)
@@ -45,6 +46,9 @@ const handleAudioEnded = () => {
 
 const computedAudios = computed(() => {
   let tmp = audios.value;
+  if (activateKey.value !== '全部') {
+    tmp = tmp.filter(item => item.group === activateKey.value)
+  }
   if (selectGender.value) {
     tmp = tmp.filter(item => item.gender === selectGender.value)
   }
@@ -82,7 +86,7 @@ const editAudio = (audio: RefAudio) => {
 const handleQueryAudios = async () => {
   const {data} = await queryRefAudios();
   audios.value = data;
-  groupOptions.value = [...new Set(data.filter((item) => !!item.group).map((item) => item.group))]
+  groupOptions.value = ['全部', ...new Set(data.filter((item) => !!item.group).map((item) => item.group))]
   genderOptions.value = [...new Set(data.filter((item) => !!item.gender).map((item) => item.gender))]
   ageGroupOptions.value = [...new Set(data.filter((item) => !!item.ageGroup).map((item) => item.ageGroup))]
   languageOptions.value = [...new Set(data.filter((item) => !!item.language).map((item) => item.language))]
@@ -93,6 +97,7 @@ const handleQueryAudios = async () => {
               .flatMap(moodAudio => moodAudio.tags))).filter(item => !!item);
   const res = [...audioTags, ...moodAudioTags]
   tagOptions.value = [...new Set(res)]
+  activateKey.value = groupOptions.value[0];
 }
 
 const reset = () => {
@@ -147,16 +152,14 @@ onMounted(() => {
       </a-space>
     </a-card>
     <div style="margin-top: 20px">
-      <a-tabs type="rounded" :default-active-key="groupOptions[0]" size="large">
+      <a-tabs v-model:active-key="activateKey" type="rounded" size="large">
         <a-tab-pane v-for="(item) in groupOptions" :key="item" :title="item">
           <a-space size="medium" wrap align="start">
             <a-card
-                v-for="(item1, index1) in computedAudios
-                .filter(value => value.group === item)
-                .flatMap(value => value.list)"
+                v-for="(item1, index1) in computedAudios.flatMap(value => value.list)"
                 :key="index1"
                 hoverable
-                style="width: 330px;"
+                style="width: 350px;"
             >
               <div style="display: flex">
                 <div>
@@ -167,6 +170,9 @@ onMounted(() => {
                 </div>
                 <div style="margin-left: 20px">
                   <a-descriptions :title="item1.name" :column="2">
+                    <a-descriptions-item label="群组">
+                      {{ item1.group }}
+                    </a-descriptions-item>
                     <a-descriptions-item label="性别">
                       {{ item1.gender ?? '未知' }}
                     </a-descriptions-item>
@@ -282,5 +288,9 @@ onMounted(() => {
 <style scoped>
 :deep(.arco-tabs-tab-active) {
   background-color: #ffffff;
+}
+
+:deep(.arco-typography, p.arco-typography) {
+  margin: 0;
 }
 </style>
