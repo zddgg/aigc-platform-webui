@@ -29,7 +29,6 @@ const textContentConfig = ref<TextContentConfig>({
 const textContentRef = ref<
     {
       playAllAudio: Function,
-      refresh: Function,
       onCombineExport: Function,
     } | null
 >(null);
@@ -37,7 +36,6 @@ const textContentRef = ref<
 const tableContentRef = ref<
     {
       playAllAudio: Function,
-      refresh: Function,
       onCombineExport: Function,
     } | null
 >(null);
@@ -123,12 +121,12 @@ const onAiInference = () => {
 }
 
 const handleStartCreateAudio = async (actionType: 'all' | 'modified') => {
-  const {msg} = await startCreateAudio({
+  const {data} = await startCreateAudio({
     project: route.query.project as string,
     chapter: route.query.chapter as string,
     actionType: actionType,
   });
-  Message.success(msg);
+  Message.success(`提交任务数：${data}`);
 }
 
 const onStartCreateAudio = (actionType: 'all' | 'modified') => {
@@ -178,9 +176,11 @@ function connectWebSocket() {
 provide('WebSocketService', WebSocketService);
 
 const taskNum = ref(0);
-const stageHandler = (data: number) => {
-  taskNum.value = data;
-  if (data === 0) {
+const creatingIds = ref<string[]>([])
+const stageHandler = (data: any) => {
+  taskNum.value = data.taskNum;
+  creatingIds.value = data.creatingIds;
+  if (data.taskNum === 0) {
     stopLoading.value = false;
   }
 }
@@ -349,6 +349,7 @@ watch(
               ref="tableContentRef"
               v-model:text-content-config="textContentConfig"
               v-model:selected-indexes="selectedIndexes"
+              v-model:creating-ids="creatingIds"
           />
         </div>
         <div v-else>

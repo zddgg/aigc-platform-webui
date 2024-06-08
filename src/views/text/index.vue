@@ -2,7 +2,7 @@
 import {onMounted, ref} from "vue";
 import {useRouter} from "vue-router";
 import ProjectCreate from './components/ProjectCreate.vue'
-import {deleteProject, projectList} from "@/api/text.ts";
+import {deleteProject, projectList, ProjectParam} from "@/api/text.ts";
 import {Message, Modal} from "@arco-design/web-vue";
 import useLoading from "@/hooks/loading.ts";
 
@@ -11,14 +11,14 @@ const {loading, setLoading} = useLoading();
 
 const projectCreateVisible = ref(false);
 
-const projects = ref<string[]>([])
+const projects = ref<ProjectParam[]>([])
 
 const handleProjectList = async () => {
   const {data} = await projectList()
   projects.value = data;
 }
 
-const handleDeleteProject = (item: string) => {
+const handleDeleteProject = (project: string) => {
   Modal.error({
     title: '删除项目',
     content:
@@ -26,7 +26,7 @@ const handleDeleteProject = (item: string) => {
     async onOk() {
       try {
         setLoading(true);
-        const {msg} = await deleteProject({project: item});
+        const {msg} = await deleteProject({project: project});
         Message.success(msg);
         await handleProjectList();
       } finally {
@@ -76,20 +76,24 @@ onMounted(() => {
                 </div>
               </div>
             </a-card>
-            <a-card v-for="(item, index) in projects" :key="index" style="width: 350px">
-              <a-descriptions :title="item" :column="1" bordered>
+            <a-card
+                v-for="(item, index) in projects"
+                :key="index"
+                style="width: 350px"
+            >
+              <a-descriptions :title="item.project" :column="1" bordered>
                 <a-descriptions-item label="类型">
-                  章节小说
+                  {{ '章节小说' }}
                 </a-descriptions-item>
                 <a-descriptions-item label="章节">
-                  1304
+                  {{ item.chapterNum }}
                 </a-descriptions-item>
               </a-descriptions>
               <div style="display: flex; justify-content: right; margin-top: 10px">
                 <a-space>
                   <a-button
                       type="outline"
-                      @click="textProjectRoute(item)"
+                      @click="textProjectRoute(item.project)"
                   >
                     进入空间
                   </a-button>
@@ -97,7 +101,7 @@ onMounted(() => {
                       type="outline"
                       status="danger"
                       :loading="loading"
-                      @click="handleDeleteProject(item)"
+                      @click="handleDeleteProject(item.project)"
                   >
                     删除
                   </a-button>

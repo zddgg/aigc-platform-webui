@@ -78,13 +78,14 @@ watch(
 
 <template>
   <div>
-    <a-modal v-model:visible="showModal"
-             :title="form.name"
-             :width="700"
-             :unmount-on-close="true"
-             @before-ok="handleBeforeOk"
-             @close="close"
-             @cancel="close"
+    <a-modal
+        v-model:visible="showModal"
+        :title="form.name"
+        :width="700"
+        :unmount-on-close="true"
+        @before-ok="handleBeforeOk"
+        @close="close"
+        @cancel="close"
     >
       <a-form
           ref="formRef"

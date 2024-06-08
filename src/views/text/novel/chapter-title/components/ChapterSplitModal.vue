@@ -72,8 +72,8 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
         linesPattern: form.value.linesPattern,
       });
       Message.success(msg);
-      emits('refresh')
       done(true);
+      emits('refresh')
     }
   } else {
     done(false);
@@ -146,6 +146,7 @@ watch(
                 :data="chapterTitles"
                 :columns="[{ title: '章节名', dataIndex: 'text' }]"
                 :pagination="false"
+                :loading="loading"
                 style="width: 100%"
             />
           </n-scrollbar>

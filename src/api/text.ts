@@ -1,9 +1,10 @@
-import axios from 'axios';
+import axios from '@/axios/default-axios.ts';
 import {FetchStream, IFetchStreamOptions} from "@/api/stream.ts";
-import {ModelSelect} from "@/api/ref-audio.ts";
+import {ModelConfig} from "@/api/model.ts";
 
 export interface ProjectParam {
     project: string;
+    chapterNum?: string;
 }
 
 export function createProject(params: FormData) {
@@ -15,7 +16,7 @@ export function deleteProject(params: ProjectParam) {
 }
 
 export function projectList() {
-    return axios.post<string[]>('/api/text/project/list');
+    return axios.post<ProjectParam[]>('/api/text/project/list');
 }
 
 export interface ChapterParam extends ProjectParam {
@@ -59,7 +60,7 @@ export function linesParse(params: ChapterSplit) {
     return axios.post('/api/text/chapter/linesParse', params);
 }
 
-export interface Role extends ModelSelect {
+export interface Role extends ModelConfig {
     role: string;
     gender: string;
     ageGroup: string;
@@ -187,7 +188,7 @@ export function updateChapterText(params: {
 }
 
 export function startCreateAudio(params: { actionType: string } & ChapterParam) {
-    return axios.post('/api/text/chapter/startCreateAudio', params);
+    return axios.post<number>('/api/text/chapter/startCreateAudio', params);
 }
 
 export function createAudio(params: {
@@ -220,6 +221,17 @@ export function updateInterval(params: {
     chapterInfo: ChapterInfo,
 }) {
     return axios.post<ChapterInfo>('/api/text/chapter/updateInterval', params);
+}
+
+export function updateControls(params: {
+    enableVolume: boolean,
+    volume: number,
+    enableSpeed: boolean,
+    speed: number,
+    enableInterval: boolean,
+    interval: number,
+} & ChapterParam) {
+    return axios.post<ChapterInfo>('/api/text/chapter/updateControls', params);
 }
 
 export function chapterExpose(params: {

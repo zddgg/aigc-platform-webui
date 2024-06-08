@@ -2,11 +2,11 @@
 import {useRoute} from "vue-router";
 import {ref, watch} from "vue";
 import {queryRoles, Role, roleModelChange} from "@/api/text.ts";
-import {ModelSelect} from "@/api/ref-audio.ts";
 import {Message} from "@arco-design/web-vue";
 import AudioSelect from '@/views/audio-select/index.vue'
 import RoleRename from "@/views/text/novel/chapter-role/components/RoleRename.vue";
 import RoleDelete from "@/views/text/novel/chapter-role/components/RoleDelete.vue";
+import {ModelConfig} from "@/api/model.ts";
 
 const route = useRoute();
 
@@ -46,13 +46,13 @@ const refresh = () => {
   emits('roleModelChange');
 }
 
-const modelSelect = async (modelSelect: ModelSelect) => {
+const modelSelect = async (modelConfig: ModelConfig) => {
 
   roles.value = roles.value.map(item => {
     if (item.role === currentRole.value.role) {
       return {
         ...item,
-        ...modelSelect,
+        ...modelConfig,
       }
     }
     return item;
@@ -65,7 +65,7 @@ const modelSelect = async (modelSelect: ModelSelect) => {
     },
     role: {
       ...currentRole.value,
-      ...modelSelect,
+      ...modelConfig,
     }
   })
   Message.success(msg);
@@ -169,8 +169,8 @@ watch(
     </div>
     <audio-select
         v-model:visible="modelSelectVisible"
-        :model-select="currentRole"
-        @change="modelSelect"
+        :model-config="currentRole"
+        @model-select="modelSelect"
     />
     <role-rename
         v-model:visible="roleRenameModalVisible"

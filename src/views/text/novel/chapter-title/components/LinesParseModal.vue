@@ -70,8 +70,8 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
       textContent: textContent.value,
     });
     Message.success(msg);
-    emits('refresh')
     done(true);
+    emits('refresh')
   } else {
     done(false);
   }
@@ -88,7 +88,7 @@ watch(
       if (props.visible) {
         handleQueryChapterText()
         lines.value = []
-        formRef.value.resetFields();
+        formRef.value?.resetFields();
       }
     },
     {immediate: true}
@@ -115,7 +115,7 @@ watch(
                 :label-col-props="{ span: 6 }"
                 :wrapper-col-props="{ span: 18 }"
             >
-              <a-form-item label="台词解析规则" field="linesPattern" required>
+              <a-form-item label="台词解析规则" field="linesPattern">
                 <a-select
                     v-model="form.linesPattern"
                     allow-create

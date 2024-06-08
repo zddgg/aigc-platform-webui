@@ -3,7 +3,9 @@ import type { AxiosResponse } from 'axios';
 import { Message } from '@arco-design/web-vue';
 import { HttpResponse } from '@/types/global.ts';
 
-axios.interceptors.request.use(
+const defaultAxios = axios.create();
+
+defaultAxios.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
     // let each request carry token
     // this example using the JWT token
@@ -21,7 +23,7 @@ axios.interceptors.request.use(
   }
 );
 // add response interceptors
-axios.interceptors.response.use(
+defaultAxios.interceptors.response.use(
     (response: AxiosResponse<HttpResponse | any>) => {
     const res = response.data;
     // if the custom code is not 20000, it is judged as an error.
@@ -42,3 +44,5 @@ axios.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export default defaultAxios;

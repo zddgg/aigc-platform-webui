@@ -9,10 +9,10 @@ import {
   queryRoles,
   Role,
 } from "@/api/text.ts";
-import {ModelSelect} from "@/api/ref-audio.ts";
 import {FormInstance, Message, Modal} from "@arco-design/web-vue";
 import AudioSelect from '@/views/audio-select/index.vue'
 import RoleRename from "@/views/text/novel/chapter-role/components/RoleRename.vue";
+import {ModelConfig} from "@/api/model.ts";
 
 const route = useRoute();
 
@@ -63,17 +63,17 @@ const refresh = () => {
   emits('roleModelChange');
 }
 
-const handleRoleModelChange = async (modelSelect: ModelSelect) => {
+const handleRoleModelChange = async (modelConfig: ModelConfig) => {
   currentRole.value = {
     ...currentRole.value,
-    ...modelSelect,
+    ...modelConfig,
   }
 
   roles.value = roles.value.map(item => {
     if (item.role === currentRole.value.role) {
       return {
         ...item,
-        ...modelSelect,
+        ...modelConfig,
       }
     }
     return item;
@@ -85,7 +85,7 @@ const handleRoleModelChange = async (modelSelect: ModelSelect) => {
     },
     role: {
       ...currentRole.value,
-      ...modelSelect,
+      ...modelConfig,
     }
   })
 
@@ -95,32 +95,32 @@ const handleRoleModelChange = async (modelSelect: ModelSelect) => {
 
 const addCommonRoleFormRef = ref<FormInstance>()
 const addCommonRoleVisible = ref<boolean>(false)
-const handleAddCommonRole = (modelSelect: ModelSelect) => {
+const handleAddCommonRole = (modelConfig: ModelConfig) => {
   currentRole.value = {
-    ...modelSelect
+    ...modelConfig
   } as Role;
   addCommonRoleVisible.value = true;
 }
 
-const modelSelect = (modelSelect: ModelSelect) => {
+const modelSelect = (modelConfig: ModelConfig) => {
   if (selectModelType.value === 'roleModelChange') {
-    handleRoleModelChange(modelSelect);
+    handleRoleModelChange(modelConfig);
   }
   if (selectModelType.value === 'addCommonRole') {
-    handleAddCommonRole(modelSelect);
+    handleAddCommonRole(modelConfig);
   }
 }
 
 const computedAddFormModel = computed(() => {
-  return currentRole.value.model.join('/')
+  return currentRole.value.model?.join('/')
 })
 
 const computedAddFormAudio = computed(() => {
-  return currentRole.value.audio.filter((_, index) => index < 3).join('/')
+  return currentRole.value.audio?.filter((_, index) => index < 3).join('/')
 })
 
 const computedAddFormRefAudio = computed(() => {
-  return currentRole.value.audio.filter((_, index) => index === 3).join('/')
+  return currentRole.value.audio?.filter((_, index) => index === 3).join('/')
 })
 
 const handleAddCommonRoleBeforeOk = async (done: (closed: boolean) => void) => {
@@ -225,19 +225,86 @@ watch(
                   </span>
           </template>
           <div>
-            <a-descriptions :column="1">
-              <a-descriptions-item v-if="item.modelType" label="类型">
-                {{ item.modelType }}
-              </a-descriptions-item>
-              <a-descriptions-item v-if="item.model && item.model.length" label="模型">
-                {{ item.model.join('/') }}
-              </a-descriptions-item>
-              <a-descriptions-item v-if="item.modelType !== 'edge-tts' && item.audio && item.audio.length" label="音频">
-                <a-typography-text ellipsis>
-                  {{ item.audio.join('/') }}
-                </a-typography-text>
-              </a-descriptions-item>
-            </a-descriptions>
+            <div v-if="['gpt-sovits', 'fish-speech'].includes(item.modelType)">
+              <a-descriptions
+                  :column="1"
+                  size="medium"
+              >
+                <a-descriptions-item label="类型">
+                  {{ item.modelType }}
+                </a-descriptions-item>
+                <a-descriptions-item
+                    v-if="item.model && item.model.length"
+                    label="模型"
+                >
+                  {{ item.model.join('/') }}
+                </a-descriptions-item>
+                <a-descriptions-item
+                    v-if="item.audio && item.audio.length"
+                    label="音频"
+                >
+                  <a-typography-text ellipsis>
+                    {{ item.audio.join('/') }}
+                  </a-typography-text>
+                </a-descriptions-item>
+              </a-descriptions>
+            </div>
+            <div v-if="['edge-tts'].includes(item.modelType)">
+              <a-descriptions
+                  :column="1"
+                  size="medium"
+              >
+                <a-descriptions-item label="类型">
+                  {{ item.modelType }}
+                </a-descriptions-item>
+                <a-descriptions-item
+                    v-if="item.model && item.model.length"
+                    label="声音"
+                >
+                  {{ item.model.join('/') }}
+                </a-descriptions-item>
+              </a-descriptions>
+            </div>
+            <div
+                v-if="['chat-tts'].includes(item.modelType)"
+                style="margin-bottom: 5px"
+            >
+              <a-descriptions
+                  :column="2"
+                  size="small"
+                  layout="inline-vertical"
+              >
+                <a-descriptions-item label="类型">
+                  {{ item.modelType }}
+                </a-descriptions-item>
+                <a-descriptions-item label="模型">
+                  {{ item.chatTtsConfig?.configName }}
+                </a-descriptions-item>
+                <a-descriptions-item label="audio_seed">
+                  {{ item.chatTtsConfig?.audio_seed_input }}
+                </a-descriptions-item>
+                <a-descriptions-item label="text_seed">
+                  {{ item.chatTtsConfig?.text_seed_input }}
+                </a-descriptions-item>
+                <a-descriptions-item label="top_P">
+                  {{ item.chatTtsConfig?.top_P }}
+                </a-descriptions-item>
+                <a-descriptions-item label="top_K">
+                  {{ item.chatTtsConfig?.top_K }}
+                </a-descriptions-item>
+                <a-descriptions-item label="temperature">
+                  {{ item.chatTtsConfig?.temperature }}
+                </a-descriptions-item>
+                <a-descriptions-item label="refine_flag">
+                  {{ item.chatTtsConfig?.refine_text_flag }}
+                </a-descriptions-item>
+                <a-descriptions-item label="refine_params">
+                  <a-typography-text ellipsis>
+                    {{ item.chatTtsConfig?.params_refine_text }}
+                  </a-typography-text>
+                </a-descriptions-item>
+              </a-descriptions>
+            </div>
             <div style="text-align: left">
               <a-space wrap>
                 <a-dropdown-button
@@ -278,13 +345,14 @@ watch(
 
     <audio-select
         v-model:visible="modelSelectVisible"
-        :model-select="currentRole"
-        @change="modelSelect"
+        :model-config="currentRole"
+        @model-select="modelSelect"
     />
 
     <a-modal
         v-model:visible="addCommonRoleVisible"
         title="添加预置角色"
+        :width="600"
         @before-ok="handleAddCommonRoleBeforeOk"
         @close="handleAddCommonRoleClose"
         @cancel="handleAddCommonRoleClose"
@@ -310,18 +378,97 @@ watch(
             <a-option>老年</a-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="modelType">
+        <a-form-item label="model-type">
           <a-input v-model="currentRole.modelType" readonly/>
         </a-form-item>
-        <a-form-item v-if="currentRole.model" label="model">
-          <a-input v-model="computedAddFormModel" readonly/>
-        </a-form-item>
-        <a-form-item v-if="currentRole.modelType !== 'edge-tts' && currentRole.audio" label="audio">
-          <a-input v-model="computedAddFormAudio" readonly/>
-        </a-form-item>
-        <a-form-item v-if="currentRole.modelType !== 'edge-tts' && currentRole.audio" label="refAudio">
-          <a-input v-model="computedAddFormRefAudio" readonly/>
-        </a-form-item>
+        <div v-if="['gpt-sovits', 'fish-speech'].includes(currentRole.modelType)">
+          <a-form-item label="model">
+            <a-input v-model="computedAddFormModel" readonly/>
+          </a-form-item>
+          <a-form-item label="audio">
+            <a-input v-model="computedAddFormAudio" readonly/>
+          </a-form-item>
+          <a-form-item label="ref-audio">
+            <a-textarea v-model="computedAddFormRefAudio" readonly/>
+          </a-form-item>
+        </div>
+
+        <div v-if="['edge-tts'].includes(currentRole.modelType)">
+          <a-form-item label="model">
+            <a-input v-model="computedAddFormModel" readonly/>
+          </a-form-item>
+        </div>
+
+        <div v-if="['chat-tts'].includes(currentRole.modelType)">
+          <a-form-item label="config_name">
+            <a-input :model-value="currentRole.chatTtsConfig?.configName" readonly/>
+          </a-form-item>
+
+          <a-row :gutter="20">
+            <a-col :span="12">
+              <a-form-item
+                  label="audio_seed"
+                  :label-col-props="{span: 12}"
+                  :wrapper-col-props="{span: 12}"
+              >
+                <a-input-number :model-value="currentRole.chatTtsConfig?.audio_seed_input" readonly/>
+              </a-form-item>
+            </a-col>
+            <a-col :span="12">
+              <a-form-item
+                  label="text_seed"
+                  :label-col-props="{span: 12}"
+                  :wrapper-col-props="{span: 12}"
+              >
+                <a-input-number :model-value="currentRole.chatTtsConfig?.text_seed_input" readonly/>
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="20">
+            <a-col :span="12">
+              <a-form-item
+                  label="top_P"
+                  :label-col-props="{span: 12}"
+                  :wrapper-col-props="{span: 12}"
+              >
+                <a-input-number :model-value="currentRole.chatTtsConfig?.top_P" readonly/>
+              </a-form-item>
+            </a-col>
+            <a-col :span="12">
+              <a-form-item
+                  label="top_K"
+                  :label-col-props="{span: 12}"
+                  :wrapper-col-props="{span: 12}"
+              >
+                <a-input-number :model-value="currentRole.chatTtsConfig?.top_K" readonly/>
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="20">
+            <a-col :span="12">
+              <a-form-item
+                  label="temperature"
+                  :label-col-props="{span: 12}"
+                  :wrapper-col-props="{span: 12}"
+              >
+                <a-input-number :model-value="currentRole.chatTtsConfig?.temperature" readonly/>
+              </a-form-item>
+            </a-col>
+            <a-col :span="12">
+              <a-form-item
+                  label="refine_flag"
+                  :label-col-props="{span: 12}"
+                  :wrapper-col-props="{span: 12}"
+              >
+                <a-checkbox :value="currentRole.chatTtsConfig?.refine_text_flag" disabled/>
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-form-item label="refine_params">
+            <a-input :model-value="currentRole.chatTtsConfig?.params_refine_text" readonly/>
+          </a-form-item>
+        </div>
+
       </a-form>
     </a-modal>
 

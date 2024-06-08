@@ -6,7 +6,7 @@ import ArcoVue from '@arco-design/web-vue';
 import ArcoVueIcon from '@arco-design/web-vue/es/icon';
 import '@arco-design/web-vue/dist/arco.css';
 import naive from 'naive-ui'
-import '@/api/interceptor.ts';
+import '@/axios/default-axios.ts';
 import '@/assets/style.css';
 
 

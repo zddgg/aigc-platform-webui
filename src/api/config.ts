@@ -1,4 +1,6 @@
-import axios from 'axios';
+import axios from '@/axios/default-axios.ts';
+import customAxios from "@/axios/custom-axios.ts";
+import {ChatTtsConfig} from "@/api/chat-tts.ts";
 
 export interface ChatModelParam {
     templateName: string
@@ -58,7 +60,6 @@ export interface VoiceTag {
 }
 
 export interface EdgeTtsVoice {
-    name: string;
     shortName: string;
     gender: string;
     locale: string;
@@ -67,12 +68,15 @@ export interface EdgeTtsVoice {
     status: string;
     voiceTag: VoiceTag[];
     url: string;
+    text: string;
+    avatar: string;
 }
 
 export interface LangText {
     enName: string;
     zhName: string;
     text: string;
+    show: boolean;
 }
 
 export interface EdgeTtsConfig {
@@ -81,7 +85,7 @@ export interface EdgeTtsConfig {
 }
 
 export function queryEdgeTtsConfig() {
-    return axios.post<EdgeTtsConfig>('/api/config/edge-tts/config');
+    return axios.post<EdgeTtsConfig>('/api/config/edge-tts/queryEdgeTtsConfig');
 }
 
 export function updateEdgeTtsConfig(params: LangText) {
@@ -90,4 +94,20 @@ export function updateEdgeTtsConfig(params: LangText) {
 
 export function queryVoiceAudioUrl(params: string) {
     return axios.post<string>('/api/model/edge-tts/playAudio', {voice: params});
+}
+
+export function queryChatTtsConfig() {
+    return axios.post<ChatTtsConfig[]>('/api/config/chat-tts/queryChatTtsConfig');
+}
+
+export function createChatTtsConfig(params: FormData) {
+    return axios.post('/api/config/chat-tts/createChatTtsConfig', params);
+}
+
+export function deleteChatTtsConfig(params: ChatTtsConfig) {
+    return axios.post('/api/config/chat-tts/deleteChatTtsConfig', params);
+}
+
+export function chatTts(params: ChatTtsConfig) {
+    return customAxios.post('/api/model/chat-tts/playAudio', params, {responseType: 'blob'});
 }

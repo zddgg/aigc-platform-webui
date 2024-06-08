@@ -1,3 +1,5 @@
+import {ChatTtsConfig} from "@/api/chat-tts.ts";
+
 export interface Model {
     id: number;
     name: string;
@@ -7,10 +9,8 @@ export interface Model {
 }
 
 export interface ModelConfig {
-    serverUrl: string;
+    modelType: string;
+    model?: string[]
+    audio?: string[];
+    chatTtsConfig?: ChatTtsConfig;
 }
-
-export interface CommonModelConfig extends ModelConfig{
-    models: Model[];
-}
-

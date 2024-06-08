@@ -1,5 +1,9 @@
 export const linesPatternOptions = [
     {
+        label: '不解析',
+        value: '',
+    },
+    {
         label: '“中文双引号”',
         value: '“”',
     },

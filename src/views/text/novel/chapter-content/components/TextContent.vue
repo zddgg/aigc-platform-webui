@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import ContextMenu from "@/components/ContextMenu.vue";
-import {computed, inject, PropType, ref, watch} from "vue";
+import {computed, inject, onMounted, PropType, ref, watch} from "vue";
 import {ChapterInfo, createAudio, queryChapterInfo, textModelChange, updateChapterText} from "@/api/text.ts";
 import {useRoute} from "vue-router";
 import {voiceNameFormat} from "@/utils/model-util.ts";
 import {TextContentConfig} from "@/views/text/novel/chapter-content/useChapterContent.ts";
-import {ModelSelect} from "@/api/ref-audio.ts";
 import {Message} from "@arco-design/web-vue";
 import RoleChangeModel from "@/views/text/novel/chapter-content/components/RoleChangeModel.vue";
 import AudioSelect from '@/views/audio-select/index.vue'
 import {scrollToTop} from '@/utils/view-utils.ts'
 import {IWebSocketService} from "@/services/websocketService.ts";
 import useLoading from "@/hooks/loading.ts";
+import {ModelConfig} from "@/api/model.ts";
+import {ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {EventBus} from "@/vite-env";
 
 const route = useRoute();
 const props = defineProps({
@@ -23,6 +25,7 @@ const props = defineProps({
   },
 })
 const {loading, setLoading} = useLoading();
+const eventBus = inject<EventBus>('eventBus');
 
 const audioElement = ref<HTMLAudioElement | null>(null); // ref 对象引用到 audio 元素
 
@@ -63,10 +66,12 @@ const textSelect = (e: Event) => {
   const target = e.target as HTMLElement | null;
   if (target) {
     const strings = target.id.split('-');
+    console.log(strings)
     if (strings.length === 3) {
       const find = chapterInfos.value
           .find((item) => item.p === Number.parseInt(strings[1]) && item.s === Number.parseInt(strings[2]));
       if (find) {
+        console.log(find)
         currentChapterInfo.value = find;
       }
     }
@@ -85,40 +90,40 @@ const contextMenuSelect = (key: string) => {
 const textModelFormat = computed(() => (chapterInfo: ChapterInfo) => {
   let modelType = '';
   let ext = '';
+
+  if (chapterInfo.modelType === 'gpt-sovits') {
+    modelType = 'gs';
+    if (chapterInfo.model && chapterInfo.audio) {
+      ext = `${chapterInfo.model[1]}-${chapterInfo.audio[1]}-${chapterInfo.audio[2]}`
+    }
+  }
+  if (chapterInfo.modelType === 'fish-speech') {
+    modelType = 'fs'
+    if (chapterInfo.model && chapterInfo.audio) {
+      ext = `${chapterInfo.model[1]}-${chapterInfo.audio[1]}-${chapterInfo.audio[2]}`
+    }
+  }
+
   if (chapterInfo.modelType === 'edge-tts') {
     modelType = 'et';
     if (chapterInfo.model) {
       ext = voiceNameFormat(chapterInfo.model[0]) as string;
     }
-  } else {
-    if (chapterInfo.modelType === 'fish-speech') {
-      modelType = 'fs'
-    }
-    if (chapterInfo.modelType === 'gpt-sovits') {
-      modelType = 'gs';
-    }
-    if (chapterInfo.model && chapterInfo.audio) {
-      ext = `${chapterInfo.model[1]}-${chapterInfo.audio[1]}-${chapterInfo.audio[2]}`
-    }
   }
+
+  if (chapterInfo.modelType === 'chat-tts') {
+    modelType = 'ct';
+    ext = chapterInfo.chatTtsConfig?.configName as string;
+  }
+
   if (modelType && ext) {
     return `${modelType}-${ext}`;
   }
   return null;
 })
 
-const modelSelect = async (modelSelect: ModelSelect) => {
-
-  chapterInfos.value = chapterInfos.value.map((item) => {
-    if (item.p === currentChapterInfo.value.p && item.s === currentChapterInfo.value.s) {
-      return {
-        ...item,
-        ...modelSelect
-      };
-    }
-    return item;
-  });
-
+const modelSelect = async (modelConfig: ModelConfig) => {
+  console.log(modelConfig)
   const {msg} = await textModelChange({
     chapter: {
       project: route.query.project as string,
@@ -126,15 +131,11 @@ const modelSelect = async (modelSelect: ModelSelect) => {
     },
     chapterInfo: {
       ...currentChapterInfo.value,
-      ...modelSelect,
+      ...modelConfig,
     },
   });
   Message.success(msg);
   await handleQueryChapterInfo();
-}
-
-const refresh = () => {
-  handleQueryChapterInfo();
 }
 
 const backupText = ref<string>('');
@@ -253,9 +254,21 @@ const handleCreateAudio = async (record: ChapterInfo) => {
   }
 }
 
+const onRoleChange = () => {
+  eventBus?.emit(ROLE_CHANGE);
+}
+
 const WebSocketService = inject<IWebSocketService>('WebSocketService') as IWebSocketService;
 
-defineExpose({playAllAudio, refresh})
+const roleChangeEvent = () => {
+  handleQueryChapterInfo();
+}
+
+onMounted(() => {
+  eventBus?.on(ROLE_CHANGE, roleChangeEvent);
+});
+
+defineExpose({playAllAudio})
 
 watch(
     () => route.query.chapter,
@@ -353,7 +366,7 @@ watch(
               >
                 <a-typography-text
                     v-model:edit-text="item1.text"
-                    :id="`text-${index}-${index1}`"
+                    :id="`text-${item1.index}`"
                     :type="item1.modelType ? 'normal' : 'danger'"
                     :class="{'lines-color': textContentConfig.showLines && item1.linesFlag}"
                     :mark="activeAudioKey === `${item1.p}-${item1.s}`"
@@ -372,13 +385,13 @@ watch(
     </a-card>
     <audio-select
         v-model:visible="modelSelectVisible"
-        :model-select="currentChapterInfo"
-        @change="modelSelect"
+        :model-config="currentChapterInfo"
+        @model-select="modelSelect"
     />
     <role-change-model
         v-model:visible="roleChangeModelVisible"
         :chapter-info="currentChapterInfo"
-        @success="refresh"
+        @change="onRoleChange"
     />
     <audio ref="audioElement" @ended="handleAudioEnded"></audio>
   </div>

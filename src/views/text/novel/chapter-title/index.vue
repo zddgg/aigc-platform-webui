@@ -64,7 +64,15 @@ const handleLinesParse = (chapter: Chapter) => {
 }
 
 const refresh = () => {
-  handleQueryChapters();
+  handleQueryChapters().then(() => {
+    router.push({
+      name: route.name as string,
+      query: {
+        ...route.query,
+        chapter: chapterTitles.value[0].chapter,
+      }
+    })
+  });
 }
 
 const roleChangeEvent = () => {
@@ -90,7 +98,7 @@ onMounted(async () => {
       }
     })
   }
-  loading.value = false;
+  setLoading(false);
 })
 </script>
 

@@ -39,7 +39,7 @@ class WebSocketService implements IWebSocketService {
                     }
                 }
                 if (data.type === 'stage') {
-                    this.stageHandler(data.taskNum)
+                    this.stageHandler(data)
                 }
             };
 

@@ -7,11 +7,13 @@ import {
   createAudio,
   queryChapterInfo,
   textModelChange,
-  updateChapterText, updateInterval, updateSpeed,
+  updateChapterText,
+  updateControls,
+  updateInterval,
+  updateSpeed,
   updateVolume
 } from "@/api/text.ts";
 import {audioNameFormat, modelNameFormat, voiceNameFormat} from "@/utils/model-util.ts";
-import {ModelSelect} from "@/api/ref-audio.ts";
 import {TextContentConfig} from "@/views/text/novel/chapter-content/useChapterContent.ts";
 import RoleChangeModel from "@/views/text/novel/chapter-content/components/RoleChangeModel.vue";
 import AudioSelect from '@/views/audio-select/index.vue'
@@ -21,6 +23,7 @@ import {IconSettings} from "@arco-design/web-vue/es/icon";
 import CombineExport from "@/views/text/novel/chapter-content/components/CombineExport.vue";
 import {EventBus} from "@/vite-env";
 import {ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {ModelConfig} from "@/api/model.ts";
 
 const route = useRoute();
 const props = defineProps({
@@ -33,8 +36,13 @@ const props = defineProps({
   selectedIndexes: {
     type: Array as PropType<string[]>,
     default: []
+  },
+  creatingIds: {
+    type: Array as PropType<string[]>,
+    default: []
   }
 });
+
 const eventBus = inject<EventBus>('eventBus');
 
 const audioElement = ref<HTMLAudioElement | null>(null); // ref 对象引用到 audio 元素
@@ -73,7 +81,7 @@ const columns: TableColumnData[] = [
     }
   },
   {
-    title: '台词',
+    title: '文本',
     slotName: 'text'
   },
   {
@@ -126,29 +134,21 @@ const handleQueryChapterInfo = async () => {
     project: route.query.project as string,
     chapter: route.query.chapter as string,
   })
-  chapterInfos.value = data;
+  chapterInfos.value = data.map((item) => {
+    return {
+      ...item,
+      disabled: !item.modelType
+    }
+  });
+  console.log(chapterInfos.value)
   selectedIndexes.value = data.filter(item => item.export).map(item => item.index)
-}
-
-const refresh = () => {
-  handleQueryChapterInfo();
 }
 
 const onRoleChange = () => {
   eventBus?.emit(ROLE_CHANGE);
 }
 
-const modelSelect = async (modelSelect: ModelSelect) => {
-
-  chapterInfos.value = chapterInfos.value.map((item) => {
-    if (item.p === currentChapterInfo.value.p && item.s === currentChapterInfo.value.s) {
-      return {
-        ...item,
-        ...modelSelect
-      };
-    }
-    return item;
-  });
+const modelSelect = async (modelConfig: ModelConfig) => {
 
   const {msg} = await textModelChange({
     chapter: {
@@ -157,7 +157,7 @@ const modelSelect = async (modelSelect: ModelSelect) => {
     },
     chapterInfo: {
       ...currentChapterInfo.value,
-      ...modelSelect,
+      ...modelConfig,
     },
   });
   Message.success(msg);
@@ -256,15 +256,6 @@ const playNext = () => {
 
 const playAllAudio = () => {
   playAll.value = true;
-  // if (playStartIndex.value) {
-  //   let start = -1;
-  //   roleSpeechConfigs.value.forEach((item, index) => {
-  //     if (item.linesIndex === playStartIndex.value) {
-  //       start = index - 1;
-  //     }
-  //   });
-  //   activeAudioIndex.value = start;
-  // }
   activeAudioIndex.value = -1;
   playNext();
 }
@@ -325,6 +316,41 @@ const onCombineExport = () => {
   }
 }
 
+const batchControls = ref({
+  enableVolume: false,
+  volume: 100,
+  enableSpeed: false,
+  speed: 1.0,
+  enableInterval: false,
+  interval: 500,
+})
+
+const handleUpdateControls = async () => {
+  if (!batchControls.value.enableVolume
+      && !batchControls.value.enableSpeed
+      && !batchControls.value.enableInterval) {
+    Message.warning("请选择要批量更新的配置？")
+  }
+  try {
+    setLoading(true);
+    const {msg} = await updateControls({
+      project: route.query.project as string,
+      chapter: route.query.chapter as string,
+      ...batchControls.value
+    });
+    batchControls.value = {
+      ...batchControls.value,
+      enableVolume: false,
+      enableSpeed: false,
+      enableInterval: false,
+    }
+    Message.success(msg);
+    await handleQueryChapterInfo()
+  } finally {
+    setLoading(false)
+  }
+}
+
 const roleChangeEvent = () => {
   handleQueryChapterInfo();
 }
@@ -337,7 +363,7 @@ onBeforeUnmount(() => {
   eventBus?.off(ROLE_CHANGE, roleChangeEvent);
 });
 
-defineExpose({playAllAudio, refresh, onCombineExport})
+defineExpose({playAllAudio, onCombineExport})
 
 watch(
     () => route.query.chapter,
@@ -472,19 +498,24 @@ watch(
             <a-typography-text style="display: block; white-space: nowrap">
               {{ record.modelType }}
             </a-typography-text>
-            <a-typography-text
-                v-if="record.modelType === 'edge-tts'"
-                style="display: block; white-space: nowrap">
-              {{ voiceNameFormat(record.model[0]) }}
-            </a-typography-text>
-            <a-typography-text
-                v-else
-                style="display: block; white-space: nowrap">
-              {{ modelNameFormat(record) }}
-            </a-typography-text>
-            <a-typography-text style="display: block; white-space: nowrap">
-              {{ audioNameFormat(record) }}
-            </a-typography-text>
+            <div v-if="['gpt-sovits', 'fish-speech'].includes(record.modelType)">
+              <a-typography-text style="display: block; white-space: nowrap">
+                {{ modelNameFormat(record) }}
+              </a-typography-text>
+              <a-typography-text style="display: block; white-space: nowrap">
+                {{ audioNameFormat(record) }}
+              </a-typography-text>
+            </div>
+            <div v-if="['edge-tts'].includes(record.modelType)">
+              <a-typography-text style="display: block; white-space: nowrap">
+                {{ voiceNameFormat(record.model[0]) }}
+              </a-typography-text>
+            </div>
+            <div v-if="['chat-tts'].includes(record.modelType)">
+              <a-typography-text style="display: block; white-space: nowrap">
+                {{ record.chatTtsConfig.configName }}
+              </a-typography-text>
+            </div>
           </div>
           <div v-else>
             <a-button size="mini" type="outline" status="danger">
@@ -557,11 +588,14 @@ watch(
         <a-card>
           <a-space direction="vertical" style="width: 200px;">
             <div style="display: flex; justify-content: center; align-items: center">
-              <a-checkbox>
-                <span style="white-space: nowrap; margin-right: 10px">音量</span>
+              <a-checkbox
+                  v-model="batchControls.enableVolume"
+                  style="margin-right: 10px"
+              >
+                <span style="white-space: nowrap">音量</span>
               </a-checkbox>
               <n-slider
-                  :default-value="100"
+                  v-model:value="batchControls.volume"
                   :step="1"
                   :max="200"
                   :min="0"
@@ -569,11 +603,14 @@ watch(
               />
             </div>
             <div style="display: flex; justify-content: center; align-items: center">
-              <a-checkbox>
-                <span style="white-space: nowrap; margin-right: 10px">语速</span>
+              <a-checkbox
+                  v-model="batchControls.enableSpeed"
+                  style="margin-right: 10px"
+              >
+                <span style="white-space: nowrap">语速</span>
               </a-checkbox>
               <n-slider
-                  :default-value="1"
+                  v-model:value="batchControls.speed"
                   :step="0.1"
                   :max="2"
                   :min="0.1"
@@ -581,11 +618,14 @@ watch(
               />
             </div>
             <div style="display: flex; justify-content: center; align-items: center">
-              <a-checkbox>
-                <span style="white-space: nowrap; margin-right: 10px">间隔</span>
+              <a-checkbox
+                  v-model="batchControls.enableInterval"
+                  style="margin-right: 10px"
+              >
+                <span style="white-space: nowrap">间隔</span>
               </a-checkbox>
               <n-slider
-                  :default-value="500"
+                  v-model:value="batchControls.interval"
                   :step="100"
                   :max="3000"
                   :min="0"
@@ -593,11 +633,18 @@ watch(
               />
             </div>
             <div style="display: flex; justify-content: right">
-              <a-button
-                  type="outline" size="mini"
+              <a-popconfirm
+                  content="更新章节所有配置?"
+                  type="error"
+                  @ok="handleUpdateControls"
               >
-                批量更新
-              </a-button>
+                <a-button
+                    :loading="loading"
+                    type="outline" size="mini"
+                >
+                  批量更新
+                </a-button>
+              </a-popconfirm>
             </div>
           </a-space>
         </a-card>
@@ -630,9 +677,12 @@ watch(
             <a-button
                 type="outline"
                 size="mini"
-                :disabled="!record.modelType || (loading && createAudioKey === `${record.p}-${record.s}`)"
+                :disabled="!record.modelType || createAudioKey === `${record.p}-${record.s}`
+                || props.creatingIds?.includes(record.index)"
             >
-              <icon-refresh :spin="loading && createAudioKey === `${record.p}-${record.s}`"/>
+              <icon-refresh
+                  :spin="props.creatingIds?.includes(record.index)"
+              />
             </a-button>
           </a-popconfirm>
         </a-space>
@@ -640,8 +690,8 @@ watch(
     </a-table>
     <audio-select
         v-model:visible="modelSelectVisible"
-        :model-select="currentChapterInfo"
-        @change="modelSelect"
+        :model-config="currentChapterInfo"
+        @model-select="modelSelect"
     />
     <role-change-model
         v-model:visible="roleChangeModelVisible"

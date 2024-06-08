@@ -92,6 +92,10 @@ watch(
     () => props.visible,
     () => {
       showModal.value = props.visible
+      if (props.visible) {
+        form.value.project = '';
+        file.value = null;
+      }
     },
     {immediate: true}
 );

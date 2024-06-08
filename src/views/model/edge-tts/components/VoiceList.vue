@@ -114,7 +114,7 @@ onMounted(() => {
             placeholder="语言"
             allow-search
             allow-clear
-            :options="langTexts"
+            :options="langTexts.filter(item => item.show)"
             :field-names="{value: 'enName', label: 'zhName'}"
             style="width: 200px"
         >

@@ -2,13 +2,13 @@
 import {useRoute} from "vue-router";
 import {inject, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import {queryRoles, Role, roleModelChange} from "@/api/text.ts";
-import {ModelSelect} from "@/api/ref-audio.ts";
 import {Message} from "@arco-design/web-vue";
 import AudioSelect from '@/views/audio-select/index.vue'
 import RoleRename from "@/views/text/novel/chapter-role/components/RoleRename.vue";
 import RoleDelete from "@/views/text/novel/chapter-role/components/RoleDelete.vue";
 import {EventBus} from "@/vite-env";
 import {ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {ModelConfig} from "@/api/model.ts";
 
 const route = useRoute();
 
@@ -36,20 +36,18 @@ const openAllRule = () => {
 }
 
 const currentRole = ref<Role>({} as Role);
-const selectModelType = ref<'roleModelChange' | ''>('')
 const roleSelectModel = (role: Role) => {
-  selectModelType.value = 'roleModelChange'
   currentRole.value = role;
   modelSelectVisible.value = true
 }
 
-const modelSelect = async (modelSelect: ModelSelect) => {
+const modelSelect = async (modelConfig: ModelConfig) => {
 
   roles.value = roles.value.map(item => {
     if (item.role === currentRole.value.role) {
       return {
         ...item,
-        ...modelSelect,
+        ...modelConfig,
       }
     }
     return item;
@@ -62,7 +60,7 @@ const modelSelect = async (modelSelect: ModelSelect) => {
     },
     role: {
       ...currentRole.value,
-      ...modelSelect,
+      ...modelConfig,
     }
   })
   Message.success(msg);
@@ -141,19 +139,86 @@ watch(
                   </span>
           </template>
           <div>
-            <a-descriptions :column="1">
-              <a-descriptions-item v-if="item.modelType" label="类型">
-                {{ item.modelType }}
-              </a-descriptions-item>
-              <a-descriptions-item v-if="item.model && item.model.length" label="模型">
-                {{ item.model.join('/') }}
-              </a-descriptions-item>
-              <a-descriptions-item v-if="item.modelType !== 'edge-tts' && item.audio && item.audio.length" label="音频">
-                <a-typography-text ellipsis>
-                  {{ item.audio.join('/') }}
-                </a-typography-text>
-              </a-descriptions-item>
-            </a-descriptions>
+            <div v-if="['gpt-sovits', 'fish-speech'].includes(item.modelType)">
+              <a-descriptions
+                  :column="1"
+                  size="medium"
+              >
+                <a-descriptions-item label="类型">
+                  {{ item.modelType }}
+                </a-descriptions-item>
+                <a-descriptions-item
+                    v-if="item.model && item.model.length"
+                    label="模型"
+                >
+                  {{ item.model.join('/') }}
+                </a-descriptions-item>
+                <a-descriptions-item
+                    v-if="item.audio && item.audio.length"
+                    label="音频"
+                >
+                  <a-typography-text ellipsis>
+                    {{ item.audio.join('/') }}
+                  </a-typography-text>
+                </a-descriptions-item>
+              </a-descriptions>
+            </div>
+            <div v-if="['edge-tts'].includes(item.modelType)">
+              <a-descriptions
+                  :column="1"
+                  size="medium"
+              >
+                <a-descriptions-item label="类型">
+                  {{ item.modelType }}
+                </a-descriptions-item>
+                <a-descriptions-item
+                    v-if="item.model && item.model.length"
+                    label="声音"
+                >
+                  {{ item.model.join('/') }}
+                </a-descriptions-item>
+              </a-descriptions>
+            </div>
+            <div
+                v-if="['chat-tts'].includes(item.modelType)"
+                style="margin-bottom: 5px"
+            >
+              <a-descriptions
+                  :column="2"
+                  size="small"
+                  layout="inline-vertical"
+              >
+                <a-descriptions-item label="类型">
+                  {{ item.modelType }}
+                </a-descriptions-item>
+                <a-descriptions-item label="模型">
+                  {{ item.chatTtsConfig?.configName }}
+                </a-descriptions-item>
+                <a-descriptions-item label="audio_seed">
+                  {{ item.chatTtsConfig?.audio_seed_input }}
+                </a-descriptions-item>
+                <a-descriptions-item label="text_seed">
+                  {{ item.chatTtsConfig?.text_seed_input }}
+                </a-descriptions-item>
+                <a-descriptions-item label="top_P">
+                  {{ item.chatTtsConfig?.top_P }}
+                </a-descriptions-item>
+                <a-descriptions-item label="top_K">
+                  {{ item.chatTtsConfig?.top_K }}
+                </a-descriptions-item>
+                <a-descriptions-item label="temperature">
+                  {{ item.chatTtsConfig?.temperature }}
+                </a-descriptions-item>
+                <a-descriptions-item label="refine_flag">
+                  {{ item.chatTtsConfig?.refine_text_flag }}
+                </a-descriptions-item>
+                <a-descriptions-item label="refine_params">
+                  <a-typography-text ellipsis>
+                    {{ item.chatTtsConfig?.params_refine_text }}
+                  </a-typography-text>
+                </a-descriptions-item>
+              </a-descriptions>
+            </div>
             <div style="text-align: left">
               <a-space wrap>
                 <a-dropdown-button
@@ -185,8 +250,8 @@ watch(
     </div>
     <audio-select
         v-model:visible="modelSelectVisible"
-        :model-select="currentRole"
-        @change="modelSelect"
+        :model-config="currentRole"
+        @model-select="modelSelect"
     />
     <role-rename
         v-model:visible="roleRenameModalVisible"

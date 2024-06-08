@@ -1,4 +1,4 @@
-import {ModelSelect} from "@/api/ref-audio.ts";
+import {ModelConfig} from "@/api/model.ts";
 
 export const voiceNameFormat = (shortName: string) => {
     if (!shortName) {
@@ -7,20 +7,20 @@ export const voiceNameFormat = (shortName: string) => {
     return shortName.substring(shortName.lastIndexOf('-') + 1).replace('Neural', '')
 }
 
-export const modelNameFormat = (modelSelect: ModelSelect | undefined) => {
-    return modelSelect?.model?.join('/')
+export const modelNameFormat = (modelConfig: ModelConfig | undefined) => {
+    return modelConfig?.model?.join('/')
 }
 
-export const audioNameFormat = (modelSelect: ModelSelect | undefined) => {
-    if (modelSelect?.modelType === 'edge-tts') {
+export const audioNameFormat = (modelConfig: ModelConfig | undefined) => {
+    if (modelConfig?.modelType === 'edge-tts') {
         return undefined;
     }
-    return modelSelect?.audio?.filter((_, index) => index < 3).join('/')
+    return modelConfig?.audio?.filter((_: any, index: any) => index < 3).join('/')
 }
 
-export const refAudioNameFormat = (modelSelect: ModelSelect | undefined) => {
-    if (modelSelect?.modelType === 'edge-tts') {
+export const refAudioNameFormat = (modelConfig: ModelConfig | undefined) => {
+    if (modelConfig?.modelType === 'edge-tts') {
         return undefined;
     }
-    return modelSelect?.audio?.filter((_, index) => index === 3).join('/')
+    return modelConfig?.audio?.filter((_: any, index: any) => index === 3).join('/')
 }

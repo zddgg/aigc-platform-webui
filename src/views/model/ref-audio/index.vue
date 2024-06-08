@@ -2,6 +2,7 @@
 import {computed, onMounted, ref} from "vue";
 import AudioDetail from "@/views/model/ref-audio/components/AudioDetail.vue";
 import {RefAudio, queryRefAudios} from "@/api/ref-audio.ts";
+import GroupSort from "@/views/model/ref-audio/components/GroupSort.vue";
 
 const audioElement = ref<HTMLAudioElement | null>(null); // ref 对象引用到 audio 元素
 
@@ -20,6 +21,8 @@ const tagOptions = ref<string[]>([])
 const selectTag = ref<string>('')
 
 const activeAudioKey = ref<string>('')
+
+const groupSortVisible = ref<boolean>(false)
 
 const playAudio = (key: string, url: string) => {
   activeAudioKey.value = key;
@@ -151,8 +154,17 @@ onMounted(() => {
         <a-button @click="reset">重置</a-button>
       </a-space>
     </a-card>
-    <div style="margin-top: 20px">
-      <a-tabs v-model:active-key="activateKey" type="rounded" size="large">
+    <div>
+      <a-tabs v-model:active-key="activateKey" size="large">
+        <template #extra>
+          <a-button
+              type="outline"
+              style="margin-right: 20px"
+              @click="() => (groupSortVisible = true)"
+          >
+            排序配置
+          </a-button>
+        </template>
         <a-tab-pane v-for="(item) in groupOptions" :key="item" :title="item">
           <a-space size="medium" wrap align="start">
             <a-card
@@ -280,6 +292,10 @@ onMounted(() => {
         v-model:visible="audioDetailVisible"
         :audio="currentAudio"
         @success="handleQueryAudios"
+    />
+    <group-sort
+        v-model:visible="groupSortVisible"
+        @change="handleQueryAudios"
     />
     <audio ref="audioElement" @ended="handleAudioEnded"></audio>
   </div>

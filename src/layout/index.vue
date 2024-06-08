@@ -89,7 +89,10 @@ const activeIndex = ref('');
           </div>
         </a-space>
       </div>
-      <div style="margin-top: auto; display: flex; flex-direction: column; align-items: center;">
+      <div
+          v-if="false"
+          style="margin-top: auto; display: flex; flex-direction: column; align-items: center"
+      >
         <div class="nav-item"
              :class="activeIndex === '设置' ? 'active-item' : ''"
              style="padding: 10px 18px; border-radius: 8px; cursor: pointer; margin-bottom: 20px"

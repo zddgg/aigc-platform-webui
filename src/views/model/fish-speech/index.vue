@@ -30,7 +30,7 @@ onMounted(() => {
 <template>
   <div>
     <div>
-      <a-tabs type="rounded" :default-active-key="groupOptions[0]" size="large">
+      <a-tabs :default-active-key="groupOptions[0]" size="large">
         <a-tab-pane v-for="(item) in groupOptions" :key="item" :title="item">
           <a-space size="medium" wrap>
             <a-card
