@@ -8,7 +8,7 @@ const emits = defineEmits(['roleModelChange'])
 
 const textRoleRef = ref<{
   refreshInner: Function
-}>(null)
+}>({refreshInner: () => {}})
 
 const roleModelChange = () => {
   emits('roleModelChange')

@@ -1,10 +1,10 @@
 import {onMounted, onUnmounted, ref} from "vue";
 
-export default function (containerRef) {
+export default function (containerRef: any) {
     const showMenu = ref(false);
     const x = ref(0);
     const y = ref(0);
-    const handleContextMenu = (e) => {
+    const handleContextMenu = (e: any) => {
         e.preventDefault();
         e.stopPropagation();
         showMenu.value = true;

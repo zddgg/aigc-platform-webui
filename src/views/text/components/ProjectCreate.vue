@@ -62,7 +62,7 @@ const form = ref({
   project: '',
 });
 
-const file = ref<FileItem>();
+const file = ref<FileItem | null>(null);
 
 const onChange = (_: FileItem[], fileItem: FileItem) => {
   file.value = {

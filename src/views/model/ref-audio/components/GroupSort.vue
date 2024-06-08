@@ -2,7 +2,7 @@
 
 import {ref, watch} from "vue";
 import {queryRefAudioSort, RefAudioSort, updateRefAudioSort} from "@/api/ref-audio.ts";
-import {Message} from "@arco-design/web-vue";
+import {Message, TableData} from "@arco-design/web-vue";
 
 const props = defineProps({
   visible: {
@@ -34,8 +34,8 @@ const handleQueryRefAudioSort = async () => {
   console.log(data)
 }
 
-const sortChange = (_data) => {
-  refAudioSorts.value = _data
+const sortChange = (_data: TableData[]) => {
+  refAudioSorts.value = _data as RefAudioSort[]
 }
 
 const close = () => {

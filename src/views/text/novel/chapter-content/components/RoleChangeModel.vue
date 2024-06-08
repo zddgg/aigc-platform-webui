@@ -226,7 +226,7 @@ watch(
         <div>
           <a-row :gutter="24">
             <a-col :span="12">
-              <div v-if="['gpt-sovits', 'fish-speech'].includes(props.chapterInfo?.modelType)">
+              <div v-if="['gpt-sovits', 'fish-speech'].includes(props.chapterInfo?.modelType as string)">
                 <a-descriptions title="当前角色" bordered size="medium" :column="1">
                   <a-descriptions-item label="角色名">
                     {{ props.chapterInfo?.role }}
@@ -251,7 +251,7 @@ watch(
                   </a-descriptions-item>
                 </a-descriptions>
               </div>
-              <div v-if="['edge-tts'].includes(props.chapterInfo?.modelType)">
+              <div v-if="['edge-tts'].includes(props.chapterInfo?.modelType as string)">
                 <a-descriptions title="当前角色" bordered size="medium" :column="1">
                   <a-descriptions-item label="角色名">
                     {{ props.chapterInfo?.role }}
@@ -264,7 +264,7 @@ watch(
                   </a-descriptions-item>
                 </a-descriptions>
               </div>
-              <div v-if="['chat-tts'].includes(props.chapterInfo?.modelType)">
+              <div v-if="['chat-tts'].includes(props.chapterInfo?.modelType as string)">
                 <a-descriptions title="当前角色" bordered size="medium" :column="1">
                   <a-descriptions-item label="角色名">
                     {{ props.chapterInfo?.role }}
@@ -273,28 +273,28 @@ watch(
                     {{ props.chapterInfo?.modelType }}
                   </a-descriptions-item>
                   <a-descriptions-item label="model">
-                    {{ props.chapterInfo.chatTtsConfig.configName }}
+                    {{ props.chapterInfo?.chatTtsConfig?.configName }}
                   </a-descriptions-item>
                   <a-descriptions-item label="audio_seed">
-                    {{ props.chapterInfo.chatTtsConfig.audio_seed_input }}
+                    {{ props.chapterInfo?.chatTtsConfig?.audio_seed_input }}
                   </a-descriptions-item>
                   <a-descriptions-item label="text_seed">
-                    {{ props.chapterInfo.chatTtsConfig.text_seed_input }}
+                    {{ props.chapterInfo?.chatTtsConfig?.text_seed_input }}
                   </a-descriptions-item>
                   <a-descriptions-item label="top_P">
-                    {{ props.chapterInfo.chatTtsConfig.top_P }}
+                    {{ props.chapterInfo?.chatTtsConfig?.top_P }}
                   </a-descriptions-item>
                   <a-descriptions-item label="top_K">
-                    {{ props.chapterInfo.chatTtsConfig.top_K }}
+                    {{ props.chapterInfo?.chatTtsConfig?.top_K }}
                   </a-descriptions-item>
                   <a-descriptions-item label="temperature">
-                    {{ props.chapterInfo.chatTtsConfig.temperature }}
+                    {{ props.chapterInfo?.chatTtsConfig?.temperature }}
                   </a-descriptions-item>
                   <a-descriptions-item label="refine_flag">
-                    {{ props.chapterInfo.chatTtsConfig.refine_text_flag }}
+                    {{ props.chapterInfo?.chatTtsConfig?.refine_text_flag }}
                   </a-descriptions-item>
                   <a-descriptions-item label="refine_params">
-                    {{ props.chapterInfo.chatTtsConfig.params_refine_text }}
+                    {{ props.chapterInfo?.chatTtsConfig?.params_refine_text }}
                   </a-descriptions-item>
                 </a-descriptions>
               </div>
@@ -347,28 +347,28 @@ watch(
                     {{ currentRole?.modelType }}
                   </a-descriptions-item>
                   <a-descriptions-item label="model">
-                    {{ currentRole.chatTtsConfig.configName }}
+                    {{ currentRole.chatTtsConfig?.configName }}
                   </a-descriptions-item>
                   <a-descriptions-item label="audio_seed">
-                    {{ currentRole.chatTtsConfig.audio_seed_input }}
+                    {{ currentRole.chatTtsConfig?.audio_seed_input }}
                   </a-descriptions-item>
                   <a-descriptions-item label="text_seed">
-                    {{ currentRole.chatTtsConfig.text_seed_input }}
+                    {{ currentRole.chatTtsConfig?.text_seed_input }}
                   </a-descriptions-item>
                   <a-descriptions-item label="top_P">
-                    {{ currentRole.chatTtsConfig.top_P }}
+                    {{ currentRole.chatTtsConfig?.top_P }}
                   </a-descriptions-item>
                   <a-descriptions-item label="top_K">
-                    {{ currentRole.chatTtsConfig.top_K }}
+                    {{ currentRole.chatTtsConfig?.top_K }}
                   </a-descriptions-item>
                   <a-descriptions-item label="temperature">
-                    {{ currentRole.chatTtsConfig.temperature }}
+                    {{ currentRole.chatTtsConfig?.temperature }}
                   </a-descriptions-item>
                   <a-descriptions-item label="refine_flag">
-                    {{ currentRole.chatTtsConfig.refine_text_flag }}
+                    {{ currentRole.chatTtsConfig?.refine_text_flag }}
                   </a-descriptions-item>
                   <a-descriptions-item label="refine_params">
-                    {{ currentRole.chatTtsConfig.params_refine_text }}
+                    {{ currentRole.chatTtsConfig?.params_refine_text }}
                   </a-descriptions-item>
                 </a-descriptions>
               </div>

@@ -17,13 +17,13 @@
     </Teleport>
   </div>
 </template>
-<script setup>
-import {ref} from 'vue';
-import useContextMenu from './useContextMenu';
+<script setup lang="ts">
+import {PropType, ref} from 'vue';
+import useContextMenu from './useContextMenu.ts';
 
 const props = defineProps({
   menu: {
-    type: Array,
+    type: Array as PropType<{ label: string; value: string }[]>,
     default: () => [],
   },
 });
@@ -32,7 +32,7 @@ const emits = defineEmits(['select']);
 const {x, y, showMenu} = useContextMenu(containerRef);
 
 // 菜单的点击事件
-function handleClick(item, e) {
+function handleClick(item: string) {
   // 选中菜单后关闭菜单
   showMenu.value = false;
   // 并返回选中的菜单

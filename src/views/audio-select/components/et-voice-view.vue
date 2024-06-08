@@ -4,6 +4,7 @@ import useLoading from "@/hooks/loading.ts";
 import {EdgeTtsVoice, LangText, queryEdgeTtsConfig, queryVoiceAudioUrl} from "@/api/config.ts";
 import {voiceNameFormat} from "@/utils/model-util.ts";
 import {ModelConfig} from "@/api/model.ts";
+import {SelectOptionData} from "@arco-design/web-vue/es/select/interface";
 
 const props = defineProps({
   activeTabKey: {
@@ -23,7 +24,7 @@ const voices = ref<EdgeTtsVoice[]>([])
 const currentAudio = ref<EdgeTtsVoice>({} as EdgeTtsVoice)
 const langTexts = ref<LangText[]>([])
 
-const genderOptions = ref<string[]>([])
+const genderOptions = ref<SelectOptionData[]>([])
 const selectGender = ref<string>('')
 const selectLanguage = ref<string>('')
 const nameSearchInput = ref<string>('')
@@ -49,10 +50,12 @@ const handleQueryVoices = async () => {
   voices.value = data.voices
   langTexts.value = data.langTexts
   genderOptions.value = Array.from(new Set(data.voices.map(item => item.gender)))
-      .map(gender => ({
-        label: gender === 'Male' ? '男' : gender === 'Female' ? '女' : gender,
-        value: gender
-      }));
+      .map(gender => {
+        return {
+          label: gender === 'Male' ? '男' : gender === 'Female' ? '女' : gender,
+          value: gender
+        }
+      });
 }
 
 const activeAudioKey = ref<string>('')

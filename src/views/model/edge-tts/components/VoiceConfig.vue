@@ -93,16 +93,6 @@ onMounted(() => {
         </a-card>
       </a-grid-item>
     </a-grid>
-    <a-space wrap size="medium">
-      <a-row :gutter="24">
-        <a-col
-            v-for="(item, index) in langTexts"
-            :key="index"
-            :span="8"
-        >
-        </a-col>
-      </a-row>
-    </a-space>
   </div>
 </template>
 
