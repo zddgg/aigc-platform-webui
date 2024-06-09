@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import {computed, inject, onBeforeUnmount, onMounted, ref} from "vue";
+import {inject, onBeforeUnmount, onMounted, ref} from "vue";
 import {Chapter, queryChapters} from "@/api/text.ts";
 import {useRoute, useRouter} from "vue-router";
 import ChapterSplitModal from "@/views/text/novel/chapter-title/components/ChapterSplitModal.vue";
 import LinesParseModal from "@/views/text/novel/chapter-title/components/LinesParseModal.vue";
 import {ROLE_CHANGE} from "@/services/eventTypes.ts";
 import {EventBus} from "@/vite-env";
-import useLoading from "@/hooks/loading.ts";
 
 const route = useRoute();
 const router = useRouter();
@@ -14,15 +13,12 @@ const router = useRouter();
 const emits = defineEmits(['toggleCollapse', 'refresh'])
 const eventBus = inject<EventBus>('eventBus');
 
-const {loading, setLoading} = useLoading(true);
-
 const collapsed = ref(false);
 const chapterSplitModalVisible = ref(false);
 const linesParseModalVisible = ref(false);
 
 const activeChapterIndex = ref(0)
 const chapterTitles = ref<Chapter[]>([])
-const tmpChapterTitles = ref<string[]>([]);
 
 const handleQueryChapters = async () => {
   const {data} = await queryChapters({
@@ -41,16 +37,6 @@ const chapterSelect = (chapterTitle: string, index: number) => {
     }
   })
 }
-
-const computedChapterTitles = computed(() => {
-  return chapterTitles.value && chapterTitles.value.length > 0
-      ? chapterTitles.value
-      : tmpChapterTitles.value.map(item => {
-        return {
-          chapter: item,
-        } as Chapter
-      })
-})
 
 const toggleCollapse = () => {
   collapsed.value = !collapsed.value;
@@ -98,7 +84,6 @@ onMounted(async () => {
       }
     })
   }
-  setLoading(false);
 })
 </script>
 
@@ -114,7 +99,7 @@ onMounted(async () => {
           章节解析
         </a-button>
         <a-button
-            v-if="computedChapterTitles && computedChapterTitles.length !== 0"
+            v-if="chapterTitles && chapterTitles.length !== 0"
             type="outline"
             @click="toggleCollapse"
         >
@@ -126,21 +111,15 @@ onMounted(async () => {
     <n-scrollbar style="max-height: calc(100vh - 76px); padding-right: 10px">
       <a-space direction="vertical" style="width: 100%">
         <a-card
-            v-if="!computedChapterTitles || computedChapterTitles.length === 0"
-            :loading="loading"
-        >
-          <a-empty description="先完成章节解析"/>
-        </a-card>
-        <a-card
-            v-else
-            v-for="(item, index) in computedChapterTitles"
+            v-for="(item, index) in chapterTitles"
             :key="index"
             style="border: 1px #ccc solid; border-radius: 8px"
             hoverable
             :style="index == activeChapterIndex && {backgroundColor: '#c3f6f6'}"
             @click="chapterSelect(item.chapter, index)"
         >
-          <div v-if="collapsed" style="text-align: center" :style="item?.stage === '合并完成' && {backgroundColor: 'green'}">
+          <div v-if="collapsed" style="text-align: center"
+               :style="item?.stage === '合并完成' && {backgroundColor: 'green'}">
             {{ index }}
           </div>
           <div v-else>

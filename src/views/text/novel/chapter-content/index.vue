@@ -57,7 +57,7 @@ const handleAiInferenceDone = () => {
   setTimeout(() => {
     refresh();
   }, 500)
-  console.log('Request done', aiResultText.value);
+  console.log('Request done\n', aiResultText.value);
 };
 
 const handleAiInferenceError = (response: Response) => {
@@ -121,12 +121,13 @@ const onAiInference = () => {
 }
 
 const handleStartCreateAudio = async (actionType: 'all' | 'modified') => {
-  const {data} = await startCreateAudio({
+  const {data, msg} = await startCreateAudio({
     project: route.query.project as string,
     chapter: route.query.chapter as string,
     actionType: actionType,
   });
-  Message.success(`提交任务数：${data}`);
+  Message.success(msg);
+  creatingIds.value = data;
 }
 
 const onStartCreateAudio = (actionType: 'all' | 'modified') => {
@@ -356,6 +357,7 @@ watch(
           <text-content
               ref="textContentRef"
               v-model:text-content-config="textContentConfig"
+              v-model:creating-ids="creatingIds"
           />
         </div>
       </div>

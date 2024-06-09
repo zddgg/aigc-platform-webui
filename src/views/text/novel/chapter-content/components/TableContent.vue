@@ -24,6 +24,7 @@ import CombineExport from "@/views/text/novel/chapter-content/components/Combine
 import {EventBus} from "@/vite-env";
 import {ROLE_CHANGE} from "@/services/eventTypes.ts";
 import {ModelConfig} from "@/api/model.ts";
+import { Notification } from '@arco-design/web-vue';
 
 const route = useRoute();
 const props = defineProps({
@@ -44,6 +45,7 @@ const props = defineProps({
 });
 
 const eventBus = inject<EventBus>('eventBus');
+const emits = defineEmits(['update:creatingIds'])
 
 const audioElement = ref<HTMLAudioElement | null>(null); // ref 对象引用到 audio 元素
 const {loading, setLoading} = useLoading();
@@ -214,11 +216,17 @@ const handleChapterInfoUpdate = (data: ChapterInfo) => {
       }
     }
     return item;
+  });
+  Notification.success({
+    title: `${data.index}生成成功`,
+    content: '',
+    position: 'bottomRight',
+    duration: 2000
   })
 };
 const handleCreateAudio = async (record: ChapterInfo) => {
   try {
-    createAudioKey.value = `${record.p}-${record.s}`;
+    createAudioKey.value = record.index;
     setLoading(true);
     const {data, msg} = await createAudio({
       chapter: {
@@ -227,10 +235,8 @@ const handleCreateAudio = async (record: ChapterInfo) => {
       },
       chapterInfo: record
     })
-    handleChapterInfoUpdate({
-      ...data
-    })
     Message.success(msg);
+    emits('update:creatingIds', data)
   } finally {
     createAudioKey.value = ''
     setLoading(false);
@@ -677,8 +683,8 @@ watch(
             <a-button
                 type="outline"
                 size="mini"
-                :disabled="!record.modelType || createAudioKey === `${record.p}-${record.s}`
-                || props.creatingIds?.includes(record.index)"
+                :status="props.creatingIds?.includes(record.index) ? 'danger' : 'normal'"
+                :disabled="!record.modelType || props.creatingIds?.includes(record.index)"
             >
               <icon-refresh
                   :spin="props.creatingIds?.includes(record.index)"

@@ -5,7 +5,7 @@ import {ChapterInfo, createAudio, queryChapterInfo, textModelChange, updateChapt
 import {useRoute} from "vue-router";
 import {voiceNameFormat} from "@/utils/model-util.ts";
 import {TextContentConfig} from "@/views/text/novel/chapter-content/useChapterContent.ts";
-import {Message} from "@arco-design/web-vue";
+import {Message, Notification} from "@arco-design/web-vue";
 import RoleChangeModel from "@/views/text/novel/chapter-content/components/RoleChangeModel.vue";
 import AudioSelect from '@/views/audio-select/index.vue'
 import {scrollToTop} from '@/utils/view-utils.ts'
@@ -23,7 +23,14 @@ const props = defineProps({
       textViewType: 'text'
     } as TextContentConfig
   },
+  creatingIds: {
+    type: Array as PropType<string[]>,
+    default: []
+  }
 })
+
+const emits = defineEmits(['update:creatingIds'])
+
 const {loading, setLoading} = useLoading();
 const eventBus = inject<EventBus>('eventBus');
 
@@ -227,6 +234,12 @@ const handleChapterInfoUpdate = (data: ChapterInfo) => {
       }
     }
     return item;
+  });
+  Notification.success({
+    title: `${data.index}生成成功`,
+    content: '',
+    position: 'bottomRight',
+    duration: 2000
   })
 };
 const createAudioKey = ref<string>('');
@@ -244,10 +257,8 @@ const handleCreateAudio = async (record: ChapterInfo) => {
       },
       chapterInfo: record
     })
-    handleChapterInfoUpdate({
-      ...data
-    })
     Message.success(msg);
+    emits('update:creatingIds', data)
   } finally {
     createAudioKey.value = ''
     setLoading(false);
@@ -329,32 +340,42 @@ watch(
               </span>
             </span>
             <span v-if="textContentConfig.showAudio && item1.modelType">
-              <a-tag
+              <a-button
                   v-if="activeAudioKey === `${item1.p}-${item1.s}`"
-                  size="small"
-                  color="red"
+                  size="mini"
+                  type="outline"
+                  status="danger"
                   style="margin-right: 5px"
                   @click="stopAudio"
               >
                 <icon-mute-fill/>
-              </a-tag>
-              <a-tag
+              </a-button>
+              <a-button
                   v-else
-                  size="small"
-                  color="blue"
+                  size="mini"
+                  type="outline"
                   style="margin-right: 5px"
                   @click="playAudio(item1)"
               >
                 <icon-play-arrow/>
-              </a-tag>
-              <a-tag
-                  size="small"
-                  color="blue"
-                  style="margin-right: 5px"
-                  @click="handleCreateAudio(item1)"
+              </a-button>
+              <a-popconfirm
+                  type="warning"
+                  content="确认生成?"
+                  @ok="handleCreateAudio(item1)"
               >
-                <icon-refresh :spin="loading && createAudioKey === `${item1.p}-${item1.s}`"/>
-              </a-tag>
+                <a-button
+                    size="mini"
+                    type="outline"
+                    style="margin-right: 5px"
+                    :status="props.creatingIds?.includes(item1.index) ? 'danger' : 'normal'"
+                    :disabled="!item1.modelType || props.creatingIds?.includes(item1.index)"
+                >
+                  <icon-refresh
+                      :spin="props.creatingIds?.includes(item1.index)"
+                  />
+                </a-button>
+              </a-popconfirm>
             </span>
             <span>
               <context-menu

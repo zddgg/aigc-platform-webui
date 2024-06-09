@@ -188,14 +188,14 @@ export function updateChapterText(params: {
 }
 
 export function startCreateAudio(params: { actionType: string } & ChapterParam) {
-    return axios.post<number>('/api/text/chapter/startCreateAudio', params);
+    return axios.post<string[]>('/api/text/chapter/startCreateAudio', params);
 }
 
 export function createAudio(params: {
     chapter: ChapterParam,
     chapterInfo: ChapterInfo,
 }) {
-    return axios.post<ChapterInfo>('/api/text/chapter/createAudio', params);
+    return axios.post<string[]>('/api/text/chapter/createAudio', params);
 }
 
 export function stopCreateAudio() {

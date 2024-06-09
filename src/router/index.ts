@@ -23,7 +23,7 @@ const routes: Array<RouteRecordRaw> = [
 ];
 
 const router = createRouter({
-    history: createWebHistory(),
+    history: createWebHistory('/webui/'),
     routes,
     scrollBehavior() {
         return { top: 0 };
