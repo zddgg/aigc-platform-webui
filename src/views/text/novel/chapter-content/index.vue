@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {inject, onMounted, onUnmounted, provide, ref, watch} from "vue";
 import {useRoute} from "vue-router";
-import {aiInference, checkAiResult, loadAiResult, startCreateAudio, stopCreateAudio} from "@/api/text.ts";
 import useLoading from "@/hooks/loading.ts";
 import TextContent from "@/views/text/novel/chapter-content/components/TextContent.vue";
 import {TextContentConfig} from "@/views/text/novel/chapter-content/useChapterContent.ts";
@@ -11,6 +10,13 @@ import BatchChangeModal from "@/views/text/novel/chapter-content/components/Batc
 import WebSocketService from "@/services/websocketService.ts";
 import {ROLE_CHANGE} from "@/services/eventTypes.ts";
 import {EventBus} from "@/vite-env";
+import {
+  checkRoleInference,
+  loadRoleInference,
+  roleInference,
+  startCreateAudio,
+  stopCreateAudio
+} from "@/api/text-chapter.ts";
 
 const route = useRoute();
 const {loading, setLoading} = useLoading();
@@ -60,9 +66,16 @@ const handleAiInferenceDone = () => {
   console.log('Request done\n', aiResultText.value);
 };
 
-const handleAiInferenceError = (response: Response) => {
+const handleAiInferenceError = async (response: Response) => {
   setLoading(false);
-  console.error('Request failed', response);
+  const errorBody = await response.json();
+  if (response.status === 401) {
+    Message.error(errorBody.error);
+  } else if (response.status === 400) {
+    Message.error(errorBody.error);
+  } else {
+    Message.error('Unexpected error occurred');
+  }
 };
 
 const handleAiInferenceTimeout = () => {
@@ -73,11 +86,11 @@ const handleAiInferenceTimeout = () => {
 const handleAiInference = () => {
   try {
     setLoading(true);
-    aiInference(
-        '/api/text/chapter/aiInference',
+    roleInference(
+        '/api/textChapter/roleInference',
         {
-          project: route.query.project as string,
-          chapter: route.query.chapter as string,
+          projectId: route.query.projectId as string,
+          chapterId: route.query.chapterId as string,
         },
         handleAiInferenceMessage,
         handleAiInferenceDone,
@@ -92,18 +105,18 @@ const handleAiInference = () => {
 
 const aiResultBool = ref<boolean>(false);
 const onCheckAiResult = async () => {
-  const {data} = await checkAiResult({
-    project: route.query.project as string,
-    chapter: route.query.chapter as string,
+  const {data} = await checkRoleInference({
+    projectId: route.query.projectId as string,
+    chapterId: route.query.chapterId as string,
   });
   aiResultBool.value = data;
   return data;
 }
 
 const handleUseCache = async () => {
-  await loadAiResult({
-    project: route.query.project as string,
-    chapter: route.query.chapter as string,
+  await loadRoleInference({
+    projectId: route.query.projectId as string,
+    chapterId: route.query.chapterId as string,
   });
   aiResultModalVisible.value = false;
   refresh();
@@ -122,8 +135,8 @@ const onAiInference = () => {
 
 const handleStartCreateAudio = async (actionType: 'all' | 'modified') => {
   const {data, msg} = await startCreateAudio({
-    project: route.query.project as string,
-    chapter: route.query.chapter as string,
+    projectId: route.query.projectId as string,
+    chapterId: route.query.chapterId as string,
     actionType: actionType,
   });
   Message.success(msg);
@@ -171,7 +184,7 @@ onUnmounted(() => {
 });
 
 function connectWebSocket() {
-  WebSocketService.connect(route.query.project as string);
+  WebSocketService.connect(route.query.projectId as string);
 }
 
 provide('WebSocketService', WebSocketService);

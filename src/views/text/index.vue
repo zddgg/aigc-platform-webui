@@ -2,23 +2,23 @@
 import {onMounted, ref} from "vue";
 import {useRouter} from "vue-router";
 import ProjectCreate from './components/ProjectCreate.vue'
-import {deleteProject, projectList, ProjectParam} from "@/api/text.ts";
 import {Message, Modal} from "@arco-design/web-vue";
 import useLoading from "@/hooks/loading.ts";
+import {deleteProject, list as queryTextProjectList, TextProject} from "@/api/text-project.ts";
 
 const router = useRouter();
 const {loading, setLoading} = useLoading();
 
 const projectCreateVisible = ref(false);
 
-const projects = ref<ProjectParam[]>([])
+const textProjects = ref<TextProject[]>([])
 
 const handleProjectList = async () => {
-  const {data} = await projectList()
-  projects.value = data;
+  const {data} = await queryTextProjectList()
+  textProjects.value = data;
 }
 
-const handleDeleteProject = (project: string) => {
+const handleDeleteProject = (project: TextProject) => {
   Modal.error({
     title: '删除项目',
     content:
@@ -26,7 +26,7 @@ const handleDeleteProject = (project: string) => {
     async onOk() {
       try {
         setLoading(true);
-        const {msg} = await deleteProject({project: project});
+        const {msg} = await deleteProject(project);
         Message.success(msg);
         await handleProjectList();
       } finally {
@@ -36,11 +36,12 @@ const handleDeleteProject = (project: string) => {
   });
 };
 
-const textProjectRoute = (project: string) => {
+const textProjectRoute = (project: TextProject) => {
   router.push({
     name: 'Novel',
     query: {
-      project: project
+      projectName: project.projectName,
+      projectId: project.projectId,
     }
   })
 }
@@ -77,23 +78,23 @@ onMounted(() => {
               </div>
             </a-card>
             <a-card
-                v-for="(item, index) in projects"
+                v-for="(item, index) in textProjects"
                 :key="index"
                 style="width: 350px"
             >
-              <a-descriptions :title="item.project" :column="1" bordered>
+              <a-descriptions :title="item.projectName" :column="1" bordered>
                 <a-descriptions-item label="类型">
                   {{ '章节小说' }}
                 </a-descriptions-item>
                 <a-descriptions-item label="章节">
-                  {{ item.chapterNum }}
+                  {{ item.chapterCount }}
                 </a-descriptions-item>
               </a-descriptions>
               <div style="display: flex; justify-content: right; margin-top: 10px">
                 <a-space>
                   <a-button
                       type="outline"
-                      @click="textProjectRoute(item.project)"
+                      @click="textProjectRoute(item)"
                   >
                     进入空间
                   </a-button>
@@ -101,7 +102,7 @@ onMounted(() => {
                       type="outline"
                       status="danger"
                       :loading="loading"
-                      @click="handleDeleteProject(item.project)"
+                      @click="handleDeleteProject(item)"
                   >
                     删除
                   </a-button>

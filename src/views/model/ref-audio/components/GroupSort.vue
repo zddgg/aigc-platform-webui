@@ -1,7 +1,7 @@
 <script setup lang="ts">
 
 import {ref, watch} from "vue";
-import {queryRefAudioSort, RefAudioSort, updateRefAudioSort} from "@/api/ref-audio.ts";
+import {queryGroupSorts, RefAudioSort, updateRefAudioSorts} from "@/api/ref-audio.ts";
 import {Message, TableData} from "@arco-design/web-vue";
 
 const props = defineProps({
@@ -22,16 +22,15 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
       sortOrder: index
     }
   })
-  const {msg} = await updateRefAudioSort(refAudioSorts.value);
+  const {msg} = await updateRefAudioSorts(refAudioSorts.value);
   Message.success(msg);
   done(true);
   emits('change')
 };
 
 const handleQueryRefAudioSort = async () => {
-  const {data} = await queryRefAudioSort()
+  const {data} = await queryGroupSorts()
   refAudioSorts.value = data;
-  console.log(data)
 }
 
 const sortChange = (_data: TableData[]) => {

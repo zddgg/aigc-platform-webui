@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import {useRoute} from "vue-router";
 import {inject, onBeforeUnmount, onMounted, ref, watch} from "vue";
-import {queryRoles, Role, roleModelChange} from "@/api/text.ts";
+import {roles as queryRoles, TextRole, updateRole,} from "@/api/text-chapter.ts";
 import {Message} from "@arco-design/web-vue";
 import AudioSelect from '@/views/audio-select/index.vue'
 import RoleRename from "@/views/text/novel/chapter-role/components/RoleRename.vue";
 import RoleDelete from "@/views/text/novel/chapter-role/components/RoleDelete.vue";
 import {EventBus} from "@/vite-env";
 import {ROLE_CHANGE} from "@/services/eventTypes.ts";
-import {ModelConfig} from "@/api/model.ts";
+import {AudioModelConfig} from "@/api/model.ts";
+import {voiceNameFormat} from "@/utils/model-util.ts";
 
 const route = useRoute();
 
@@ -18,12 +19,12 @@ const modelSelectVisible = ref<boolean>(false);
 const roleRenameModalVisible = ref<boolean>(false);
 const roleDeleteModalVisible = ref<boolean>(false);
 
-const roles = ref<Role[]>([])
+const roles = ref<TextRole[]>([])
 
 const handleQueryRoles = async () => {
   const {data} = await queryRoles({
-    project: route.query.project as string,
-    chapter: route.query.chapter as string,
+    projectId: route.query.projectId as string,
+    chapterId: route.query.chapterId as string,
   })
   roles.value = data;
 }
@@ -35,13 +36,13 @@ const openAllRule = () => {
       : ruleActiveKey.value = [...Array(roles.value.length).keys()]
 }
 
-const currentRole = ref<Role>({} as Role);
-const roleSelectModel = (role: Role) => {
+const currentRole = ref<TextRole>({} as TextRole);
+const roleSelectModel = (role: TextRole) => {
   currentRole.value = role;
   modelSelectVisible.value = true
 }
 
-const modelSelect = async (modelConfig: ModelConfig) => {
+const modelSelect = async (modelConfig: AudioModelConfig) => {
 
   roles.value = roles.value.map(item => {
     if (item.role === currentRole.value.role) {
@@ -53,26 +54,20 @@ const modelSelect = async (modelConfig: ModelConfig) => {
     return item;
   })
 
-  const {msg} = await roleModelChange({
-    chapter: {
-      project: route.query.project as string,
-      chapter: route.query.chapter as string,
-    },
-    role: {
-      ...currentRole.value,
-      ...modelConfig,
-    }
+  const {msg} = await updateRole({
+    ...currentRole.value,
+    ...modelConfig,
   })
   Message.success(msg);
   eventBus?.emit(ROLE_CHANGE);
 }
 
-const onRoleRename = (role: Role) => {
+const onRoleRename = (role: TextRole) => {
   currentRole.value = role;
   roleRenameModalVisible.value = true;
 }
 
-const onDeleteRole = (role: Role) => {
+const onDeleteRole = (role: TextRole) => {
   currentRole.value = role;
   roleDeleteModalVisible.value = true;
 }
@@ -98,9 +93,11 @@ onBeforeUnmount(() => {
 });
 
 watch(
-    () => route.query.chapter,
+    () => route.query.chapterId,
     () => {
-      handleQueryRoles();
+      if (route.query.chapterId) {
+        handleQueryRoles();
+      }
     },
     {immediate: true}
 );
@@ -139,86 +136,81 @@ watch(
                   </span>
           </template>
           <div>
-            <div v-if="['gpt-sovits', 'fish-speech'].includes(item.modelType)">
-              <a-descriptions
-                  :column="1"
-                  size="medium"
-              >
-                <a-descriptions-item label="类型">
-                  {{ item.modelType }}
-                </a-descriptions-item>
-                <a-descriptions-item
-                    v-if="item.model && item.model.length"
-                    label="模型"
-                >
-                  {{ item.model.join('/') }}
-                </a-descriptions-item>
-                <a-descriptions-item
-                    v-if="item.audio && item.audio.length"
-                    label="音频"
-                >
-                  <a-typography-text ellipsis>
-                    {{ item.audio.join('/') }}
-                  </a-typography-text>
-                </a-descriptions-item>
-              </a-descriptions>
-            </div>
-            <div v-if="['edge-tts'].includes(item.modelType)">
-              <a-descriptions
-                  :column="1"
-                  size="medium"
-              >
-                <a-descriptions-item label="类型">
-                  {{ item.modelType }}
-                </a-descriptions-item>
-                <a-descriptions-item
-                    v-if="item.model && item.model.length"
-                    label="声音"
-                >
-                  {{ item.model.join('/') }}
-                </a-descriptions-item>
-              </a-descriptions>
-            </div>
-            <div
-                v-if="['chat-tts'].includes(item.modelType)"
-                style="margin-bottom: 5px"
+            <a-descriptions
+                :column="1"
+                size="medium"
             >
-              <a-descriptions
-                  :column="2"
-                  size="small"
-                  layout="inline-vertical"
+              <a-descriptions-item label="类型">
+                {{ item.audioModelType }}
+              </a-descriptions-item>
+              <a-descriptions-item
+                  v-if="['gpt-sovits'].includes(item.audioModelType)"
+                  label="模型"
               >
-                <a-descriptions-item label="类型">
-                  {{ item.modelType }}
-                </a-descriptions-item>
-                <a-descriptions-item label="模型">
+                <a-typography-text ellipsis>
+                  {{ `${item.gptSovitsModel?.modelGroup}/${item.gptSovitsModel?.modelName}` }}
+                </a-typography-text>
+              </a-descriptions-item>
+              <a-descriptions-item
+                  v-if="['gpt-sovits'].includes(item.audioModelType)"
+                  label="配置"
+              >
+                <a-typography-text ellipsis>
+                  {{ `${item.gptSovitsConfig?.configName}` }}
+                </a-typography-text>
+              </a-descriptions-item>
+              <a-descriptions-item
+                  v-if="['gpt-sovits'].includes(item.audioModelType)"
+                  label="音频"
+              >
+                <a-typography-text ellipsis>
+                  {{ `${item.refAudio?.audioGroup}/${item.refAudio?.audioName}/${item.refAudio?.moodName}/${item.refAudio?.moodAudioName}` }}
+                </a-typography-text>
+              </a-descriptions-item>
+
+              <a-descriptions-item
+                  v-if="['fish-speech'].includes(item.audioModelType)"
+                  label="模型"
+              >
+                <a-typography-text ellipsis>
+                  {{ `${item.fishSpeechModel?.modelGroup}/${item.fishSpeechModel?.modelName}` }}
+                </a-typography-text>
+              </a-descriptions-item>
+              <a-descriptions-item
+                  v-if="['fish-speech'].includes(item.audioModelType)"
+                  label="配置"
+              >
+                <a-typography-text ellipsis>
+                  {{ `${item.fishSpeechConfig?.configName}` }}
+                </a-typography-text>
+              </a-descriptions-item>
+              <a-descriptions-item
+                  v-if="['fish-speech'].includes(item.audioModelType)"
+                  label="音频"
+              >
+                <a-typography-text ellipsis>
+                  {{ `${item.refAudio?.audioGroup}/${item.refAudio?.audioName}/${item.refAudio?.moodName}` }}
+                </a-typography-text>
+              </a-descriptions-item>
+
+              <a-descriptions-item
+                  v-if="['chat-tts'].includes(item.audioModelType)"
+                  label="配置"
+              >
+                <a-typography-text ellipsis>
                   {{ item.chatTtsConfig?.configName }}
-                </a-descriptions-item>
-                <a-descriptions-item label="audio_seed">
-                  {{ item.chatTtsConfig?.audio_seed_input }}
-                </a-descriptions-item>
-                <a-descriptions-item label="text_seed">
-                  {{ item.chatTtsConfig?.text_seed_input }}
-                </a-descriptions-item>
-                <a-descriptions-item label="top_P">
-                  {{ item.chatTtsConfig?.top_P }}
-                </a-descriptions-item>
-                <a-descriptions-item label="top_K">
-                  {{ item.chatTtsConfig?.top_K }}
-                </a-descriptions-item>
-                <a-descriptions-item label="temperature">
-                  {{ item.chatTtsConfig?.temperature }}
-                </a-descriptions-item>
-                <a-descriptions-item label="refine_flag">
-                  {{ item.chatTtsConfig?.refine_text_flag }}
-                </a-descriptions-item>
-                <a-descriptions-item label="refine_params">
-                  <a-typography-text ellipsis>
-                    {{ item.chatTtsConfig?.params_refine_text }}
-                  </a-typography-text>
-                </a-descriptions-item>
-              </a-descriptions>
-            </div>
+                </a-typography-text>
+              </a-descriptions-item>
+
+              <a-descriptions-item
+                  v-if="['edge-tts'].includes(item.audioModelType)"
+                  label="配置"
+              >
+                <a-typography-text ellipsis>
+                  {{ voiceNameFormat(item.audioConfigId) }}
+                </a-typography-text>
+              </a-descriptions-item>
+            </a-descriptions>
             <div style="text-align: left">
               <a-space wrap>
                 <a-dropdown-button

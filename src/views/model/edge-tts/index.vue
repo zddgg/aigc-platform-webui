@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import VoiceList from "@/views/model/edge-tts/components/VoiceList.vue";
 import VoiceConfig from "@/views/model/edge-tts/components/VoiceConfig.vue";
-
 </script>
 
 <template>

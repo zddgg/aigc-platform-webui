@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from "vue";
 import AudioDetail from "@/views/model/ref-audio/components/AudioDetail.vue";
-import {RefAudio, queryRefAudios} from "@/api/ref-audio.ts";
+import {queryRefAudios, RefAudio, refreshCache} from "@/api/ref-audio.ts";
 import GroupSort from "@/views/model/ref-audio/components/GroupSort.vue";
+import {Message} from "@arco-design/web-vue";
+import {voiceNameFormat} from "@/utils/model-util.ts";
 
 const audioElement = ref<HTMLAudioElement | null>(null); // ref 对象引用到 audio 元素
 
@@ -110,6 +112,12 @@ const reset = () => {
   selectTag.value = '';
 }
 
+const handleRefresh = async () => {
+  const {msg} = await refreshCache()
+  await handleQueryAudios()
+  Message.success(msg);
+}
+
 onMounted(() => {
   handleQueryAudios();
 })
@@ -157,13 +165,23 @@ onMounted(() => {
     <div>
       <a-tabs v-model:active-key="activateKey" size="large">
         <template #extra>
-          <a-button
-              type="outline"
-              style="margin-right: 20px"
-              @click="() => (groupSortVisible = true)"
-          >
-            排序配置
-          </a-button>
+          <a-space>
+            <a-button
+                type="outline"
+                style="margin-right: 20px"
+                @click="() => (groupSortVisible = true)"
+            >
+              排序配置
+            </a-button>
+            <a-popconfirm content="刷新缓存?" @ok="handleRefresh">
+              <a-button
+                  type="outline"
+                  style="margin-right: 20px"
+              >
+                刷新缓存
+              </a-button>
+            </a-popconfirm>
+          </a-space>
         </template>
         <a-tab-pane v-for="(item) in groupOptions" :key="item" :title="item">
           <a-space size="medium" wrap align="start">
@@ -175,13 +193,16 @@ onMounted(() => {
             >
               <div style="display: flex">
                 <div>
-                  <a-avatar v-if="item1.avatar" :image-url="item1.avatar"/>
+                  <a-avatar v-if="item1.avatarUrl" :image-url="item1.avatarUrl"/>
                   <a-avatar v-else>
-                    {{ item1.name }}
+                    {{ item1.group === 'edge-tts' ? voiceNameFormat(item1.name) : item1.name }}
                   </a-avatar>
                 </div>
                 <div style="margin-left: 20px">
-                  <a-descriptions :title="item1.name" :column="2">
+                  <a-descriptions :column="2">
+                    <template #title>
+                      {{ item1.group === 'edge-tts' ? voiceNameFormat(item1.name) : item1.name }}
+                    </template>
                     <a-descriptions-item label="群组">
                       {{ item1.group }}
                     </a-descriptions-item>
@@ -237,7 +258,7 @@ onMounted(() => {
                                 </a-typography-paragraph>
                               </div>
                               <div>
-                                <a-space v-if="item3.tags" wrap>
+                                <a-space v-if="item3.tags && item3.tags.length" wrap>
                                   <a-tag
                                       v-for="(item4, index4) in item3.tags"
                                       :key="index4"
@@ -267,7 +288,7 @@ onMounted(() => {
                                   style="text-align: right; margin-left: 5px"
                                   @click.stop="playAudio(
                                       `${item}-${item1.name}-${item2.name}-${item3.name}`,
-                                      item3.url
+                                      item3.audioUrl
                                   )"
                               >
                                 <icon-play-arrow/>

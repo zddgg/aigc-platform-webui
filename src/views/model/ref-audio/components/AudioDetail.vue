@@ -2,6 +2,7 @@
 import {PropType, ref, watch} from "vue";
 import {FormInstance, Message} from "@arco-design/web-vue";
 import {updateRefAudio, RefAudio} from "@/api/ref-audio.ts";
+import {voiceNameFormat} from "@/utils/model-util.ts";
 
 const props = defineProps({
   visible: {
@@ -96,12 +97,12 @@ watch(
         <div style="display: flex">
           <div style="width: 20%; text-align: center">
             <a-avatar
-                v-if="form.avatar"
-                :image-url="form.avatar"
+                v-if="form.avatarUrl"
+                :image-url="form.avatarUrl"
                 :size="80"
             />
             <a-avatar v-else :size="80">
-              {{ form.name }}
+              {{ form.group === 'edge-tts' ? voiceNameFormat(form.name) : form.name }}
             </a-avatar>
           </div>
           <div style="width: 80%">
@@ -147,7 +148,7 @@ watch(
       <a-tabs :default-active-key="form.moods[0].name">
         <a-tab-pane v-for="(item, index) in form.moods" :key="item.name">
           <template #title>
-            <a-avatar v-if="item.avatar || form.avatar" :image-url="item.avatar ?? form.avatar"/>
+            <a-avatar v-if="item.avatarUrl || form.avatarUrl" :image-url="item.avatarUrl ?? form.avatarUrl"/>
             <span style="margin-left: 10px">{{ item.name }}</span>
           </template>
           <n-scrollbar style="height: 350px">
@@ -178,7 +179,7 @@ watch(
                             v-else
                             type="outline"
                             size="mini"
-                            @click="playAudio(`${item.name}-${item1.name}`, item1.url)"
+                            @click="playAudio(`${item.name}-${item1.name}`, item1.audioUrl)"
                         >
                           <icon-play-arrow/>
                         </a-button>

@@ -3,31 +3,41 @@ import {computed, onMounted, ref} from "vue";
 import {SelectOptionData} from "@arco-design/web-vue/es/select/interface";
 import useLoading from "@/hooks/loading.ts";
 import {voiceNameFormat} from "@/utils/model-util.ts";
-import {EdgeTtsVoice, LangText, queryEdgeTtsConfig, queryVoiceAudioUrl} from "@/api/config.ts";
+import {
+  EdgeTtsSetting,
+  EdgeTtsConfig,
+  playOrCreateAudio,
+  settings as querySettings,
+  configs as queryConfigs
+} from "@/api/edge-tts.ts";
 
 const {loading, setLoading} = useLoading();
 
-const edgeTtsVoices = ref<EdgeTtsVoice[]>([])
-const langTexts = ref<LangText[]>([])
+const edgeTtsConfigs = ref<EdgeTtsConfig[]>([])
+const edgeTtsSettings = ref<EdgeTtsSetting[]>([])
 
 const selectGender = ref<string>('')
 const genderOptions = ref<SelectOptionData[]>([])
 const selectLanguage = ref<string>('')
 const voiceNameInput = ref<string>('')
 
-const handleVoices = async () => {
-  const {data} = await queryEdgeTtsConfig()
-  edgeTtsVoices.value = data.voices
-  langTexts.value = data.langTexts
-  genderOptions.value = Array.from(new Set(data.voices.map(item => item.gender)))
+const handleQueryConfigs = async () => {
+  const {data} = await queryConfigs()
+  edgeTtsConfigs.value = data
+  genderOptions.value = Array.from(new Set(data.map(item => item.gender)))
       .map(gender => ({
         label: gender === 'Male' ? '男' : gender === 'Female' ? '女' : gender,
         value: gender
       }));
 }
 
+const handleQuerySettings = async () => {
+  const {data} = await querySettings()
+  edgeTtsSettings.value = data;
+}
+
 const computedVoices = computed(() => {
-  let tmp = edgeTtsVoices.value;
+  let tmp = edgeTtsConfigs.value;
   if (selectGender.value) {
     tmp = tmp.filter(item => item.gender === selectGender.value)
   }
@@ -46,27 +56,15 @@ const audioElement = ref<HTMLAudioElement | null>(null); // ref 对象引用到 
 
 const activeAudioKey = ref<string>('')
 
-const playAudio = (key: string, url: string) => {
-  activeAudioKey.value = key;
-
-  if (audioElement.value) {
-    // 设置音频源
-    audioElement.value.src = url;
-
-    // 播放音频
-    audioElement.value.play();
-  }
-};
-
 const createAudioKey = ref('')
-const createAudio = async (key: string, url: string) => {
-  let newUrl = url;
+
+const playAudio = async (key: string, url: string) => {
   if (!url) {
     try {
       createAudioKey.value = key;
       setLoading(true);
-      const {data} = await queryVoiceAudioUrl(key);
-      newUrl = data;
+      const {data} = await playOrCreateAudio(key);
+      url = data;
     } catch (error) {
       console.error('Error fetching audio URL:', error);
       // 错误处理逻辑
@@ -76,7 +74,16 @@ const createAudio = async (key: string, url: string) => {
       setLoading(false);
     }
   }
-  playAudio(key, newUrl);
+
+  activeAudioKey.value = key;
+
+  if (audioElement.value) {
+    // 设置音频源
+    audioElement.value.src = url;
+
+    // 播放音频
+    audioElement.value.play();
+  }
 }
 
 const stopAudio = () => {
@@ -93,7 +100,8 @@ const handleAudioEnded = () => {
 };
 
 onMounted(() => {
-  handleVoices();
+  handleQueryConfigs();
+  handleQuerySettings();
 })
 </script>
 
@@ -112,9 +120,8 @@ onMounted(() => {
         <a-select
             v-model="selectLanguage"
             placeholder="语言"
-            allow-search
             allow-clear
-            :options="langTexts.filter(item => item.show)"
+            :options="edgeTtsSettings.filter(item => item.showFlag)"
             :field-names="{value: 'enName', label: 'zhName'}"
             style="width: 200px"
         >
@@ -162,7 +169,7 @@ onMounted(() => {
                 v-else
                 type="outline"
                 :loading="createAudioKey === item.shortName && loading"
-                @click="createAudio(item.shortName, item.url)"
+                @click="playAudio(item.shortName, item.url)"
             >
               <icon-play-arrow/>
             </a-button>

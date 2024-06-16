@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {deleteChatTtsConfig, queryChatTtsConfig} from "@/api/config.ts";
+import {configs as queryChatTtsConfigs, deleteConfig} from "@/api/chat-tts.ts"
 import {onMounted, ref} from "vue";
 import {Message} from "@arco-design/web-vue";
 import {ChatTtsConfig} from "@/api/chat-tts.ts";
@@ -7,12 +7,12 @@ import {ChatTtsConfig} from "@/api/chat-tts.ts";
 const chatTtsConfigs = ref<ChatTtsConfig[]>([])
 
 const handleQueryChatTtsConfig = async () => {
-  const {data} = await queryChatTtsConfig()
+  const {data} = await queryChatTtsConfigs()
   chatTtsConfigs.value = data;
 }
 
 const handleDeleteChatTtsConfig = async (config: ChatTtsConfig) => {
-  const {msg} = await deleteChatTtsConfig(config)
+  const {msg} = await deleteConfig(config)
   Message.success(msg)
   await handleQueryChatTtsConfig();
 }
@@ -39,28 +39,28 @@ onMounted(() => {
             layout="inline-vertical"
         >
           <a-descriptions-item label="audio_seed">
-            {{ item.audio_seed_input }}
+            {{ item.audioSeedInput }}
           </a-descriptions-item>
           <a-descriptions-item label="text_seed">
-            {{ item.text_seed_input }}
+            {{ item.textSeedInput }}
           </a-descriptions-item>
           <a-descriptions-item label="top_P">
-            {{ item.top_P }}
+            {{ item.topP }}
           </a-descriptions-item>
           <a-descriptions-item label="top_K">
-            {{ item.top_K }}
+            {{ item.topK }}
           </a-descriptions-item>
           <a-descriptions-item label="temperature">
             {{ item.temperature }}
           </a-descriptions-item>
           <a-descriptions-item label="refine_flag">
-            {{ item.refine_text_flag }}
+            {{ item.refineTextFlag }}
           </a-descriptions-item>
           <a-descriptions-item label="refine_params">
             <div style="display: flex; justify-content: space-between">
               <div>
                 <span>
-                  {{ item.params_refine_text }}
+                  {{ item.refineTextParams }}
                 </span>
               </div>
               <div>

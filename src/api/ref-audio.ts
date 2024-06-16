@@ -1,18 +1,18 @@
 import axios from '@/axios/default-axios.ts';
 
 export interface MoodAudio {
-    id: number;
+    id: string;
     name: string;
     text: string;
     tags: string[];
-    url: string;
+    audioUrl: string;
 }
 
 export interface Mood {
     id: number;
     name: string;
     moodAudios: MoodAudio[];
-    avatar: string;
+    avatarUrl: string;
     currentMoodAudio: MoodAudio;
 }
 
@@ -26,15 +26,28 @@ export interface RefAudio {
     language: string;
     moods: Mood[];
     tags: string[];
-    avatar: string;
+    avatarUrl: string;
+}
+
+export interface RefAudioEntity {
+    refAudioId: string;
+    audioGroup: string;
+    audioName: string;
+    moodName: string;
+    moodAudioName: string;
+    moodAudioText: string;
 }
 
 export function queryRefAudios() {
-    return axios.post<RefAudio[]>('/api/model/refAudio/queryRefAudios');
+    return axios.post<RefAudio[]>('/api/refAudio/refAudioList');
 }
 
 export function updateRefAudio(params: RefAudio) {
-    return axios.post('/api/model/refAudio/updateRefAudio', params);
+    return axios.post('/api/refAudio/updateRefAudio', params);
+}
+
+export function refreshCache() {
+    return axios.post('/api/refAudio/refreshCache');
 }
 
 export interface RefAudioSort {
@@ -43,10 +56,10 @@ export interface RefAudioSort {
     showFlag: boolean;
 }
 
-export function queryRefAudioSort() {
-    return axios.post<RefAudioSort[]>('/api/model/refAudio/queryRefAudioSort');
+export function queryGroupSorts() {
+    return axios.post<RefAudioSort[]>('/api/refAudio/queryGroupSorts');
 }
 
-export function updateRefAudioSort(params: RefAudioSort[]) {
-    return axios.post('/api/model/refAudio/updateRefAudioSort', params);
+export function updateRefAudioSorts(params: RefAudioSort[]) {
+    return axios.post('/api/refAudio/updateRefAudioSorts', params);
 }

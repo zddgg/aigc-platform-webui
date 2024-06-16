@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import AudioConfigList from "@/views/model/chat-tts/components/AudioConfigList.vue";
 import AudioCreate from "@/views/model/chat-tts/components/AudioCreate.vue";
+import ConfigParamList from "@/views/model/chat-tts/components/ConfigParamList.vue";
 </script>
 
 <template>
   <div>
     <a-tabs default-active-key="1">
-      <a-tab-pane key="1" title="音频配置列表">
-        <audio-config-list/>
+      <a-tab-pane key="1" title="配置参数列表">
+        <config-param-list/>
       </a-tab-pane>
       <a-tab-pane key="2" title="音频生成">
         <audio-create/>

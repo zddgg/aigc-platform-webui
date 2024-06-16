@@ -1,17 +1,27 @@
 <script setup lang="ts">
-import {computed, onMounted, PropType, ref, watch} from "vue";
+import {computed, PropType, ref, watch} from "vue";
 import useLoading from "@/hooks/loading.ts";
-import {EdgeTtsVoice, LangText, queryEdgeTtsConfig, queryVoiceAudioUrl} from "@/api/config.ts";
 import {voiceNameFormat} from "@/utils/model-util.ts";
-import {ModelConfig} from "@/api/model.ts";
+import {AudioModelConfig} from "@/api/model.ts";
 import {SelectOptionData} from "@arco-design/web-vue/es/select/interface";
+import {
+  configs as queryConfigs,
+  EdgeTtsConfig,
+  EdgeTtsSetting,
+  playOrCreateAudio,
+  settings as querySettings
+} from "@/api/edge-tts.ts";
 
 const props = defineProps({
+  visible: {
+    type: Boolean,
+    default: false,
+  },
   activeTabKey: {
     type: String,
   },
-  modelConfig: {
-    type: Object as PropType<ModelConfig>
+  audioModelConfig: {
+    type: Object as PropType<AudioModelConfig>
   }
 })
 
@@ -20,9 +30,9 @@ const emits = defineEmits(['modelSelect'])
 const {loading, setLoading} = useLoading();
 const audioElement = ref<HTMLAudioElement | null>(null); // ref 对象引用到 audio 元素
 
-const voices = ref<EdgeTtsVoice[]>([])
-const currentAudio = ref<EdgeTtsVoice>({} as EdgeTtsVoice)
-const langTexts = ref<LangText[]>([])
+const edgeTtsConfigs = ref<EdgeTtsConfig[]>([])
+const currentAudio = ref<EdgeTtsConfig>({} as EdgeTtsConfig)
+const edgeTtsSettings = ref<EdgeTtsSetting[]>([])
 
 const genderOptions = ref<SelectOptionData[]>([])
 const selectGender = ref<string>('')
@@ -30,7 +40,7 @@ const selectLanguage = ref<string>('')
 const nameSearchInput = ref<string>('')
 
 const computedVoices = computed(() => {
-  let tmp = voices.value;
+  let tmp = edgeTtsConfigs.value;
   if (selectGender.value) {
     tmp = tmp.filter(item => item.gender === selectGender.value)
   }
@@ -45,11 +55,10 @@ const computedVoices = computed(() => {
   return tmp;
 })
 
-const handleQueryVoices = async () => {
-  const {data} = await queryEdgeTtsConfig()
-  voices.value = data.voices
-  langTexts.value = data.langTexts
-  genderOptions.value = Array.from(new Set(data.voices.map(item => item.gender)))
+const handleQueryConfigs = async () => {
+  const {data} = await queryConfigs()
+  edgeTtsConfigs.value = data
+  genderOptions.value = Array.from(new Set(data.map(item => item.gender)))
       .map(gender => {
         return {
           label: gender === 'Male' ? '男' : gender === 'Female' ? '女' : gender,
@@ -58,13 +67,18 @@ const handleQueryVoices = async () => {
       });
 }
 
+const handleQuerySettings = async () => {
+  const {data} = await querySettings();
+  edgeTtsSettings.value = data.sort((a, b) => (b.showFlag ? 1 : 0) - (a.showFlag ? 1 : 0));
+}
+
 const activeAudioKey = ref<string>('')
 
-const playOrCreateAudio = async (voice: EdgeTtsVoice) => {
+const playAudio = async (voice: EdgeTtsConfig) => {
   if (!voice.url) {
     try {
       setLoading(true)
-      const {data} = await queryVoiceAudioUrl(voice.shortName);
+      const {data} = await playOrCreateAudio(voice.shortName);
       voice.url = data
     } finally {
       setLoading(false)
@@ -94,30 +108,38 @@ const handleAudioEnded = () => {
 };
 
 const modelSelect = () => {
-  const modelConfig: ModelConfig = {
-    modelType: 'edge-tts',
-    model: [currentAudio.value.shortName],
-  }
-  emits('modelSelect', modelConfig);
+  const audioModelConfig: AudioModelConfig = {
+    audioModelType: 'edge-tts',
+    audioConfigId: currentAudio.value.shortName,
+  } as AudioModelConfig;
+  emits('modelSelect', audioModelConfig);
 }
 
-onMounted(() => {
-  handleQueryVoices();
-})
+watch(
+    () => props.visible,
+    async () => {
+      if (props.visible) {
+        await handleQueryConfigs();
+        await handleQuerySettings();
+
+        if (props.activeTabKey === '3') {
+          if (props.audioModelConfig && props.audioModelConfig?.edgeTtsConfig) {
+            const find = edgeTtsConfigs.value.find(item => item.shortName === props.audioModelConfig?.edgeTtsConfig?.shortName);
+            if (find) {
+              currentAudio.value = {...find};
+            }
+          }
+        }
+      }
+    },
+    {immediate: true}
+)
 
 watch(
     () => props.activeTabKey,
     () => {
-      if (props.activeTabKey !== '2') {
+      if (props.activeTabKey !== '3') {
         stopAudio();
-      }
-      if (props.activeTabKey === '2') {
-        if (props.modelConfig && props.modelConfig?.model && props.modelConfig?.model.length > 0) {
-          const find = voices.value.find(item => item.shortName === (props.modelConfig?.model as Array<any>)[0]);
-          if (find) {
-            currentAudio.value = {...find};
-          }
-        }
       }
     },
     {immediate: true}
@@ -139,10 +161,9 @@ watch(
         />
         <a-select
             v-model="selectLanguage"
-            :options="langTexts.filter(item => item.show)"
+            :options="edgeTtsSettings.filter(item => item.showFlag)"
             :field-names="{value: 'enName', label: 'zhName'}"
             allow-clear
-            allow-search
             placeholder="语言"
             size="small"
             style="width: 100px"
@@ -266,7 +287,7 @@ watch(
                     type="outline"
                     style="text-align: right; margin-left: 5px"
                     :loading="loading"
-                    @click.stop="playOrCreateAudio(currentAudio)"
+                    @click.stop="playAudio(currentAudio)"
                 >
                   <icon-play-arrow/>
                 </a-button>
@@ -314,7 +335,7 @@ watch(
                             size="mini"
                             type="outline"
                             style="text-align: right; margin-left: 5px"
-                            @click.stop="playOrCreateAudio(currentAudio)"
+                            @click.stop="playAudio(currentAudio)"
                         >
                           <icon-play-arrow/>
                         </a-button>

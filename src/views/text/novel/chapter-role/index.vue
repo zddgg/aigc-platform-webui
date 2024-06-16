@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import CommonRole from "@/views/text/novel/chapter-role/components/CommonRole.vue";
 import TextRole from "@/views/text/novel/chapter-role/components/TextRole.vue";
-import TextModel from "@/views/text/novel/chapter-role/components/TextModel.vue";
 import {ref} from "vue";
 
 const emits = defineEmits(['roleModelChange'])
 
 const textRoleRef = ref<{
   refreshInner: Function
-}>({refreshInner: () => {}})
+}>({
+  refreshInner: () => {
+  }
+})
 
 const roleModelChange = () => {
   emits('roleModelChange')
@@ -37,22 +39,14 @@ defineExpose({refreshTextRole})
               type="line"
           >
             <n-tab-pane
-                v-if="false"
                 name="1"
-                tab="文中模型"
-                display-directive="show:lazy"
-            >
-              <text-model @role-model-change="roleModelChange"/>
-            </n-tab-pane>
-            <n-tab-pane
-                name="2"
                 tab="文中角色"
                 display-directive="show:lazy"
             >
               <text-role ref="textRoleRef" @role-model-change="roleModelChange"/>
             </n-tab-pane>
             <n-tab-pane
-                name="3"
+                name="2"
                 tab="预置角色"
                 display-directive="show:lazy"
             >
@@ -74,12 +68,15 @@ defineExpose({refreshTextRole})
   border-radius: 8px;
   margin-bottom: 10px;
 }
+
 :deep(.n-tabs-bar) {
   background-color: #165dff !important;
 }
+
 :deep(.n-tabs-tab:hover) {
   color: #165dff !important;
 }
+
 :deep(.n-tabs-tab--active) {
   color: #165dff !important;
 }

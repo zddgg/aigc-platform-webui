@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import {computed, onMounted, PropType, ref, watch} from "vue";
-import {queryChatTtsConfig} from "@/api/config.ts";
-import {ChatTtsConfig} from "@/api/chat-tts.ts";
-import {ModelConfig} from "@/api/model.ts";
+import {computed, PropType, ref, watch} from "vue";
+import {ChatTtsConfig, configs as queryChatTtsConfigs} from "@/api/chat-tts.ts";
+import {AudioModelConfig} from "@/api/model.ts";
 
 const props = defineProps({
+  visible: {
+    type: Boolean,
+    default: false,
+  },
   activeTabKey: {
     type: String,
   },
-  modelConfig: {
-    type: Object as PropType<ModelConfig>
+  audioModelConfig: {
+    type: Object as PropType<AudioModelConfig>
   }
 })
 
@@ -31,7 +34,7 @@ const computedConfigs = computed(() => {
 })
 
 const handleQueryChatTtsConfig = async () => {
-  const {data} = await queryChatTtsConfig()
+  const {data} = await queryChatTtsConfigs()
   chatTtsConfigs.value = data
 }
 
@@ -62,26 +65,32 @@ const handleAudioEnded = () => {
 };
 
 const modelSelect = () => {
-  const modelConfig: ModelConfig = {
-    modelType: 'chat-tts',
-    chatTtsConfig: currentConfig.value,
-  }
-  emits('modelSelect', modelConfig);
+  const audioModelConfig: AudioModelConfig = {
+    audioModelType: 'chat-tts',
+    audioConfigId: currentConfig.value.configId,
+  } as AudioModelConfig;
+  emits('modelSelect', audioModelConfig);
 }
 
-onMounted(() => {
-  handleQueryChatTtsConfig();
-})
+watch(
+    () => props.visible,
+    () => {
+      if (props.visible) {
+        handleQueryChatTtsConfig();
+      }
+    },
+    {immediate: true}
+)
 
 watch(
     () => props.activeTabKey,
     () => {
-      if (props.activeTabKey !== '3') {
+      if (props.activeTabKey !== '2') {
         stopAudio();
       }
-      if (props.activeTabKey === '3') {
-        if (props.modelConfig) {
-          currentConfig.value = props.modelConfig?.chatTtsConfig as ChatTtsConfig;
+      if (props.activeTabKey === '2') {
+        if (props.audioModelConfig) {
+          currentConfig.value = props.audioModelConfig?.chatTtsConfig as ChatTtsConfig;
         }
       }
     },
@@ -122,10 +131,10 @@ watch(
                     </a-typography-text>
                   </template>
                   <a-descriptions-item label="audio_seed">
-                    {{ item.audio_seed_input }}
+                    {{ item.audioSeedInput }}
                   </a-descriptions-item>
                   <a-descriptions-item label="text_seed">
-                    {{ item.text_seed_input }}
+                    {{ item.textSeedInput }}
                   </a-descriptions-item>
                 </a-descriptions>
               </a-card>
@@ -147,25 +156,25 @@ watch(
             </a-typography-text>
           </template>
           <a-descriptions-item label="audio_seed">
-            <a-input-number v-model="currentConfig.audio_seed_input" size="mini"/>
+            {{ currentConfig.audioSeedInput }}
           </a-descriptions-item>
           <a-descriptions-item label="text_seed">
-            <a-input-number v-model="currentConfig.text_seed_input" size="mini"/>
+            {{ currentConfig.textSeedInput }}
           </a-descriptions-item>
           <a-descriptions-item label="top_P">
-            <a-input-number v-model="currentConfig.top_P" size="mini"/>
+            {{ currentConfig.topP }}
           </a-descriptions-item>
           <a-descriptions-item label="top_K">
-            <a-input-number v-model="currentConfig.top_K" size="mini"/>
+            {{ currentConfig.topK }}
           </a-descriptions-item>
           <a-descriptions-item label="temperature">
-            <a-input-number v-model="currentConfig.temperature" size="mini"/>
+            {{ currentConfig.temperature }}
           </a-descriptions-item>
           <a-descriptions-item label="refine_flag">
-            <a-checkbox v-model="currentConfig.refine_text_flag">{{ currentConfig.refine_text_flag }}</a-checkbox>
+            {{ currentConfig.refineTextFlag }}
           </a-descriptions-item>
           <a-descriptions-item label="refine_params">
-            <a-input v-model="currentConfig.params_refine_text"/>
+            {{ currentConfig.refineTextParams }}
           </a-descriptions-item>
         </a-descriptions>
       </div>

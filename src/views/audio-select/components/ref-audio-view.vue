@@ -1,18 +1,23 @@
 <script setup lang="ts">
-import {computed, onMounted, PropType, ref, watch} from "vue";
+import {computed, PropType, ref, watch} from "vue";
 import {Mood, queryRefAudios, RefAudio} from "@/api/ref-audio.ts";
 import {voiceNameFormat} from "@/utils/model-util.ts";
 import {CascaderOption} from "naive-ui";
-import {queryModels as queryGsvModels} from "@/api/gpt-sovits.ts";
-import {queryModels as queryFsModels} from "@/api/fish-speech.ts";
-import {Model, ModelConfig} from "@/api/model.ts";
+import {configs as queryGsvConfigs, GptSovitsModel, models as queryGsvModels} from "@/api/gpt-sovits.ts";
+import {configs as queryFsConfigs, FishSpeechModel, models as queryFsModels} from "@/api/fish-speech.ts";
+import {AudioModelConfig} from "@/api/model.ts";
+import {SelectOptionData} from "@arco-design/web-vue/es/select/interface";
 
 const props = defineProps({
+  visible: {
+    type: Boolean,
+    default: false,
+  },
   activeTabKey: {
     type: String,
   },
-  modelConfig: {
-    type: Object as PropType<ModelConfig>
+  audioModelConfig: {
+    type: Object as PropType<AudioModelConfig>
   }
 })
 
@@ -23,7 +28,10 @@ const audioElement = ref<HTMLAudioElement | null>(null); // ref 对象引用到 
 const refAudios = ref<RefAudio[]>([])
 const currentAudio = ref<RefAudio>({} as RefAudio)
 const modelDataOptions = ref<CascaderOption[]>([]);
+
+const modelType = ref<string>('');
 const currentModel = ref<string[]>([])
+const configId = ref<string>('');
 
 const groupOptions = ref<string[]>([])
 const selectGroup = ref<string>('')
@@ -63,7 +71,7 @@ const computedRefAudios = computed(() => {
   return tmp;
 });
 
-const handleQueryRefAudio = async () => {
+const handleQueryRefAudios = async () => {
   const {data} = await queryRefAudios();
   refAudios.value = data.map(item => {
     return {
@@ -91,7 +99,7 @@ const handleQueryRefAudio = async () => {
 }
 
 
-const handleQueryModel = async () => {
+const handleQueryModels = async () => {
   const gsvRes = await queryGsvModels();
   const fsRes = await queryFsModels();
   modelDataOptions.value = [
@@ -99,10 +107,10 @@ const handleQueryModel = async () => {
       label: 'gpt-sovits',
       value: 'gpt-sovits',
       children: gsvRes.data.reduce((acc: any, item) => {
-        const {group} = item;
-        let groupItem = acc.find((g: Model) => g.group === group);
+        const {modelGroup} = item;
+        let groupItem = acc.find((g: GptSovitsModel) => g.modelGroup === modelGroup);
         if (!groupItem) {
-          groupItem = {group, list: []} as any;
+          groupItem = {modelGroup, list: []} as any;
           acc.push(groupItem);
         }
         groupItem.list.push(item);
@@ -110,9 +118,12 @@ const handleQueryModel = async () => {
       }, [])
           .map((item: any) => {
             return {
-              value: item.group,
-              children: item.list.map((item1: any) => {
-                return {value: item1.name};
+              value: item.modelGroup,
+              children: item.list.map((item1: GptSovitsModel) => {
+                return {
+                  label: item1.modelName,
+                  value: item1.modelId
+                };
               }),
             };
           })
@@ -121,10 +132,10 @@ const handleQueryModel = async () => {
       label: 'fish-speech',
       value: 'fish-speech',
       children: fsRes.data.reduce((acc: any, item) => {
-        const {group} = item;
-        let groupItem = acc.find((g: Model) => g.group === group);
+        const {modelGroup} = item;
+        let groupItem = acc.find((g: FishSpeechModel) => g.modelGroup === modelGroup);
         if (!groupItem) {
-          groupItem = {group, list: []} as any;
+          groupItem = {modelGroup, list: []} as any;
           acc.push(groupItem);
         }
         groupItem.list.push(item);
@@ -132,21 +143,17 @@ const handleQueryModel = async () => {
       }, [])
           .map((item: any) => {
             return {
-              value: item.group,
-              children: item.list.map((item1: any) => {
-                return {value: item1.name};
+              value: item.modelGroup,
+              children: item.list.map((item1: FishSpeechModel) => {
+                return {
+                  label: item1.modelName,
+                  value: item1.modelId
+                };
               }),
             };
           })
     }
   ]
-
-  const filterElement = modelDataOptions.value.find(item => item.value === 'gpt-sovits');
-  currentModel.value = [
-    'gpt-sovits',
-    (filterElement?.children as any)[0].value,
-    (filterElement?.children as any)[0].children[0]?.value
-  ];
 }
 
 
@@ -176,48 +183,116 @@ const handleAudioEnded = () => {
   activeAudioKey.value = '';
 };
 
+const gsvConfigs = ref<SelectOptionData[]>([])
+const fsConfigs = ref<SelectOptionData[]>([])
+
+const handleQueryConfigs = async () => {
+  gsvConfigs.value = (await queryGsvConfigs())
+      .data
+      .map(item => {
+        return {
+          label: item.configName,
+          value: item.configId,
+        }
+      });
+  fsConfigs.value = (await queryFsConfigs())
+      .data
+      .map(item => {
+        return {
+          label: item.configName,
+          value: item.configId,
+        }
+      });
+}
+
+const onModelChange = (value: any) => {
+  if (modelType.value !== (value as string[])[0]) {
+    modelType.value = (value as string[])[0]
+    configId.value = modelType.value === 'gpt-sovits'
+        ? gsvConfigs.value[0].value as string
+        : fsConfigs.value[0].value as string
+  }
+}
+
+const computedConfigs = computed(() => {
+  return modelType.value === 'gpt-sovits' ? gsvConfigs.value : fsConfigs.value;
+})
+
+const onAudioCardSelect = (refAudio: RefAudio) => {
+  currentAudio.value = refAudio;
+  if (!modelType.value) {
+    modelType.value = 'gpt-sovits';
+  }
+  if (!currentModel.value || !currentModel.value.length) {
+    currentModel.value = [
+      modelDataOptions.value[0].value as string,
+      (modelDataOptions.value[0].children as any)[0].value as string,
+      ((modelDataOptions.value[0].children as any)[0].children as any)[0].value as string
+    ]
+  }
+  if (!configId.value) {
+    configId.value = gsvConfigs.value[0].value as string;
+  }
+}
+
 const modelSelect = (mood: Mood) => {
   if (!mood.currentMoodAudio || !mood.currentMoodAudio.name) {
     mood.currentMoodAudio = mood.moodAudios[0]
   }
-  const modelConfig: ModelConfig = {
-    modelType: currentModel.value[0],
-    model: [currentModel.value[1], currentModel.value[2]],
-    audio: [currentAudio.value.group, currentAudio.value.name, mood.name, mood.currentMoodAudio.name]
+
+  const audioModelConfig: AudioModelConfig = {
+    audioModelType: modelType.value,
+    audioModelId: currentModel.value[2],
+    audioConfigId: configId.value,
+    refAudioId: mood.currentMoodAudio.id,
   }
-  emits('modelSelect', modelConfig);
+
+  emits('modelSelect', audioModelConfig)
 }
 
-onMounted(() => {
-  handleQueryRefAudio();
-  handleQueryModel();
-})
+
+watch(
+    () => props.visible,
+    async () => {
+      if (props.visible) {
+        await handleQueryRefAudios();
+        await handleQueryModels();
+        await handleQueryConfigs();
+
+        if (props.activeTabKey === '1' && props.audioModelConfig) {
+          modelType.value = props.audioModelConfig?.audioModelType as string;
+          modelDataOptions.value.forEach(item => {
+            if (item.value === modelType.value) {
+              item.children?.forEach((item1) => {
+                item1.children?.forEach((item2) => {
+                  if (item2.value === props.audioModelConfig?.audioModelId) {
+                    currentModel.value = [item.value as string, item1.value as string, item2.value as string];
+                  }
+                })
+              })
+            }
+          })
+          configId.value = props.audioModelConfig?.audioConfigId as string
+          refAudios.value.forEach((item) => {
+            item.moods.forEach((item1) => {
+              item1.moodAudios.forEach((item2) => {
+                if (item2.id === props.audioModelConfig?.refAudioId) {
+                  currentAudio.value = item;
+                }
+              })
+            })
+          })
+        }
+      }
+    },
+    {immediate: true}
+)
 
 watch(
     () => props.activeTabKey,
     () => {
       if (props.activeTabKey !== '1') {
         stopAudio();
-      }
-      if (props.activeTabKey === '1') {
-        if (props.modelConfig && props.modelConfig?.model && props.modelConfig?.model.length > 1) {
-          currentModel.value = [props.modelConfig?.modelType, props.modelConfig?.model[0], props.modelConfig?.model[1]];
-        }
-        if (props.modelConfig && props.modelConfig?.audio && props.modelConfig?.audio.length > 0) {
-          const audio = props.modelConfig?.audio;
-          const find = refAudios.value.find(item => item.group === audio[0] && item.name === audio[1]);
-          if (find) {
-            currentAudio.value = {
-              ...find,
-              moods: find.moods.map(item1 => {
-                return {
-                  ...item1,
-                  currentMoodAudio: item1.moodAudios[0]
-                }
-              })
-            };
-          }
-        }
       }
     },
     {immediate: true}
@@ -281,12 +356,12 @@ watch(
                   hoverable
                   :body-style="{padding: '10px'}"
                   style="border: 1px #ccc solid; border-radius: 8px"
-                  @click="() => currentAudio = item"
+                  @click="onAudioCardSelect(item)"
               >
                 <div style="display: flex; justify-content: center; align-items: center">
                   <div style="width: 50%; text-align: center">
-                    <div v-if="item.avatar">
-                      <a-avatar :image-url="item.avatar"
+                    <div v-if="item.avatarUrl">
+                      <a-avatar :image-url="item.avatarUrl"
                       />
                     </div>
                     <div v-else>
@@ -328,8 +403,8 @@ watch(
         style="width: 40%">
       <div>
         <div style="display: flex; align-items: center">
-          <div v-if="currentAudio?.avatar">
-            <a-avatar :image-url="currentAudio?.avatar"
+          <div v-if="currentAudio?.avatarUrl">
+            <a-avatar :image-url="currentAudio?.avatarUrl"
             />
           </div>
           <div v-else>
@@ -354,7 +429,10 @@ watch(
             </a-descriptions>
           </div>
         </div>
-        <div v-if="currentAudio?.tags" style="margin: 5px 0 0 60px">
+        <div
+            v-if="currentAudio?.tags && currentAudio.tags.length"
+            style="margin-left: 60px; height: 40px; display: flex; align-items: center"
+        >
           <a-space wrap>
             <a-tag
                 v-for="(item, index) in currentAudio?.tags"
@@ -365,21 +443,30 @@ watch(
             </a-tag>
           </a-space>
         </div>
-        <div v-if="currentAudio?.modelType !== 'edge-tts'" style="margin: 5px 0 0 10px">
-          <a-descriptions :column="2">
+        <div v-if="currentAudio?.modelType !== 'edge-tts'" style="margin-left: 10px">
+          <a-descriptions :column="1">
             <a-descriptions-item label="模型">
               <a-cascader
                   v-model="currentModel"
                   path-mode
                   size="small"
                   :options="modelDataOptions"
+                  @change="onModelChange"
               />
+            </a-descriptions-item>
+            <a-descriptions-item label="配置">
+              <a-select
+                  v-model="configId"
+                  size="small"
+                  :options="computedConfigs"
+              >
+              </a-select>
             </a-descriptions-item>
           </a-descriptions>
         </div>
       </div>
       <a-divider style="margin: 10px 0"/>
-      <n-scrollbar style="height: 390px">
+      <n-scrollbar :style="{height: `${360-(currentAudio?.tags && currentAudio.tags.length ? 40 : 0)}px`}">
         <div style="margin-right: 10px">
           <a-space direction="vertical" style="width: 100%">
             <div
@@ -387,8 +474,8 @@ watch(
                 v-for="(item, index) in currentAudio.moods"
                 :key="index"
                 style="display: flex; align-items: center; padding: 0 5px 10px 0; border-bottom: 1px solid #cccccc">
-              <div v-if="item?.avatar ?? currentAudio?.avatar">
-                <a-avatar :image-url="item?.avatar ?? currentAudio?.avatar"
+              <div v-if="item?.avatarUrl ?? currentAudio?.avatarUrl">
+                <a-avatar :image-url="item?.avatarUrl ?? currentAudio?.avatarUrl"
                 />
               </div>
               <div v-else>
@@ -418,7 +505,7 @@ watch(
                           type="outline"
                           @click="playAudio(
                             `${currentAudio.group}-${currentAudio.name}-${item.name}-${item.currentMoodAudio.name}`,
-                            item.currentMoodAudio.url
+                            item.currentMoodAudio.audioUrl
                             )"
                       >
                         <icon-play-arrow/>
@@ -459,7 +546,7 @@ watch(
                                 </a-typography-paragraph>
                               </div>
                               <div>
-                                <a-space v-if="item1.tags" wrap>
+                                <a-space v-if="item1.tags && item1.tags.length" wrap>
                                   <a-tag
                                       v-for="(item2, index2) in item1.tags"
                                       :key="index2"
@@ -487,7 +574,7 @@ watch(
                                   size="mini"
                                   type="outline"
                                   style="text-align: right; margin-left: 5px"
-                                  @click.stop="playAudio(`${currentAudio.group}-${currentAudio.name}-${item.name}-${item1.name}`, item1.url)"
+                                  @click.stop="playAudio(`${currentAudio.group}-${currentAudio.name}-${item.name}-${item1.name}`, item1.audioUrl)"
                               >
                                 <icon-play-arrow/>
                               </a-button>

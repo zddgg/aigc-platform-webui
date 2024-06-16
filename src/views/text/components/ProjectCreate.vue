@@ -43,7 +43,7 @@
 <script lang="ts" setup>
 import {ref, watch} from 'vue';
 import {FileItem} from '@arco-design/web-vue/es/upload/interfaces';
-import {createProject} from '@/api/text.ts';
+import {createProject} from '@/api/text-project.ts';
 import useLoading from '@/hooks/loading.ts';
 
 const props = defineProps({

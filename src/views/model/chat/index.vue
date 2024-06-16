@@ -2,38 +2,43 @@
 import {onMounted, ref} from "vue";
 import ChatParamDetail from "@/views/model/chat/components/ChatParamDetail.vue";
 import {Message} from "@arco-design/web-vue";
-import {activeChatConfig, ChatModelParam, deleteChatConfig, queryChatConfig} from "@/api/config.ts";
+import {
+  activeModelChatConfig,
+  ChatModelConfig,
+  deleteModelChatConfig,
+  list as queryChatConfigList
+} from "@/api/chat.ts";
 
 const visible = ref(false);
-const chatServices = ref<ChatModelParam[]>([]);
-const currentModelParam = ref<ChatModelParam>({} as ChatModelParam);
+const chatConfigs = ref<ChatModelConfig[]>([]);
+const currentModelConfig = ref<ChatModelConfig>({} as ChatModelConfig);
 
 const handleQueryChatConfig = async () => {
-  const {data} = await queryChatConfig();
-  chatServices.value = data.services;
+  const {data} = await queryChatConfigList();
+  chatConfigs.value = data;
 }
 
-const handleDeleteChatConfig = async (item: ChatModelParam) => {
-  const {msg} = await deleteChatConfig(item);
+const handleDeleteChatConfig = async (item: ChatModelConfig) => {
+  const {msg} = await deleteModelChatConfig(item);
   await handleQueryChatConfig();
   Message.success(msg);
 }
 
 
 const addConfig = () => {
-  currentModelParam.value = {} as ChatModelParam;
+  currentModelConfig.value = {} as ChatModelConfig;
   visible.value = true
 }
 
 
-const editConfig = (item: ChatModelParam) => {
-  currentModelParam.value = item;
+const editConfig = (item: ChatModelConfig) => {
+  currentModelConfig.value = item;
   visible.value = true
 }
 
 
-const activeConfig = async (item: ChatModelParam) => {
-  const {msg} = await activeChatConfig(item);
+const activeConfig = async (item: ChatModelConfig) => {
+  const {msg} = await activeModelChatConfig(item);
   Message.success(msg);
   await handleQueryChatConfig();
 }
@@ -50,7 +55,7 @@ onMounted(() => {
       <a-button type="primary" @click="addConfig">添加文本大模型</a-button>
     </div>
     <a-grid :cols="2" :col-gap="20" :row-gap="20">
-      <a-grid-item v-for="(item, index) in chatServices" :key="index">
+      <a-grid-item v-for="(item, index) in chatConfigs" :key="index">
         <a-card
             hoverable
             style="border-radius: 8px">
@@ -111,7 +116,7 @@ onMounted(() => {
     </a-grid>
     <chat-param-detail
         v-model:visible="visible"
-        :chat-model-param="currentModelParam"
+        :chat-model-config="currentModelConfig"
         @success="() => handleQueryChatConfig()"
     />
   </div>

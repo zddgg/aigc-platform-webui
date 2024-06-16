@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import ContextMenu from "@/components/ContextMenu.vue";
 import {computed, inject, onMounted, PropType, ref, watch} from "vue";
-import {ChapterInfo, createAudio, queryChapterInfo, textModelChange, updateChapterText} from "@/api/text.ts";
 import {useRoute} from "vue-router";
 import {voiceNameFormat} from "@/utils/model-util.ts";
 import {TextContentConfig} from "@/views/text/novel/chapter-content/useChapterContent.ts";
@@ -11,9 +10,15 @@ import AudioSelect from '@/views/audio-select/index.vue'
 import {scrollToTop} from '@/utils/view-utils.ts'
 import {IWebSocketService} from "@/services/websocketService.ts";
 import useLoading from "@/hooks/loading.ts";
-import {ModelConfig} from "@/api/model.ts";
+import {AudioModelConfig} from "@/api/model.ts";
 import {ROLE_CHANGE} from "@/services/eventTypes.ts";
 import {EventBus} from "@/vite-env";
+import {
+  audioModelChange,
+  ChapterInfo,
+  chapterInfos as queryChapterInfos, createAudio,
+  updateChapterText
+} from "@/api/text-chapter.ts";
 
 const route = useRoute();
 const props = defineProps({
@@ -44,9 +49,9 @@ const modelSelectVisible = ref<boolean>(false);
 const currentChapterInfo = ref<ChapterInfo>({} as ChapterInfo);
 
 const handleQueryChapterInfo = async () => {
-  const {data} = await queryChapterInfo({
-    project: route.query.project as string,
-    chapter: route.query.chapter as string,
+  const {data} = await queryChapterInfos({
+    projectId: route.query.projectId as string,
+    chapterId: route.query.chapterId as string,
   })
   chapterInfos.value = data;
 }
@@ -54,7 +59,7 @@ const handleQueryChapterInfo = async () => {
 const computedChapterInfo = computed(() => {
   return chapterInfos.value.reduce((accumulator: ChapterInfo[][], currentValue: ChapterInfo) => {
     // 检查accumulator中是否已经有了当前b值的分组
-    const group = accumulator.find(group => group[0].p === currentValue.p);
+    const group = accumulator.find(group => group[0].paragraphIndex === currentValue.paragraphIndex);
 
     if (group) {
       // 如果存在，将当前对象添加到该分组中
@@ -76,7 +81,7 @@ const textSelect = (e: Event) => {
     console.log(strings)
     if (strings.length === 3) {
       const find = chapterInfos.value
-          .find((item) => item.p === Number.parseInt(strings[1]) && item.s === Number.parseInt(strings[2]));
+          .find((item) => item.index === `${strings[1]}-${strings[2]}`);
       if (find) {
         console.log(find)
         currentChapterInfo.value = find;
@@ -98,29 +103,29 @@ const textModelFormat = computed(() => (chapterInfo: ChapterInfo) => {
   let modelType = '';
   let ext = '';
 
-  if (chapterInfo.modelType === 'gpt-sovits') {
+  if (chapterInfo.audioModelType === 'gpt-sovits') {
     modelType = 'gs';
-    if (chapterInfo.model && chapterInfo.audio) {
-      ext = `${chapterInfo.model[1]}-${chapterInfo.audio[1]}-${chapterInfo.audio[2]}`
+    if (chapterInfo.gptSovitsModel && chapterInfo.refAudio) {
+      ext = `${chapterInfo.gptSovitsModel.modelName}-${chapterInfo.refAudio.audioName}-${chapterInfo.refAudio.moodName}`
     }
   }
-  if (chapterInfo.modelType === 'fish-speech') {
+  if (chapterInfo.audioModelType === 'fish-speech') {
     modelType = 'fs'
-    if (chapterInfo.model && chapterInfo.audio) {
-      ext = `${chapterInfo.model[1]}-${chapterInfo.audio[1]}-${chapterInfo.audio[2]}`
+    if (chapterInfo.fishSpeechModel && chapterInfo.refAudio) {
+      ext = `${chapterInfo.fishSpeechModel.modelName}-${chapterInfo.refAudio.audioName}-${chapterInfo.refAudio.moodName}`
     }
   }
 
-  if (chapterInfo.modelType === 'edge-tts') {
-    modelType = 'et';
-    if (chapterInfo.model) {
-      ext = voiceNameFormat(chapterInfo.model[0]) as string;
-    }
-  }
-
-  if (chapterInfo.modelType === 'chat-tts') {
+  if (chapterInfo.audioModelType === 'chat-tts') {
     modelType = 'ct';
     ext = chapterInfo.chatTtsConfig?.configName as string;
+  }
+
+  if (chapterInfo.audioModelType === 'edge-tts') {
+    modelType = 'et';
+    if (chapterInfo.edgeTtsConfig) {
+      ext = voiceNameFormat(chapterInfo.edgeTtsConfig.shortName) as string;
+    }
   }
 
   if (modelType && ext) {
@@ -129,17 +134,10 @@ const textModelFormat = computed(() => (chapterInfo: ChapterInfo) => {
   return null;
 })
 
-const modelSelect = async (modelConfig: ModelConfig) => {
-  console.log(modelConfig)
-  const {msg} = await textModelChange({
-    chapter: {
-      project: route.query.project as string,
-      chapter: route.query.chapter as string,
-    },
-    chapterInfo: {
-      ...currentChapterInfo.value,
-      ...modelConfig,
-    },
+const modelSelect = async (modelConfig: AudioModelConfig) => {
+  const {msg} = await audioModelChange({
+    ...currentChapterInfo.value,
+    ...modelConfig,
   });
   Message.success(msg);
   await handleQueryChapterInfo();
@@ -153,13 +151,7 @@ const editEnd = async (chapterInfo: ChapterInfo) => {
   if (chapterInfo.text === backupText.value) {
     return;
   }
-  const {msg} = await updateChapterText({
-    chapter: {
-      project: route.query.project as string,
-      chapter: route.query.chapter as string,
-    },
-    chapterInfo: chapterInfo,
-  });
+  const {msg} = await updateChapterText(chapterInfo);
   Message.success(msg);
 }
 
@@ -169,14 +161,15 @@ const activeAudioIndex = ref<number>(-1);
 const activeAudioKey = ref<string>('');
 const playAudio = (chapterInfo: ChapterInfo) => {
   const url = chapterInfo.audioUrl;
-
-  activeAudioKey.value = `${chapterInfo.p}-${chapterInfo.s}`;
+  activeAudioKey.value = chapterInfo.index;
   if (audioElement.value && url) {
-    audioElement.value.src = url;
-    audioElement.value.volume = chapterInfo.volume / 100;
-    audioElement.value.playbackRate = chapterInfo.speed;
+    audioElement.value.src = `${url}?timestamp=${Date.now()}`;
+    audioElement.value.volume = chapterInfo.audioVolume;
+    audioElement.value.playbackRate = chapterInfo.audioSpeed;
     audioElement.value.play();
   }
+  playAll.value = false;
+  activeAudioIndex.value = -1;
 };
 
 const stopAudio = () => {
@@ -193,8 +186,15 @@ const playNext = () => {
   const chapterInfo = chapterInfos.value[activeAudioIndex.value];
   if (chapterInfo) {
     setTimeout(() => {
-      playAudio(chapterInfo);
-    }, 500);
+      const url = chapterInfo.audioUrl;
+      activeAudioKey.value = chapterInfo.index;
+      if (audioElement.value && url) {
+        audioElement.value.src = `${url}?timestamp=${Date.now()}`;
+        audioElement.value.volume = chapterInfo.audioVolume;
+        audioElement.value.playbackRate = chapterInfo.audioSpeed;
+        audioElement.value.play();
+      }
+    }, 300);
   } else {
     activeAudioIndex.value = -1;
   }
@@ -227,7 +227,7 @@ const handleAudioEnded = () => {
 
 const handleChapterInfoUpdate = (data: ChapterInfo) => {
   chapterInfos.value = chapterInfos.value.map((item) => {
-    if (item.p === data.p && item.s === data.s) {
+    if (item.index === data.index) {
       return {
         ...item,
         audioUrl: data.audioUrl
@@ -244,19 +244,13 @@ const handleChapterInfoUpdate = (data: ChapterInfo) => {
 };
 const createAudioKey = ref<string>('');
 const handleCreateAudio = async (record: ChapterInfo) => {
-  if (loading.value && createAudioKey.value === `${record.p}-${record.s}`) {
+  if (loading.value && createAudioKey.value === record.index) {
     return;
   }
   try {
-    createAudioKey.value = `${record.p}-${record.s}`;
+    createAudioKey.value = record.index;
     setLoading(true);
-    const {data, msg} = await createAudio({
-      chapter: {
-        project: route.query.project as string,
-        chapter: route.query.chapter as string,
-      },
-      chapterInfo: record
-    })
+    const {data, msg} = await createAudio(record)
     Message.success(msg);
     emits('update:creatingIds', data)
   } finally {
@@ -318,7 +312,7 @@ watch(
         >
           <span
               v-for="(item1, index1) in item"
-              :id="`sentence-${item1.p}-${item1.s}`"
+              :id="`sentence-${item1.index}`"
               :key="index1"
               :class="{'text-list': textContentConfig.textViewType === 'text-list'}"
           >
@@ -326,7 +320,7 @@ watch(
               <span
                   :id="`role-${index}-${index1}`"
                   style="background-color: #c3f6f6; margin-right: 5px"
-                  :style="item1.s !==0 && textContentConfig.textViewType === 'text' && {marginLeft: '10px'}"
+                  :style="item1.sentenceIndex !==0 && textContentConfig.textViewType === 'text' && {marginLeft: '10px'}"
               >
                 {{ item1.role }}
               </span>
@@ -339,9 +333,9 @@ watch(
                 {{ textModelFormat(item1) }}
               </span>
             </span>
-            <span v-if="textContentConfig.showAudio && item1.modelType">
+            <span v-if="textContentConfig.showAudio && item1.audioModelType">
               <a-button
-                  v-if="activeAudioKey === `${item1.p}-${item1.s}`"
+                  v-if="activeAudioKey === item1.index"
                   size="mini"
                   type="outline"
                   status="danger"
@@ -369,7 +363,7 @@ watch(
                     type="outline"
                     style="margin-right: 5px"
                     :status="props.creatingIds?.includes(item1.index) ? 'danger' : 'normal'"
-                    :disabled="!item1.modelType || props.creatingIds?.includes(item1.index)"
+                    :disabled="!item1.audioModelType || props.creatingIds?.includes(item1.index)"
                 >
                   <icon-refresh
                       :spin="props.creatingIds?.includes(item1.index)"
@@ -388,9 +382,9 @@ watch(
                 <a-typography-text
                     v-model:edit-text="item1.text"
                     :id="`text-${item1.index}`"
-                    :type="item1.modelType ? 'normal' : 'danger'"
-                    :class="{'lines-color': textContentConfig.showLines && item1.linesFlag}"
-                    :mark="activeAudioKey === `${item1.p}-${item1.s}`"
+                    :type="item1.audioModelType ? 'normal' : 'danger'"
+                    :class="{'lines-color': textContentConfig.showLines && item1.dialogueFlag}"
+                    :mark="activeAudioKey === item1.index"
                     :editable="props.textContentConfig.textEdit"
                     @edit-start="editStart(item1)"
                     @edit-end="editEnd(item1)"

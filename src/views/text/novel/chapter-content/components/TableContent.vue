@@ -1,19 +1,8 @@
 <script setup lang="ts">
 import {computed, h, inject, onBeforeUnmount, onMounted, PropType, ref, watch} from "vue";
 import {useRoute} from "vue-router";
-import {Message, Modal, TableColumnData, TableRowSelection} from "@arco-design/web-vue";
-import {
-  ChapterInfo,
-  createAudio,
-  queryChapterInfo,
-  textModelChange,
-  updateChapterText,
-  updateControls,
-  updateInterval,
-  updateSpeed,
-  updateVolume
-} from "@/api/text.ts";
-import {audioNameFormat, modelNameFormat, voiceNameFormat} from "@/utils/model-util.ts";
+import {Message, Modal, Notification, TableColumnData, TableRowSelection} from "@arco-design/web-vue";
+import {voiceNameFormat} from "@/utils/model-util.ts";
 import {TextContentConfig} from "@/views/text/novel/chapter-content/useChapterContent.ts";
 import RoleChangeModel from "@/views/text/novel/chapter-content/components/RoleChangeModel.vue";
 import AudioSelect from '@/views/audio-select/index.vue'
@@ -23,8 +12,17 @@ import {IconSettings} from "@arco-design/web-vue/es/icon";
 import CombineExport from "@/views/text/novel/chapter-content/components/CombineExport.vue";
 import {EventBus} from "@/vite-env";
 import {ROLE_CHANGE} from "@/services/eventTypes.ts";
-import {ModelConfig} from "@/api/model.ts";
-import { Notification } from '@arco-design/web-vue';
+import {AudioModelConfig} from "@/api/model.ts";
+import {
+  audioModelChange,
+  ChapterInfo,
+  chapterInfos as queryChapterInfoList, createAudio,
+  updateChapterText,
+  updateControls,
+  updateInterval,
+  updateSpeed,
+  updateVolume
+} from "@/api/text-chapter.ts";
 
 const route = useRoute();
 const props = defineProps({
@@ -87,7 +85,7 @@ const columns: TableColumnData[] = [
     slotName: 'text'
   },
   {
-    title: '模型',
+    title: '模型配置',
     slotName: 'model',
   },
   {
@@ -132,35 +130,28 @@ const currentChapterInfo = ref<ChapterInfo>({} as ChapterInfo);
 
 const selectedIndexes = ref<string[]>([]);
 const handleQueryChapterInfo = async () => {
-  const {data} = await queryChapterInfo({
-    project: route.query.project as string,
-    chapter: route.query.chapter as string,
+  const {data} = await queryChapterInfoList({
+    projectId: route.query.projectId as string,
+    chapterId: route.query.chapterId as string,
   })
   chapterInfos.value = data.map((item) => {
     return {
       ...item,
-      disabled: !item.modelType
+      disabled: !item.audioModelType
     }
   });
-  console.log(chapterInfos.value)
-  selectedIndexes.value = data.filter(item => item.export).map(item => item.index)
+  selectedIndexes.value = data.filter(item => item.exportFlag).map(item => item.index)
 }
 
 const onRoleChange = () => {
   eventBus?.emit(ROLE_CHANGE);
 }
 
-const modelSelect = async (modelConfig: ModelConfig) => {
+const modelSelect = async (modelConfig: AudioModelConfig) => {
 
-  const {msg} = await textModelChange({
-    chapter: {
-      project: route.query.project as string,
-      chapter: route.query.chapter as string,
-    },
-    chapterInfo: {
-      ...currentChapterInfo.value,
-      ...modelConfig,
-    },
+  const {msg} = await audioModelChange({
+    ...currentChapterInfo.value,
+    ...modelConfig,
   });
   Message.success(msg);
   await handleQueryChapterInfo();
@@ -174,28 +165,29 @@ const editEnd = async (chapterInfo: ChapterInfo) => {
   if (chapterInfo.text === backupText.value) {
     return;
   }
-  const {msg} = await updateChapterText({
-    chapter: {
-      project: route.query.project as string,
-      chapter: route.query.chapter as string,
-    },
-    chapterInfo: chapterInfo,
-  });
+  const {msg} = await updateChapterText(chapterInfo);
   Message.success(msg);
 }
 
 const activeAudioKey = ref<string>('');
 const playAudio = (chapterInfo: ChapterInfo) => {
+
   const url = chapterInfo.audioUrl;
 
-  activeAudioKey.value = `${chapterInfo.p}-${chapterInfo.s}`;
+  activeAudioKey.value = chapterInfo.index;
   if (audioElement.value && url) {
-    audioElement.value.src = url;
-    audioElement.value.volume = chapterInfo.volume / 100;
-    audioElement.value.playbackRate = chapterInfo.speed;
+    audioElement.value.src = `${url}?timestamp=${Date.now()}`;
+    audioElement.value.volume = chapterInfo.audioVolume;
+    audioElement.value.playbackRate = chapterInfo.audioSpeed;
     audioElement.value.play();
   }
+
+  playAll.value = false;
+  activeAudioIndex.value = -1;
 };
+
+const playAll = ref(false);
+const activeAudioIndex = ref<number>(-1);
 const stopAudio = () => {
   if (audioElement.value) {
     // 停止音频播放
@@ -203,13 +195,16 @@ const stopAudio = () => {
     audioElement.value.currentTime = 0; // 将播放进度设置为音频开头
   }
   activeAudioKey.value = '';
+  playAll.value = false;
+  activeAudioIndex.value = -1;
 };
 
 const createAudioKey = ref<string>('');
 
 const handleChapterInfoUpdate = (data: ChapterInfo) => {
   chapterInfos.value = chapterInfos.value.map((item) => {
-    if (item.p === data.p && item.s === data.s) {
+    if (item.paragraphIndex === data.paragraphIndex
+        && item.sentenceIndex === data.sentenceIndex) {
       return {
         ...item,
         audioUrl: data.audioUrl
@@ -228,13 +223,7 @@ const handleCreateAudio = async (record: ChapterInfo) => {
   try {
     createAudioKey.value = record.index;
     setLoading(true);
-    const {data, msg} = await createAudio({
-      chapter: {
-        project: route.query.project as string,
-        chapter: route.query.chapter as string,
-      },
-      chapterInfo: record
-    })
+    const {data, msg} = await createAudio(record)
     Message.success(msg);
     emits('update:creatingIds', data)
   } finally {
@@ -245,15 +234,21 @@ const handleCreateAudio = async (record: ChapterInfo) => {
 
 const WebSocketService = inject<IWebSocketService>('WebSocketService') as IWebSocketService;
 
-const playAll = ref(false);
-const activeAudioIndex = ref<number>(-1);
 
 const playNext = () => {
   activeAudioIndex.value += 1;
   const chapterInfo = computedChapterInfos.value[activeAudioIndex.value];
   if (chapterInfo) {
     setTimeout(() => {
-      playAudio(chapterInfo);
+      const url = chapterInfo.audioUrl;
+      activeAudioKey.value = chapterInfo.index;
+      if (audioElement.value && url) {
+        audioElement.value.src = `${url}?timestamp=${Date.now()}`;
+        audioElement.value.volume = chapterInfo.audioVolume;
+        audioElement.value.playbackRate = chapterInfo.audioSpeed;
+        audioElement.value.play();
+      }
+
     }, 500);
   } else {
     activeAudioIndex.value = -1;
@@ -276,39 +271,21 @@ const handleAudioEnded = () => {
 };
 
 const onVolumeChangeEnd = async (chapterInfo: ChapterInfo) => {
-  if (audioElement.value && activeAudioKey.value === `${chapterInfo.p}-${chapterInfo.s}`) {
-    audioElement.value.volume = chapterInfo.volume / 100;
+  if (audioElement.value && activeAudioKey.value === `${chapterInfo.paragraphIndex}-${chapterInfo.sentenceIndex}`) {
+    audioElement.value.volume = chapterInfo.audioVolume;
   }
-  await updateVolume({
-    chapter: {
-      project: route.query.project as string,
-      chapter: route.query.chapter as string,
-    },
-    chapterInfo: chapterInfo,
-  })
+  await updateVolume(chapterInfo)
 }
 
 const onSpeedChange = async (chapterInfo: ChapterInfo) => {
-  if (audioElement.value && activeAudioKey.value === `${chapterInfo.p}-${chapterInfo.s}`) {
-    audioElement.value.playbackRate = chapterInfo.speed;
+  if (audioElement.value && activeAudioKey.value === `${chapterInfo.paragraphIndex}-${chapterInfo.sentenceIndex}`) {
+    audioElement.value.playbackRate = chapterInfo.audioSpeed;
   }
-  await updateSpeed({
-    chapter: {
-      project: route.query.project as string,
-      chapter: route.query.chapter as string,
-    },
-    chapterInfo: chapterInfo,
-  })
+  await updateSpeed(chapterInfo)
 }
 
 const onIntervalChange = async (chapterInfo: ChapterInfo) => {
-  await updateInterval({
-    chapter: {
-      project: route.query.project as string,
-      chapter: route.query.chapter as string,
-    },
-    chapterInfo: chapterInfo,
-  })
+  await updateInterval(chapterInfo)
 }
 
 const onCombineExport = () => {
@@ -324,11 +301,11 @@ const onCombineExport = () => {
 
 const batchControls = ref({
   enableVolume: false,
-  volume: 100,
+  volume: 1.0,
   enableSpeed: false,
   speed: 1.0,
   enableInterval: false,
-  interval: 500,
+  interval: 300,
 })
 
 const handleUpdateControls = async () => {
@@ -340,8 +317,8 @@ const handleUpdateControls = async () => {
   try {
     setLoading(true);
     const {msg} = await updateControls({
-      project: route.query.project as string,
-      chapter: route.query.chapter as string,
+      projectId: route.query.projectId as string,
+      chapterId: route.query.chapterId as string,
       ...batchControls.value
     });
     batchControls.value = {
@@ -372,12 +349,15 @@ onBeforeUnmount(() => {
 defineExpose({playAllAudio, onCombineExport})
 
 watch(
-    () => route.query.chapter,
+    () => route.query.chapterId,
     () => {
-      handleQueryChapterInfo();
-      if (route.query.chapter as string) {
+      if (route.query.chapterId) {
+        handleQueryChapterInfo()
+            .then(() => {
+              eventBus?.emit(ROLE_CHANGE);
+            });
         WebSocketService.addResultHandler(
-            `${route.query.project as string}-${route.query.chapter as string}`, handleChapterInfoUpdate
+            `${route.query.projectId as string}-${route.query.chapterId as string}`, handleChapterInfoUpdate
         );
       }
       selectedIndexes.value = [];
@@ -498,28 +478,36 @@ watch(
       </template>
       <template #model="{ record }">
         <a-dropdown>
-          <div v-if="record.modelType"
+          <div v-if="record.audioModelType"
                style="padding: 5px; border: 1px solid #125CFE; border-radius: 2px; cursor: pointer"
           >
             <a-typography-text style="display: block; white-space: nowrap">
-              {{ record.modelType }}
+              {{ record.audioModelType }}
             </a-typography-text>
-            <div v-if="['gpt-sovits', 'fish-speech'].includes(record.modelType)">
+            <div v-if="['gpt-sovits'].includes(record.audioModelType)">
               <a-typography-text style="display: block; white-space: nowrap">
-                {{ modelNameFormat(record) }}
+                {{ `${record.gptSovitsModel?.modelGroup}/${record.gptSovitsModel?.modelName}` }}
               </a-typography-text>
               <a-typography-text style="display: block; white-space: nowrap">
-                {{ audioNameFormat(record) }}
-              </a-typography-text>
-            </div>
-            <div v-if="['edge-tts'].includes(record.modelType)">
-              <a-typography-text style="display: block; white-space: nowrap">
-                {{ voiceNameFormat(record.model[0]) }}
+                {{ `${record.refAudio?.audioGroup}/${record.refAudio?.audioName}/${record.refAudio?.moodName}` }}
               </a-typography-text>
             </div>
-            <div v-if="['chat-tts'].includes(record.modelType)">
+            <div v-if="['fish-speech'].includes(record.audioModelType)">
               <a-typography-text style="display: block; white-space: nowrap">
-                {{ record.chatTtsConfig.configName }}
+                {{ `${record.fishSpeechModel?.modelGroup}/${record.fishSpeechModel?.modelName}` }}
+              </a-typography-text>
+              <a-typography-text style="display: block; white-space: nowrap">
+                {{ `${record.refAudio?.audioGroup}/${record.refAudio?.audioName}/${record.refAudio?.moodName}` }}
+              </a-typography-text>
+            </div>
+            <div v-if="['chat-tts'].includes(record.audioModelType)">
+              <a-typography-text style="display: block; white-space: nowrap">
+                {{ record.chatTtsConfig?.configName }}
+              </a-typography-text>
+            </div>
+            <div v-if="['edge-tts'].includes(record.audioModelType)">
+              <a-typography-text style="display: block; white-space: nowrap">
+                {{ voiceNameFormat(record.audioConfigId) }}
               </a-typography-text>
             </div>
           </div>
@@ -534,7 +522,7 @@ watch(
                 modelSelectVisible = true;
             }"
             >
-              改模型
+              改配置
             </a-doption>
           </template>
         </a-dropdown>
@@ -555,11 +543,11 @@ watch(
           <div style="display: flex; justify-content: center; align-items: center">
             <span style="white-space: nowrap; font-size: 12px; margin-right: 10px">音量</span>
             <n-slider
-                v-model:value="record.volume"
-                :step="1"
-                :max="200"
-                :min="0"
-                :format-tooltip="(value: number) => `${value}%`"
+                v-model:value="record.audioVolume"
+                :step="0.1"
+                :max="2"
+                :min="0.1"
+                :format-tooltip="(value: number) => `${value}x`"
                 @dragend="onVolumeChangeEnd(record)"
             >
             </n-slider>
@@ -567,7 +555,7 @@ watch(
           <div style="display: flex; justify-content: center; align-items: center">
             <span style="white-space: nowrap; font-size: 12px; margin-right: 10px">语速</span>
             <n-slider
-                v-model:value="record.speed"
+                v-model:value="record.audioSpeed"
                 :step="0.1"
                 :max="2"
                 :min="0.1"
@@ -579,7 +567,7 @@ watch(
           <div style="display: flex; justify-content: center; align-items: center">
             <span style="white-space: nowrap; font-size: 12px; margin-right: 10px">间隔</span>
             <n-slider
-                v-model:value="record.interval"
+                v-model:value="record.nextAudioInterval"
                 :step="100"
                 :max="3000"
                 :min="0"
@@ -602,9 +590,9 @@ watch(
               </a-checkbox>
               <n-slider
                   v-model:value="batchControls.volume"
-                  :step="1"
-                  :max="200"
-                  :min="0"
+                  :step="0.1"
+                  :max="2"
+                  :min="0.1"
                   :format-tooltip="(value: number) => `${value}%`"
               />
             </div>
@@ -658,7 +646,7 @@ watch(
       <template #operations="{ record }">
         <a-space direction="vertical" size="small">
           <a-button
-              v-if="activeAudioKey === `${record.p}-${record.s}`"
+              v-if="activeAudioKey === record.index"
               type="outline"
               status="danger"
               size="mini"
@@ -670,7 +658,7 @@ watch(
               v-else
               type="outline"
               size="mini"
-              :disabled="!record.modelType"
+              :disabled="!record.audioModelType || !record.audioUrl"
               @click="playAudio(record)"
           >
             <icon-play-arrow/>
@@ -684,7 +672,7 @@ watch(
                 type="outline"
                 size="mini"
                 :status="props.creatingIds?.includes(record.index) ? 'danger' : 'normal'"
-                :disabled="!record.modelType || props.creatingIds?.includes(record.index)"
+                :disabled="!record.audioModelType || props.creatingIds?.includes(record.index)"
             >
               <icon-refresh
                   :spin="props.creatingIds?.includes(record.index)"
@@ -696,7 +684,7 @@ watch(
     </a-table>
     <audio-select
         v-model:visible="modelSelectVisible"
-        :model-config="currentChapterInfo"
+        :audio-model-config="currentChapterInfo"
         @model-select="modelSelect"
     />
     <role-change-model

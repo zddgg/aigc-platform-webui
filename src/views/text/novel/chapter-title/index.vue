@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import {inject, onBeforeUnmount, onMounted, ref} from "vue";
-import {Chapter, queryChapters} from "@/api/text.ts";
 import {useRoute, useRouter} from "vue-router";
 import ChapterSplitModal from "@/views/text/novel/chapter-title/components/ChapterSplitModal.vue";
 import LinesParseModal from "@/views/text/novel/chapter-title/components/LinesParseModal.vue";
 import {ROLE_CHANGE} from "@/services/eventTypes.ts";
 import {EventBus} from "@/vite-env";
+import {chapters as queryTextChapterList, TextChapter} from "@/api/text-chapter.ts";
 
 const route = useRoute();
 const router = useRouter();
@@ -18,22 +18,23 @@ const chapterSplitModalVisible = ref(false);
 const linesParseModalVisible = ref(false);
 
 const activeChapterIndex = ref(0)
-const chapterTitles = ref<Chapter[]>([])
+const textChapters = ref<TextChapter[]>([])
 
 const handleQueryChapters = async () => {
-  const {data} = await queryChapters({
-    project: route.query.project as string,
+  const {data} = await queryTextChapterList({
+    projectId: route.query.projectId as string,
   });
-  chapterTitles.value = data;
+  textChapters.value = data;
 }
 
-const chapterSelect = (chapterTitle: string, index: number) => {
+const chapterSelect = (textChapter: TextChapter, index: number) => {
   activeChapterIndex.value = index;
   router.push({
     name: route.name as string,
     query: {
       ...route.query,
-      chapter: chapterTitle,
+      chapter: textChapter.chapterName,
+      chapterId: textChapter.chapterId,
     }
   })
 }
@@ -44,9 +45,9 @@ const toggleCollapse = () => {
 }
 
 const currentChapter = ref<string>('');
-const handleLinesParse = (chapter: Chapter) => {
+const handleLinesParse = (chapter: TextChapter) => {
   linesParseModalVisible.value = true
-  currentChapter.value = chapter.chapter
+  currentChapter.value = chapter.chapterId
 }
 
 const refresh = () => {
@@ -55,7 +56,7 @@ const refresh = () => {
       name: route.name as string,
       query: {
         ...route.query,
-        chapter: chapterTitles.value[0].chapter,
+        chapterId: textChapters.value[0].chapterId,
       }
     })
   });
@@ -75,12 +76,12 @@ onBeforeUnmount(() => {
 
 onMounted(async () => {
   await handleQueryChapters();
-  if (chapterTitles.value && chapterTitles.value.length > 0) {
+  if (textChapters.value && textChapters.value.length > 0) {
     await router.push({
       name: route.name as string,
       query: {
         ...route.query,
-        chapter: chapterTitles.value[0].chapter,
+        chapterId: textChapters.value[0].chapterId,
       }
     })
   }
@@ -99,7 +100,7 @@ onMounted(async () => {
           章节解析
         </a-button>
         <a-button
-            v-if="chapterTitles && chapterTitles.length !== 0"
+            v-if="textChapters && textChapters.length !== 0"
             type="outline"
             @click="toggleCollapse"
         >
@@ -111,12 +112,12 @@ onMounted(async () => {
     <n-scrollbar style="max-height: calc(100vh - 76px); padding-right: 10px">
       <a-space direction="vertical" style="width: 100%">
         <a-card
-            v-for="(item, index) in chapterTitles"
+            v-for="(item, index) in textChapters"
             :key="index"
             style="border: 1px #ccc solid; border-radius: 8px"
             hoverable
             :style="index == activeChapterIndex && {backgroundColor: '#c3f6f6'}"
-            @click="chapterSelect(item.chapter, index)"
+            @click="chapterSelect(item, index)"
         >
           <div v-if="collapsed" style="text-align: center"
                :style="item?.stage === '合并完成' && {backgroundColor: 'green'}">
@@ -126,7 +127,7 @@ onMounted(async () => {
             <a-descriptions :column="1" size="small">
               <template #title>
               <span style="font-size: 18px; font-weight: 500">
-                {{ item.chapter?.split('--')[1] }}
+                {{ item.chapterName }}
               </span>
               </template>
               <a-descriptions-item>

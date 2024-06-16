@@ -2,7 +2,7 @@
 
 import {ref, watch} from "vue";
 import {linesPatternOptions} from "./data.ts";
-import {chapterSplit, tmpChapterSplit} from "@/api/text.ts";
+import {chapterSplit, tmpChapterSplit} from "@/api/text-project.ts";
 import {useRoute} from "vue-router";
 import useLoading from "@/hooks/loading.ts";
 import {FormInstance, Message, Modal} from "@arco-design/web-vue";
@@ -35,7 +35,7 @@ const chapterTitles = ref<{ text: string }[]>([]);
 const formRef = ref<FormInstance>()
 const form = ref({
   chapterPattern: '',
-  linesPattern: '',
+  dialoguePattern: '',
   validate: false
 });
 
@@ -43,9 +43,9 @@ const handleTmpChapterSplit = async () => {
   try {
     setLoading(true);
     const {data} = await tmpChapterSplit({
-      project: route.query.project as string,
+      projectId: route.query.projectId as string,
       chapterPattern: form.value.chapterPattern,
-      linesPattern: form.value.linesPattern,
+      dialoguePattern: form.value.dialoguePattern,
     });
     chapterTitles.value = data.map((item) => {
       return {text: item};
@@ -67,9 +67,9 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
       done(false);
     } else {
       const {msg} = await chapterSplit({
-        project: route.query.project as string,
+        projectId: route.query.projectId as string,
         chapterPattern: form.value.chapterPattern,
-        linesPattern: form.value.linesPattern,
+        dialoguePattern: form.value.dialoguePattern,
       });
       Message.success(msg);
       done(true);
@@ -128,9 +128,9 @@ watch(
                 验证
               </a-button>
             </a-form-item>
-            <a-form-item label="台词解析规则" field="linesPattern">
+            <a-form-item label="台词解析规则" field="dialoguePattern">
               <a-select
-                  v-model="form.linesPattern"
+                  v-model="form.dialoguePattern"
                   allow-create
                   allow-clear
                   :options="linesPatternOptions"

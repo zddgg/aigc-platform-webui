@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {PropType, ref, watch} from "vue";
 import {useRoute} from "vue-router";
-import {chapterExpose} from "@/api/text.ts";
 import {Message} from "@arco-design/web-vue";
+import {chapterExpose} from "@/api/text-chapter.ts";
 
 const route = useRoute();
 const props = defineProps({
@@ -26,10 +26,8 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
     done(true);
   }
   const {msg} = await chapterExpose({
-    chapter: {
-      project: route.query.project as string,
-      chapter: route.query.chapter as string,
-    },
+    projectId: route.query.projectId as string,
+    chapterId: route.query.chapterId as string,
     indexes: props.selectedIndexes,
     combineAudio: combineAudio.value,
     subtitle: subtitle.value,

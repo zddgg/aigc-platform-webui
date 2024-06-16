@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import {PropType, ref, watch} from "vue";
 import {FormInstance, Message} from "@arco-design/web-vue";
-import {ChatModelParam, queryChatConfig, updateChatConfig} from "@/api/config.ts";
+import {ChatModelConfig, templateList as queryTemplateList, updateModelChatConfig} from "@/api/chat.ts";
 
 const props = defineProps({
   visible: {
     type: Boolean,
     default: false,
   },
-  chatModelParam: {
-    type: Object as PropType<ChatModelParam>,
+  chatModelConfig: {
+    type: Object as PropType<ChatModelConfig>,
     default: {}
   }
 })
@@ -18,12 +18,12 @@ const emits = defineEmits(['update:visible', 'success']);
 const showModal = ref(false);
 const moreConfig = ref(false);
 const formRef = ref<FormInstance>();
-const form = ref<ChatModelParam>({} as ChatModelParam);
+const form = ref<ChatModelConfig>({} as ChatModelConfig);
 
 const handleBeforeOk = async (done: (closed: boolean) => void) => {
   const res = await formRef.value?.validate();
   if (!res) {
-    const {msg} = await updateChatConfig(form.value)
+    const {msg} = await updateModelChatConfig(form.value)
     Message.success(msg);
     done(true);
     emits('success')
@@ -35,20 +35,28 @@ const close = () => {
   emits('update:visible', false);
 }
 
-const chatTemplates = ref<ChatModelParam[]>([]);
+const chatTemplates = ref<ChatModelConfig[]>([]);
 
 const handleChatTemplate = async () => {
-  const {data} = await queryChatConfig();
-  chatTemplates.value = data.templates;
-  console.log(chatTemplates.value)
+  const {data} = await queryTemplateList();
+  chatTemplates.value = data;
 }
 
 const chatTemplateChange = (value: any) => {
   const find = chatTemplates.value.find(item => item.templateName === value);
+  console.log(find)
   if (find) {
     form.value = {
       ...form.value,
-      ...find,
+      interfaceType: find.interfaceType,
+      host: find.host,
+      path: find.path,
+      apiKey: find.apiKey,
+      model: find.model,
+      temperature: find.temperature,
+      maxTokens: find.maxTokens,
+      apiSecret: find.apiSecret,
+      appId: find.appId,
     }
   }
 }
@@ -58,7 +66,8 @@ watch(
     () => {
       if (props.visible) {
         handleChatTemplate();
-        form.value = {...props.chatModelParam}
+        formRef.value?.resetFields();
+        form.value = {...props.chatModelConfig}
         moreConfig.value = false;
       }
       showModal.value = props.visible
@@ -69,13 +78,14 @@ watch(
 
 <template>
   <div>
-    <a-modal v-model:visible="showModal"
-             :title="form.id ? form.name : '添加文本大模型'"
-             :width="700"
-             :unmount-on-close="true"
-             @before-ok="handleBeforeOk"
-             @close="close"
-             @cancel="close"
+    <a-modal
+        v-model:visible="showModal"
+        :title="form.id ? form.name : '添加文本大模型'"
+        :width="700"
+        :unmount-on-close="true"
+        @before-ok="handleBeforeOk"
+        @close="close"
+        @cancel="close"
     >
       <a-form
           ref="formRef"

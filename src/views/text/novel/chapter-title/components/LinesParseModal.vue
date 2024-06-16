@@ -1,11 +1,10 @@
 <script setup lang="ts">
-
 import {ref, watch} from "vue";
 import {linesPatternOptions} from "./data.ts";
-import {linesParse, queryChapterText, tmpLinesParse} from "@/api/text.ts";
 import {useRoute} from "vue-router";
 import useLoading from "@/hooks/loading.ts";
 import {FormInstance, Message} from "@arco-design/web-vue";
+import {ChapterInfo, dialogueParse, getContent, tmpDialogueParse} from "@/api/text-chapter.ts";
 
 const route = useRoute();
 const props = defineProps({
@@ -23,7 +22,7 @@ const {loading, setLoading} = useLoading();
 
 const textContent = ref<string>('')
 const showModal = ref<boolean>(false);
-const lines = ref<{ text: string }[]>([]);
+const chapterInfos = ref<ChapterInfo[]>([]);
 const formRef = ref<FormInstance>()
 const form = ref({
   chapterPattern: '',
@@ -36,15 +35,13 @@ const handleTmpLinesParse = async () => {
   if (!res) {
     try {
       setLoading(true);
-      const {data} = await tmpLinesParse({
-        project: route.query.project as string,
-        chapter: props.chapterTitle,
-        linesPattern: form.value.linesPattern,
+      const {data} = await tmpDialogueParse({
+        projectId: route.query.projectId as string,
+        chapterId: props.chapterTitle as string,
+        dialoguePattern: form.value.linesPattern,
         textContent: textContent.value,
       });
-      lines.value = data.map((item) => {
-        return {text: item};
-      });
+      chapterInfos.value = data;
       form.value.validate = true;
     } finally {
       setLoading(false);
@@ -53,9 +50,9 @@ const handleTmpLinesParse = async () => {
 }
 
 const handleQueryChapterText = async () => {
-  const {data} = await queryChapterText({
-    project: route.query.project as string,
-    chapter: props.chapterTitle,
+  const {data} = await getContent({
+    projectId: route.query.projectId as string,
+    chapterId: props.chapterTitle as string,
   })
   textContent.value = data;
 }
@@ -63,10 +60,10 @@ const handleQueryChapterText = async () => {
 const handleBeforeOk = async (done: (closed: boolean) => void) => {
   const res = await formRef.value?.validate();
   if (!res) {
-    const {msg} = await linesParse({
-      project: route.query.project as string,
-      chapter: props.chapterTitle,
-      linesPattern: form.value.linesPattern,
+    const {msg} = await dialogueParse({
+      projectId: route.query.projectId as string,
+      chapterId: props.chapterTitle as string,
+      dialoguePattern: form.value.linesPattern,
       textContent: textContent.value,
     });
     Message.success(msg);
@@ -87,7 +84,7 @@ watch(
       showModal.value = props.visible
       if (props.visible) {
         handleQueryChapterText()
-        lines.value = []
+        chapterInfos.value = []
         formRef.value?.resetFields();
       }
     },
@@ -143,9 +140,9 @@ watch(
           <a-col :span="12">
             <n-scrollbar style="height: 550px; padding-right: 10px">
               <a-table
-                  :data="lines"
+                  :data="chapterInfos"
                   :loading="loading"
-                  :columns="[{ title: '角色台词', dataIndex: 'text' }]"
+                  :columns="[{ title: '文本', dataIndex: 'text' }]"
                   :pagination="false"
                   style="width: 100%"
               />

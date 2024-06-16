@@ -9,7 +9,7 @@ import EdgeTts from "@/views/model/edge-tts/index.vue";
 import ChatTts from "@/views/model/chat-tts/index.vue";
 
 const modelTypes = [
-  '文本大模型', '音频生成服务', '参考音频', 'gpt-sovits', 'fish-speech', 'edge-tts', 'chat-tts'
+  '文本大模型', '音频生成服务', '参考音频', 'gpt-sovits', 'fish-speech', 'chat-tts', 'edge-tts'
 ]
 const activeModelType = ref('文本大模型')
 
@@ -58,11 +58,11 @@ const changeModelType = (item: string) => {
           <div v-if="activeModelType === 'fish-speech'">
             <fish-speech/>
           </div>
-          <div v-if="activeModelType === 'edge-tts'">
-            <edge-tts/>
-          </div>
           <div v-if="activeModelType === 'chat-tts'">
             <chat-tts/>
+          </div>
+          <div v-if="activeModelType === 'edge-tts'">
+            <edge-tts/>
           </div>
         </div>
       </n-scrollbar>

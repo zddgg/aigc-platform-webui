@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {inject, PropType, ref, watch} from "vue";
-import {queryCommonRoles, queryRoles, Role, roleCombine} from "@/api/text.ts";
+import { roles as queryRoles, TextRole, roleCombine} from "@/api/text-chapter.ts";
 import {FormInstance, Message} from "@arco-design/web-vue";
 import {useRoute} from "vue-router";
 import {EventBus} from "@/vite-env";
@@ -13,11 +13,8 @@ const props = defineProps({
     default: false,
   },
   role: {
-    type: Object as PropType<Role>
+    type: Object as PropType<TextRole>
   },
-  roleType: {
-    type: String as PropType<'role' | 'commonRole'>
-  }
 })
 
 const emits = defineEmits(['update:visible']);
@@ -25,23 +22,19 @@ const eventBus = inject<EventBus>('eventBus');
 
 const showModal = ref<boolean>(false);
 
-const roles = ref<Role[]>([]);
-const commonRoles = ref<Role[]>([]);
+const roles = ref<TextRole[]>([]);
 
 const formRef = ref<FormInstance>()
-const form = ref<Role>({} as Role);
+const form = ref<TextRole>({} as TextRole);
 
 const handleBeforeOk = async (done: (closed: boolean) => void) => {
   const res = await formRef.value?.validate();
   if (!res) {
     const {msg} = await roleCombine({
-      chapter: {
-        project: route.query.project as string,
-        chapter: route.query.chapter as string,
-      },
-      role: props.role?.role as string,
-      newRole: form.value.role,
-      roleType: props.roleType as string,
+      projectId: route.query.projectId as string,
+      chapterId: route.query.chapterId as string,
+      fromRoleName: props.role?.role as string,
+      toRoleName: form.value.role,
     })
     Message.success(msg);
     eventBus?.emit(ROLE_CHANGE);
@@ -56,17 +49,10 @@ const close = () => {
 
 const handleQueryRoles = async () => {
   const {data} = await queryRoles({
-    project: route.query.project as string,
-    chapter: route.query.chapter as string,
+    projectId: route.query.projectId as string,
+    chapterId: route.query.chapterId as string,
   })
   roles.value = data;
-}
-
-const handleQueryCommonRoles = async () => {
-  const {data} = await queryCommonRoles({
-    project: route.query.project as string,
-  });
-  commonRoles.value = data;
 }
 
 watch(
@@ -74,7 +60,6 @@ watch(
     async () => {
       if (props.visible) {
         await handleQueryRoles();
-        await handleQueryCommonRoles();
         showModal.value = props.visible
         formRef.value?.resetFields();
       }
@@ -87,7 +72,7 @@ watch(
   <div>
     <a-modal
         v-model:visible="showModal"
-        :title="`${props.roleType === 'commonRole' ? '公共角色删除' : '角色删除'}-${props.role?.role}`"
+        :title="`角色删除-${props.role?.role}`"
         @before-ok="handleBeforeOk"
         @close="close"
         @cancel="close"

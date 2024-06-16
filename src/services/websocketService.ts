@@ -3,7 +3,7 @@ export interface IWebSocketService {
 
     addResultHandler(key: string, handler: (data: any) => void): void;
 
-    addResultHandler(key: string, handler: (data: any) => void): void;
+    addStageHandler(handler: (data: any) => void): void;
 
     disconnect(): void;
 }
@@ -22,9 +22,9 @@ class WebSocketService implements IWebSocketService {
         this.reconnectInterval = 5000; // 5秒重连间隔
     }
 
-    connect(project: string) {
+    connect(projectId: string) {
         if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-            this.socket = new WebSocket(`ws://localhost:8080/ws?project=${project}`);
+            this.socket = new WebSocket(`ws://localhost:8080/ws?projectId=${projectId}`);
 
             this.socket.onopen = () => {
                 console.log('WebSocket connection opened.');
@@ -33,7 +33,7 @@ class WebSocketService implements IWebSocketService {
             this.socket.onmessage = (event: MessageEvent) => {
                 const data = JSON.parse(event.data);
                 if (data.type === 'result') {
-                    const handler = this.resultHandlers.get(`${data.project}-${data.chapter}`);
+                    const handler = this.resultHandlers.get(`${data.projectId}-${data.chapterId}`);
                     if (handler) {
                         handler(data.chapterInfo);
                     }
@@ -48,7 +48,7 @@ class WebSocketService implements IWebSocketService {
                 // 断线重连
                 setTimeout(() => {
                     console.log('Reconnecting WebSocket...');
-                    this.connect(project);
+                    this.connect(projectId);
                 }, this.reconnectInterval);
             };
 
