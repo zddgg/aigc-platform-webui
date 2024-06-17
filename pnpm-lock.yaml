@@ -11,9 +11,6 @@ importers:
       '@vueuse/core':
         specifier: ^10.11.0
         version: 10.11.0(vue@3.4.29(typescript@5.4.5))
-      ant-design-vue:
-        specifier: ^4.2.3
-        version: 4.2.3(vue@3.4.29(typescript@5.4.5))
       axios:
         specifier: ^1.7.2
         version: 1.7.2
@@ -36,6 +33,9 @@ importers:
       '@vitejs/plugin-vue':
         specifier: ^5.0.5
         version: 5.0.5(vite@5.3.1(@types/node@20.14.2))(vue@3.4.29(typescript@5.4.5))
+      ant-design-vue:
+        specifier: ^4.2.3
+        version: 4.2.3(vue@3.4.29(typescript@5.4.5))
       naive-ui:
         specifier: ^2.38.2
         version: 2.38.2(vue@3.4.29(typescript@5.4.5))
