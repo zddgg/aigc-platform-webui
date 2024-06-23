@@ -56,7 +56,7 @@ pipeline {
             steps {
                 script {
                     sh """
-                    docker run -d --name ${CONTAINER_NAME} -p 10332:80 ${IMAGE_NAME}:${IMAGE_TAG}
+                    docker run -d --name ${CONTAINER_NAME} --network app -p 10332:80 ${IMAGE_NAME}:${IMAGE_TAG}
                     """
                 }
             }
