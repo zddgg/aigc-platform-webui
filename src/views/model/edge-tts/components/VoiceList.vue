@@ -3,23 +3,17 @@ import {computed, onMounted, ref} from "vue";
 import {SelectOptionData} from "@arco-design/web-vue/es/select/interface";
 import useLoading from "@/hooks/loading.ts";
 import {voiceNameFormat} from "@/utils/model-util.ts";
-import {
-  EdgeTtsSetting,
-  EdgeTtsConfig,
-  playOrCreateAudio,
-  settings as querySettings,
-  configs as queryConfigs
-} from "@/api/edge-tts.ts";
+import {configs as queryConfigs, EdgeTtsConfig, playOrCreateAudio, settings as querySettings} from "@/api/edge-tts.ts";
 
 const {loading, setLoading} = useLoading();
 
 const edgeTtsConfigs = ref<EdgeTtsConfig[]>([])
-const edgeTtsSettings = ref<EdgeTtsSetting[]>([])
 
 const selectGender = ref<string>('')
 const genderOptions = ref<SelectOptionData[]>([])
 const selectLanguage = ref<string>('')
 const voiceNameInput = ref<string>('')
+const settingOptions = ref<SelectOptionData[]>([])
 
 const handleQueryConfigs = async () => {
   const {data} = await queryConfigs()
@@ -33,7 +27,14 @@ const handleQueryConfigs = async () => {
 
 const handleQuerySettings = async () => {
   const {data} = await querySettings()
-  edgeTtsSettings.value = data;
+  settingOptions.value = data
+      .filter(item => item.showFlag)
+      .map(item => {
+        return {
+          label: item.zhName || item.enName,
+          value: item.enName,
+        }
+      });
 }
 
 const computedVoices = computed(() => {
@@ -121,8 +122,7 @@ onMounted(() => {
             v-model="selectLanguage"
             placeholder="语言"
             allow-clear
-            :options="edgeTtsSettings.filter(item => item.showFlag)"
-            :field-names="{value: 'enName', label: 'zhName'}"
+            :options="settingOptions"
             style="width: 200px"
         >
         </a-select>

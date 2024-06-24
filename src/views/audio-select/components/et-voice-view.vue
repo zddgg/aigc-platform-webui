@@ -4,13 +4,7 @@ import useLoading from "@/hooks/loading.ts";
 import {voiceNameFormat} from "@/utils/model-util.ts";
 import {AudioModelConfig} from "@/api/model.ts";
 import {SelectOptionData} from "@arco-design/web-vue/es/select/interface";
-import {
-  configs as queryConfigs,
-  EdgeTtsConfig,
-  EdgeTtsSetting,
-  playOrCreateAudio,
-  settings as querySettings
-} from "@/api/edge-tts.ts";
+import {configs as queryConfigs, EdgeTtsConfig, playOrCreateAudio, settings as querySettings} from "@/api/edge-tts.ts";
 
 const props = defineProps({
   visible: {
@@ -32,12 +26,12 @@ const audioElement = ref<HTMLAudioElement | null>(null); // ref 对象引用到 
 
 const edgeTtsConfigs = ref<EdgeTtsConfig[]>([])
 const currentAudio = ref<EdgeTtsConfig>({} as EdgeTtsConfig)
-const edgeTtsSettings = ref<EdgeTtsSetting[]>([])
 
 const genderOptions = ref<SelectOptionData[]>([])
 const selectGender = ref<string>('')
 const selectLanguage = ref<string>('')
 const nameSearchInput = ref<string>('')
+const settingOptions = ref<SelectOptionData[]>([])
 
 const computedVoices = computed(() => {
   let tmp = edgeTtsConfigs.value;
@@ -69,7 +63,15 @@ const handleQueryConfigs = async () => {
 
 const handleQuerySettings = async () => {
   const {data} = await querySettings();
-  edgeTtsSettings.value = data.sort((a, b) => (b.showFlag ? 1 : 0) - (a.showFlag ? 1 : 0));
+  settingOptions.value = data.sort((a, b) => (b.showFlag ? 1 : 0) - (a.showFlag ? 1 : 0))
+      .filter(item => item.showFlag)
+      .map(item => {
+        console.log(item)
+        return {
+          label: item.zhName || item.enName,
+          value: item.enName,
+        }
+      });
 }
 
 const activeAudioKey = ref<string>('')
@@ -161,8 +163,7 @@ watch(
         />
         <a-select
             v-model="selectLanguage"
-            :options="edgeTtsSettings.filter(item => item.showFlag)"
-            :field-names="{value: 'enName', label: 'zhName'}"
+            :options="settingOptions"
             allow-clear
             placeholder="语言"
             size="small"
