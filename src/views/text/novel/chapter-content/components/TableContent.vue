@@ -249,7 +249,7 @@ const playNext = () => {
         audioElement.value.play();
       }
 
-    }, 500);
+    }, 300);
   } else {
     activeAudioIndex.value = -1;
   }
