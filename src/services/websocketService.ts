@@ -24,7 +24,7 @@ class WebSocketService implements IWebSocketService {
 
     connect(projectId: string) {
         if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-            this.socket = new WebSocket(`ws://localhost:8080/ws?projectId=${projectId}`);
+            this.socket = new WebSocket(`ws://${import.meta.env.VITE_WS_BASE_URL}/ws?projectId=${projectId}`);
 
             this.socket.onopen = () => {
                 console.log('WebSocket connection opened.');

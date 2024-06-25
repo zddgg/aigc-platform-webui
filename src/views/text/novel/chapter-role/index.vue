@@ -34,7 +34,7 @@ defineExpose({refreshTextRole})
       <n-scrollbar style="max-height: calc(100vh - 76px)">
         <a-card :bordered="false" style="border-radius: 8px" :body-style="{ padding: '0 10px 0 0' }">
           <n-tabs
-              default-value="2"
+              default-value="1"
               justify-content="space-evenly"
               type="line"
           >
