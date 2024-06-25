@@ -68,8 +68,8 @@ const filterRole = (value: string[], record: ChapterInfo) => {
 
 const columns: TableColumnData[] = [
   {
-    title: 'index',
-    dataIndex: 'index',
+    title: '序号',
+    slotName: 'index',
   },
   {
     title: '角色',
@@ -140,7 +140,7 @@ const handleQueryChapterInfo = async () => {
       disabled: !item.audioModelType
     }
   });
-  selectedIndexes.value = data.filter(item => item.exportFlag).map(item => item.index)
+  selectedIndexes.value = data.filter(item => item.audioExportFlag).map(item => item.index)
 }
 
 const onRoleChange = () => {
@@ -370,68 +370,6 @@ watch(
 
 <template>
   <div class="container">
-    <!--    <a-space size="small" direction="vertical">-->
-    <!--      <a-card-->
-    <!--          v-for="(item, index) in chapterInfos"-->
-    <!--          :key="index"-->
-    <!--          :body-style="{padding: '10px'}"-->
-    <!--      >-->
-
-    <!--        <a-descriptions-->
-    <!--            :column="5"-->
-    <!--            bordered-->
-    <!--            table-layout="fixed"-->
-    <!--        >-->
-    <!--          <a-descriptions-item label="角色" :span="1">-->
-    <!--            {{ item.role }}-->
-    <!--          </a-descriptions-item>-->
-    <!--          <a-descriptions-item label="性别" :span="1">-->
-    <!--            {{ item.gender }}-->
-    <!--          </a-descriptions-item>-->
-    <!--          <a-descriptions-item label="年龄" :span="1">-->
-    <!--            {{ item.ageGroup }}-->
-    <!--          </a-descriptions-item>-->
-    <!--        </a-descriptions>-->
-    <!--        <a-descriptions-->
-    <!--            :column="5"-->
-    <!--            bordered-->
-    <!--            table-layout="fixed"-->
-    <!--        >-->
-    <!--          <a-descriptions-item label="模型类型" :span="1">-->
-    <!--            {{ item.modelType }}-->
-    <!--          </a-descriptions-item>-->
-    <!--          <a-descriptions-item label="模型" :span="1">-->
-    <!--            {{ modelNameFormat(item) }}-->
-    <!--          </a-descriptions-item>-->
-    <!--          <a-descriptions-item label="音频" :span="2">-->
-    <!--            {{ audioNameFormat(item) }}-->
-    <!--          </a-descriptions-item>-->
-    <!--        </a-descriptions>-->
-    <!--        <a-descriptions-->
-    <!--            :column="5"-->
-    <!--            bordered-->
-    <!--            table-layout="fixed"-->
-    <!--        >-->
-    <!--          <a-descriptions-item label="台词" :span="5">-->
-    <!--            {{ item.text }}-->
-    <!--          </a-descriptions-item>-->
-    <!--        </a-descriptions>-->
-    <!--        <div style="text-align: center; margin-top: 10px">-->
-    <!--          <a-space size="large">-->
-    <!--            <a-tooltip content="播放">-->
-    <!--              <a-button type="outline" size="mini">-->
-    <!--                <icon-play-arrow />-->
-    <!--              </a-button>-->
-    <!--            </a-tooltip>-->
-    <!--            <a-tooltip content="生成">-->
-    <!--              <a-button type="outline" size="mini">-->
-    <!--                <icon-refresh />-->
-    <!--              </a-button>-->
-    <!--            </a-tooltip>-->
-    <!--          </a-space>-->
-    <!--        </div>-->
-    <!--      </a-card>-->
-    <!--    </a-space>-->
     <a-table
         row-key="index"
         :data="chapterInfos"
@@ -442,7 +380,9 @@ watch(
         v-model:selected-keys="selectedIndexes"
     >
       <template #index="{ record }">
-        {{ `${record.p}-${record.s}` }}
+        <span style="white-space: nowrap">
+          {{ record.index }}
+        </span>
       </template>
       <template #role="{ record }">
         <div>

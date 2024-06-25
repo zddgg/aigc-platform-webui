@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {ref, watch} from "vue";
-import {linesPatternOptions} from "./data.ts";
+import {linesPatternOptions} from "@/data/data.ts";
 import {useRoute} from "vue-router";
 import useLoading from "@/hooks/loading.ts";
 import {FormInstance, Message} from "@arco-design/web-vue";
@@ -12,9 +12,6 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  chapterTitle: {
-    type: String,
-  }
 });
 
 const emits = defineEmits(['update:visible', 'refresh'])
@@ -37,7 +34,7 @@ const handleTmpLinesParse = async () => {
       setLoading(true);
       const {data} = await tmpDialogueParse({
         projectId: route.query.projectId as string,
-        chapterId: props.chapterTitle as string,
+        chapterId: route.query.chapterId as string,
         dialoguePattern: form.value.linesPattern,
         textContent: textContent.value,
       });
@@ -52,7 +49,7 @@ const handleTmpLinesParse = async () => {
 const handleQueryChapterText = async () => {
   const {data} = await getContent({
     projectId: route.query.projectId as string,
-    chapterId: props.chapterTitle as string,
+    chapterId: route.query.chapterId as string,
   })
   textContent.value = data;
 }
@@ -62,7 +59,7 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
   if (!res) {
     const {msg} = await dialogueParse({
       projectId: route.query.projectId as string,
-      chapterId: props.chapterTitle as string,
+      chapterId: route.query.chapterId as string,
       dialoguePattern: form.value.linesPattern,
       textContent: textContent.value,
     });

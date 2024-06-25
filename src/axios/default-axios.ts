@@ -5,6 +5,10 @@ import { HttpResponse } from '@/types/global.ts';
 
 const defaultAxios = axios.create();
 
+if (import.meta.env.VITE_API_BASE_URL && import.meta.env.MODE !== 'development') {
+  defaultAxios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL;
+}
+
 defaultAxios.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
     // let each request carry token

@@ -51,6 +51,9 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  projectType: {
+    type: String,
+  }
 });
 
 const emits = defineEmits(['update:visible', 'close']);
@@ -75,6 +78,7 @@ const handleSubmit = async () => {
     setLoading(true);
     const formData = new FormData();
     formData.append('project', form.value.project);
+    formData.append('projectType', props.projectType as string);
     formData.append('file', file.value?.file as Blob);
     await createProject(formData);
     close();

@@ -247,7 +247,7 @@ onMounted(() => {
                 </a-col>
               </a-row>
               <a-card :body-style="{padding: '20px 20px 0'}">
-                <a-form-item label="输入文本">
+                <a-form-item label="输入文本" required>
                   <n-input v-model:value="form.text" type="textarea"/>
                 </a-form-item>
               </a-card>

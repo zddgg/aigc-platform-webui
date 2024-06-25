@@ -4,8 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc && vite build",
+    "dev": "vite --config ./config/vite.config.dev.ts",
+    "prod": "vite --config ./config/vite.config.prod.ts",
+    "build": "vue-tsc --noEmit && vite build --config ./config/vite.config.prod.ts",
     "preview": "vite preview"
   },
   "dependencies": {

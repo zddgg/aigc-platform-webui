@@ -1,4 +1,5 @@
 import axios from "@/axios/default-axios.ts";
+import customAxios from "@/axios/custom-axios.ts";
 
 export interface VoiceTag {
     contentCategories: number;
@@ -40,4 +41,8 @@ export function updateSetting(params: EdgeTtsSetting) {
 
 export function playOrCreateAudio(params: string) {
     return axios.post<string>('/api/edgeTts/playOrCreateAudio', {voice: params});
+}
+
+export function playAudio(params: EdgeTtsConfig) {
+    return customAxios.post('/api/edgeTts/playAudio', params, {responseType: 'blob'});
 }

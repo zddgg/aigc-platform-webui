@@ -46,7 +46,7 @@ export interface ChapterInfo extends TextRole {
     nextAudioInterval: number;
     audioState: number;
     audioLength: number;
-    exportFlag: boolean;
+    audioExportFlag: boolean;
 
     audioUrl: string;
 }

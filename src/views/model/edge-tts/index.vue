@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import VoiceList from "@/views/model/edge-tts/components/VoiceList.vue";
 import VoiceConfig from "@/views/model/edge-tts/components/VoiceConfig.vue";
+import AudioCreate from "@/views/model/edge-tts/components/AudioCreate.vue";
 </script>
 
 <template>
@@ -11,6 +12,9 @@ import VoiceConfig from "@/views/model/edge-tts/components/VoiceConfig.vue";
       </a-tab-pane>
       <a-tab-pane key="2" title="声音配置">
         <voice-config/>
+      </a-tab-pane>
+      <a-tab-pane key="3" title="音频生成">
+        <audio-create/>
       </a-tab-pane>
     </a-tabs>
   </div>

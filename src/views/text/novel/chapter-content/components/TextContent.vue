@@ -297,12 +297,13 @@ watch(
     <a-card v-if="!computedChapterInfo || computedChapterInfo.length === 0">
       <a-empty/>
     </a-card>
-    <a-card v-else
-            id="text-content"
-            :bordered="false"
-            style="border-radius: 8px"
-            @click.right="(e) => e.preventDefault()"
-            class="text-content"
+    <a-card
+        v-else
+        id="text-content"
+        :bordered="false"
+        style="border-radius: 8px"
+        @click.right="(e) => e.preventDefault()"
+        class="text-content"
     >
       <div>
         <p

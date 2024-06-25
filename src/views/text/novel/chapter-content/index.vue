@@ -17,6 +17,7 @@ import {
   startCreateAudio,
   stopCreateAudio
 } from "@/api/text-chapter.ts";
+import LinesParseModal from "@/views/text/novel/chapter-content/components/LinesParseModal.vue";
 
 const route = useRoute();
 const {loading, setLoading} = useLoading();
@@ -27,6 +28,7 @@ const eventBus = inject<EventBus>('eventBus');
 const batchChangeModalVisible = ref(false);
 
 const selectedIndexes = ref<string[]>([])
+const linesParseModalVisible = ref(false);
 
 const textContentConfig = ref<TextContentConfig>({
   textViewType: 'table'
@@ -222,18 +224,29 @@ watch(
   <div>
     <a-affix>
       <div class="text-space-header">
-        <div style="width: 80%; display: flex; justify-content: space-between; align-items: center">
+        <div style="width: 90%; display: flex; justify-content: space-between; align-items: center">
           <a-space size="large">
             <div>
-              <a-button type="primary"
-                        :loading="loading"
-                        @click="onAiInference"
+              <a-button
+                  type="outline"
+                  @click="() => (linesParseModalVisible = true)"
+              >
+                台词解析
+              </a-button>
+            </div>
+            <div>
+              <a-button
+                  type="primary"
+                  :loading="loading"
+                  @click="onAiInference"
               >
                 角色推理
               </a-button>
             </div>
             <div>
-              <a-dropdown-button type="primary">
+              <a-dropdown-button
+                  type="primary"
+              >
                 批量生成
                 <template #icon>
                   <icon-down/>
@@ -354,8 +367,7 @@ watch(
       </div>
     </a-affix>
     <n-scrollbar
-        style="max-height: calc(100vh - 76px); padding-right: 10px; overflow: auto;
-         border-top: 1px solid #CCCCCCFF"
+        style="max-height: calc(100vh - 76px); padding-right: 10px; overflow: auto"
     >
       <div id="text-content">
         <div v-if="textContentConfig.textViewType === 'table'">
@@ -390,6 +402,11 @@ watch(
         </a-space>
       </div>
     </a-modal>
+
+    <lines-parse-modal
+        v-model:visible="linesParseModalVisible"
+        @refresh="refresh"
+    />
 
   </div>
 </template>

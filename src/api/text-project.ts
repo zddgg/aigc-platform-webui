@@ -4,6 +4,7 @@ export interface TextProject {
     id: number;
     projectId: string;
     projectName: string;
+    projectType: string;
     chapterCount: number;
 }
 

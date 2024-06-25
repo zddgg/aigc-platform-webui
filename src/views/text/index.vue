@@ -9,7 +9,8 @@ import {deleteProject, list as queryTextProjectList, TextProject} from "@/api/te
 const router = useRouter();
 const {loading, setLoading} = useLoading();
 
-const projectCreateVisible = ref(false);
+const projectCreateVisible = ref<boolean>(false);
+const projectType = ref<string>('long_text');
 
 const textProjects = ref<TextProject[]>([])
 
@@ -42,6 +43,7 @@ const textProjectRoute = (project: TextProject) => {
     query: {
       projectName: project.projectName,
       projectId: project.projectId,
+      projectType: project.projectType,
     }
   })
 }
@@ -54,37 +56,104 @@ onMounted(() => {
 
 <template>
   <div style="padding: 20px">
-    <a-tabs type="rounded" size="large">
-      <a-tab-pane key="1">
+    <a-tabs type="rounded" size="large" @change="(value) => (projectType = value as string)">
+      <a-tab-pane key="long_text">
         <template #title>
           <div>
-            <icon-calendar/>
-            章节小说
+            <icon-book/>
+            章节长文本
           </div>
         </template>
         <div>
           <a-space wrap size="large" align="start">
-            <a-card style="width: 340px; height: 180px; display: flex; align-items: center"
-                    :body-style="{width:'100%'}"
-                    @click="() => (projectCreateVisible = true)"
+            <a-card
+                style="width: 340px; height: 180px; display: flex; align-items: center"
+                :body-style="{width:'100%'}"
+                @click="() => (projectCreateVisible = true)"
             >
               <div style=" text-align: center">
                 <div>
                   <icon-plus/>
                 </div>
-                <div style="margin-top: 10px">
-                  <span>新建项目</span>
+                <div>
+                  <div>
+                    <span>新建章节长文本项目</span>
+                  </div>
+                  <div>
+                    <span>（多章节长文本）</span>
+                  </div>
                 </div>
               </div>
             </a-card>
             <a-card
-                v-for="(item, index) in textProjects"
+                v-for="(item, index) in textProjects.filter((item1) => item1.projectType === 'long_text')"
                 :key="index"
                 style="width: 350px"
             >
               <a-descriptions :title="item.projectName" :column="1" bordered>
                 <a-descriptions-item label="类型">
-                  {{ '章节小说' }}
+                  {{ '章节长文本' }}
+                </a-descriptions-item>
+                <a-descriptions-item label="章节">
+                  {{ item.chapterCount ?? 0 }}
+                </a-descriptions-item>
+              </a-descriptions>
+              <div style="display: flex; justify-content: right; margin-top: 10px">
+                <a-space>
+                  <a-button
+                      type="outline"
+                      @click="textProjectRoute(item)"
+                  >
+                    进入空间
+                  </a-button>
+                  <a-button
+                      type="outline"
+                      status="danger"
+                      :loading="loading"
+                      @click="handleDeleteProject(item)"
+                  >
+                    删除
+                  </a-button>
+                </a-space>
+              </div>
+            </a-card>
+          </a-space>
+        </div>
+      </a-tab-pane>
+      <a-tab-pane key="short_text">
+        <template #title>
+          <icon-file/>
+          短文本
+        </template>
+        <div>
+          <a-space wrap size="large" align="start">
+            <a-card
+                style="width: 340px; height: 180px; display: flex; align-items: center"
+                :body-style="{width:'100%'}"
+                @click="() => (projectCreateVisible = true)"
+            >
+              <div style=" text-align: center">
+                <div>
+                  <icon-plus/>
+                </div>
+                <div>
+                  <div>
+                    <span>新建短文本项目</span>
+                  </div>
+                  <div>
+                    <span>（单章节短文本）</span>
+                  </div>
+                </div>
+              </div>
+            </a-card>
+            <a-card
+                v-for="(item, index) in textProjects.filter((item1) => item1.projectType === 'short_text')"
+                :key="index"
+                style="width: 350px"
+            >
+              <a-descriptions :title="item.projectName" :column="1" bordered>
+                <a-descriptions-item label="类型">
+                  {{ '短文本' }}
                 </a-descriptions-item>
                 <a-descriptions-item label="章节">
                   {{ item.chapterCount }}
@@ -112,15 +181,10 @@ onMounted(() => {
           </a-space>
         </div>
       </a-tab-pane>
-      <a-tab-pane v-if="false" key="2">
-        <template #title>
-          <icon-clock-circle/>
-          短文本
-        </template>
-      </a-tab-pane>
     </a-tabs>
     <project-create
         v-model:visible="projectCreateVisible"
+        :project-type="projectType"
         @close="() => handleProjectList()"
     />
   </div>

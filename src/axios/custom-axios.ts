@@ -5,7 +5,9 @@ import {Message} from "@arco-design/web-vue";
 
 const customAxios = axios.create();
 
-// 不添加任何拦截器
+if (import.meta.env.VITE_API_BASE_URL && import.meta.env.MODE !== 'development') {
+    customAxios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL;
+}
 
 export default customAxios;
 

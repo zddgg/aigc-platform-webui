@@ -1,7 +1,7 @@
 <script setup lang="ts">
 
 import {ref, watch} from "vue";
-import {linesPatternOptions} from "./data.ts";
+import {linesPatternOptions} from "@/data/data.ts";
 import {chapterSplit, tmpChapterSplit} from "@/api/text-project.ts";
 import {useRoute} from "vue-router";
 import useLoading from "@/hooks/loading.ts";

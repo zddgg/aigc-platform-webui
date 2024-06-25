@@ -2,7 +2,6 @@
 import {inject, onBeforeUnmount, onMounted, ref} from "vue";
 import {useRoute, useRouter} from "vue-router";
 import ChapterSplitModal from "@/views/text/novel/chapter-title/components/ChapterSplitModal.vue";
-import LinesParseModal from "@/views/text/novel/chapter-title/components/LinesParseModal.vue";
 import {ROLE_CHANGE} from "@/services/eventTypes.ts";
 import {EventBus} from "@/vite-env";
 import {chapters as queryTextChapterList, TextChapter} from "@/api/text-chapter.ts";
@@ -15,7 +14,6 @@ const eventBus = inject<EventBus>('eventBus');
 
 const collapsed = ref(false);
 const chapterSplitModalVisible = ref(false);
-const linesParseModalVisible = ref(false);
 
 const activeChapterIndex = ref(0)
 const textChapters = ref<TextChapter[]>([])
@@ -42,12 +40,6 @@ const chapterSelect = (textChapter: TextChapter, index: number) => {
 const toggleCollapse = () => {
   collapsed.value = !collapsed.value;
   emits('toggleCollapse', collapsed.value);
-}
-
-const currentChapter = ref<string>('');
-const handleLinesParse = (chapter: TextChapter) => {
-  linesParseModalVisible.value = true
-  currentChapter.value = chapter.chapterId
 }
 
 const refresh = () => {
@@ -136,7 +128,7 @@ onMounted(async () => {
                   文本数量
                 </span>
                 </template>
-                {{ item.textNum }}
+                {{ item.textNum ?? 0 }}
               </a-descriptions-item>
               <a-descriptions-item>
                 <template #label>
@@ -148,14 +140,7 @@ onMounted(async () => {
               </a-descriptions-item>
             </a-descriptions>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px">
-              <a-button
-                  type="outline"
-                  size="mini"
-                  @click="handleLinesParse(item)"
-              >
-                台词解析
-              </a-button>
-              <div v-if="item.stage" style="margin-left: 20px; cursor: pointer">
+              <div v-if="item.stage" style="cursor: pointer">
                 <a-tag
                     v-if="item.stage === '合并完成'"
                     color="green"
@@ -187,11 +172,6 @@ onMounted(async () => {
     <chapter-split-modal
         v-model:visible="chapterSplitModalVisible"
         @refresh="refresh"
-    />
-    <lines-parse-modal
-        v-model:visible="linesParseModalVisible"
-        :chapter-title="currentChapter"
-        @refresh="emits('refresh')"
     />
   </div>
 </template>
