@@ -66,7 +66,6 @@ const handleQuerySettings = async () => {
   settingOptions.value = data.sort((a, b) => (b.showFlag ? 1 : 0) - (a.showFlag ? 1 : 0))
       .filter(item => item.showFlag)
       .map(item => {
-        console.log(item)
         return {
           label: item.zhName || item.enName,
           value: item.enName,

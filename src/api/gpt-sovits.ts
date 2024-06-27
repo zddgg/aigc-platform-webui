@@ -58,3 +58,7 @@ export function createConfig(params: FormData) {
 export function deleteConfig(params: GptSovitsConfig) {
     return axios.post('/api/gptSovits/deleteConfig', params);
 }
+
+export function refreshCache() {
+    return axios.post('/api/gptSovits/refreshCache');
+}

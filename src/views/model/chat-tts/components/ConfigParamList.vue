@@ -17,6 +17,11 @@ const handleDeleteChatTtsConfig = async (config: ChatTtsConfig) => {
   await handleQueryChatTtsConfig();
 }
 
+const emits = defineEmits(['configEdit'])
+const configEdit = (id: number | undefined) => {
+  emits('configEdit', id)
+}
+
 onMounted(() => {
   handleQueryChatTtsConfig();
 })
@@ -64,19 +69,28 @@ onMounted(() => {
                 </span>
               </div>
               <div>
-                <a-popconfirm
-                    type="error"
-                    content="确认删除？"
-                    @ok="handleDeleteChatTtsConfig(item)"
-                >
+                <a-space>
                   <a-button
                       type="outline"
-                      status="danger"
                       size="mini"
+                      @click="configEdit(item.id)"
                   >
-                    删除
+                    <icon-edit/>
                   </a-button>
-                </a-popconfirm>
+                  <a-popconfirm
+                      type="error"
+                      content="确认删除？"
+                      @ok="handleDeleteChatTtsConfig(item)"
+                  >
+                    <a-button
+                        type="outline"
+                        status="danger"
+                        size="mini"
+                    >
+                      <icon-delete/>
+                    </a-button>
+                  </a-popconfirm>
+                </a-space>
               </div>
             </div>
           </a-descriptions-item>

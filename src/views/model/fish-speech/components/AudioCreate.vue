@@ -14,6 +14,12 @@ import {Model} from "@/api/model.ts";
 import {CascaderOption} from "naive-ui";
 import {queryRefAudios, RefAudio} from "@/api/ref-audio.ts";
 
+const props = defineProps({
+  configEditId: {
+    type: Number
+  }
+})
+
 const {loading, setLoading} = useLoading();
 const audioElement = ref<HTMLAudioElement | null>(null);
 const createFormRef = ref<FormInstance>()
@@ -99,6 +105,9 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
   const res = await formRef.value?.validate();
   if (!res) {
     const formData = new FormData();
+    if (form.value.id) {
+      formData.append('id', String(form.value.id));
+    }
     formData.append('configName', form.value.configName);
 
     formData.append('temperature', String(form.value.temperature));
@@ -109,7 +118,7 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
     formData.append('moodAudioId', String(form.value.moodAudioId));
 
     formData.append('text', String(form.value.text));
-    formData.append('saveAudio', String(form.value.saveAudio));
+    formData.append('saveAudio', String(form.value.saveAudio || false));
     formData.append('file', blob?.value as Blob);
 
     const {msg} = await createConfig(formData);
@@ -136,8 +145,9 @@ const copyConfig = (config: FishSpeechConfig) => {
   form.value = {
     ...form.value,
     ...config,
+    id: undefined,
     configName: '',
-    text: form.value.text
+    text: form.value.text,
   };
 }
 
@@ -200,6 +210,9 @@ const handleQueryRefAudios = async () => {
 }
 
 const computedRefAudioSelectOptions = computed(() => {
+  if (!form.value.refAudioCascaderPath) {
+    return [];
+  }
   return refAudios.value
       .find(item => item.group === form.value.refAudioCascaderPath[0]
           && item.name === form.value.refAudioCascaderPath[1])
@@ -222,10 +235,33 @@ const refAudioCascaderChange = () => {
   })
 }
 
-onMounted(() => {
-  handleQueryConfigs();
-  handleQueryModels();
-  handleQueryRefAudios();
+onMounted(async () => {
+  await handleQueryModels();
+  await handleQueryRefAudios();
+  await handleQueryConfigs();
+  if (props.configEditId) {
+    const find = configs.value.find((item) => item.id === props.configEditId);
+    if (find) {
+
+      let refAudioCascaderPath: string[] = []
+
+      refAudios.value.forEach(item => {
+        item.moods.forEach(item1 => {
+          item1.moodAudios.forEach(item2 => {
+            if (item2.id === find.moodAudioId) {
+              refAudioCascaderPath = [item.group, item.name, item1.name]
+            }
+          })
+        })
+      });
+
+      form.value = {
+        ...find,
+        refAudioCascaderPath: refAudioCascaderPath,
+        text: form.value.text,
+      } as FishSpeechConfig
+    }
+  }
 })
 
 </script>
@@ -430,12 +466,6 @@ onMounted(() => {
         v-model:visible="configCreateVisible"
         title="保存配置"
         @before-ok="handleBeforeOk"
-        @close="() => {
-          formRef?.resetFields();
-        }"
-        @cancel="() => {
-          formRef?.resetFields();
-        }"
     >
       <a-form
           ref="formRef"

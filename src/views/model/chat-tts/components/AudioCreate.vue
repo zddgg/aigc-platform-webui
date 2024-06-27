@@ -4,6 +4,12 @@ import useLoading from "@/hooks/loading.ts";
 import {FormInstance, Message} from "@arco-design/web-vue";
 import {ChatTtsConfig, configs as queryChatTtsConfigs, createConfig, playAudio} from "@/api/chat-tts.ts"
 
+const props = defineProps({
+  configEditId: {
+    type: Number
+  }
+})
+
 const {loading, setLoading} = useLoading();
 const audioElement = ref<HTMLAudioElement | null>(null);
 const formRef = ref<FormInstance>()
@@ -91,6 +97,9 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
   const res = await formRef.value?.validate();
   if (!res) {
     const formData = new FormData();
+    if (form.value.id) {
+      formData.append('id', String(form.value.id));
+    }
     formData.append('configName', form.value.configName);
     formData.append('temperature', String(form.value.temperature));
     formData.append('topP', String(form.value.topP));
@@ -101,7 +110,7 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
     formData.append('refineTextParams', form.value.refineTextParams);
 
     formData.append('text', String(form.value.text));
-    formData.append('saveAudio', String(form.value.saveAudio));
+    formData.append('saveAudio', String(form.value.saveAudio || false));
     formData.append('file', blob?.value as Blob);
     formData.append('outputText', form.value.outputText);
     const {msg} = await createConfig(formData);
@@ -117,12 +126,24 @@ const copyConfig = (config: ChatTtsConfig) => {
   form.value = {
     ...form.value,
     ...config,
-    configName: ''
+    id: undefined,
+    configName: '',
+    text: form.value.text,
   };
 }
 
-onMounted(() => {
-  handleQueryChatTtsConfigs();
+onMounted(async () => {
+  await handleQueryChatTtsConfigs();
+  if (props.configEditId) {
+    const find = chatTtsConfigs.value.find((item) => item.id === props.configEditId);
+    if (find) {
+
+      form.value = {
+        ...find,
+        text: form.value.text,
+      } as ChatTtsConfig
+    }
+  }
 })
 
 </script>
@@ -167,8 +188,12 @@ onMounted(() => {
                       <template #label>
                         <div style="display: flex; justify-content: space-between">
                           <span>top_P</span>
-                          <n-input-number v-model:value="form.topP" :show-button="false" size="tiny"
-                                          style="width: 100px"/>
+                          <n-input-number
+                              v-model:value="form.topP"
+                              :show-button="false"
+                              size="tiny"
+                              style="width: 100px"
+                          />
                         </div>
                       </template>
                       <n-slider
@@ -186,8 +211,12 @@ onMounted(() => {
                       <template #label>
                         <div style="display: flex; justify-content: space-between">
                           <span>top_K</span>
-                          <n-input-number v-model:value="form.topK" :show-button="false" size="tiny"
-                                          style="width: 100px"/>
+                          <n-input-number
+                              v-model:value="form.topK"
+                              :show-button="false"
+                              size="tiny"
+                              style="width: 100px"
+                          />
                         </div>
                       </template>
                       <n-slider
@@ -356,12 +385,6 @@ onMounted(() => {
         v-model:visible="configCreateVisible"
         title="保存配置"
         @before-ok="handleBeforeOk"
-        @close="() => {
-          formRef?.resetFields();
-        }"
-        @cancel="() => {
-          formRef?.resetFields();
-        }"
     >
       <a-form
           ref="formRef"

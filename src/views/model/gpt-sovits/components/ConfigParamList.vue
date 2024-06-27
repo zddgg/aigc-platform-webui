@@ -16,6 +16,11 @@ const handleDeleteConfig = async (config: GptSovitsConfig) => {
   await handleQueryConfigs();
 }
 
+const emits = defineEmits(['configEdit'])
+const configEdit = (id: number | undefined) => {
+  emits('configEdit', id)
+}
+
 onMounted(() => {
   handleQueryConfigs();
 })
@@ -75,19 +80,28 @@ onMounted(() => {
                 </span>
               </div>
               <div>
-                <a-popconfirm
-                    type="error"
-                    content="确认删除？"
-                    @ok="handleDeleteConfig(item)"
-                >
+                <a-space>
                   <a-button
                       type="outline"
-                      status="danger"
                       size="mini"
+                      @click="configEdit(item.id)"
                   >
-                    删除
+                    <icon-edit/>
                   </a-button>
-                </a-popconfirm>
+                  <a-popconfirm
+                      type="error"
+                      content="确认删除？"
+                      @ok="handleDeleteConfig(item)"
+                  >
+                    <a-button
+                        type="outline"
+                        status="danger"
+                        size="mini"
+                    >
+                      <icon-delete/>
+                    </a-button>
+                  </a-popconfirm>
+                </a-space>
               </div>
             </div>
           </a-descriptions-item>

@@ -50,6 +50,8 @@ const {loading, setLoading} = useLoading();
 const chapterInfos = ref<ChapterInfo[]>([]);
 const combineExportModalVisible = ref(false);
 
+const textContentConfig = ref<TextContentConfig>(props.textContentConfig)
+
 const computedFilterRole = computed(() => {
   return Array.from(new Set(chapterInfos.value.map(item => item.role))).map(item => {
     return {
@@ -470,7 +472,7 @@ watch(
       <template #text="{ record }">
         <a-typography-text
             v-model:edit-text="record.text"
-            :class="{'lines-color': textContentConfig.showLines && record.linesFlag}"
+            :class="{'lines-color': textContentConfig.showLines && record.dialogueFlag}"
             :editable="props.textContentConfig.textEdit"
             @edit-start="editStart(record)"
             @edit-end="editEnd(record)"

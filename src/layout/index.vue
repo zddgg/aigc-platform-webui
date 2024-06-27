@@ -21,7 +21,7 @@ const activeIndex = ref('');
               @click="() => {
                  activeIndex = '文本';
                  router.push({ name: 'Text' });
-               }"
+              }"
           >
             <div>
               <icon-file size="30"/>
@@ -31,11 +31,13 @@ const activeIndex = ref('');
             </div>
           </div>
           <div
-              v-if="false"
               class="nav-item"
               :class="activeIndex === '音频' ? 'active-item' : ''"
               style="padding: 10px 18px; border-radius: 8px; cursor: pointer"
-              @click="() => {activeIndex = '音频'}"
+              @click="() => {
+                activeIndex = '音频';
+                router.push({ name: 'Audio' });
+              }"
           >
             <div>
               <icon-file-audio size="30"/>
@@ -45,11 +47,13 @@ const activeIndex = ref('');
             </div>
           </div>
           <div
-              v-if="false"
               class="nav-item"
               :class="activeIndex === '图像' ? 'active-item' : ''"
               style="padding: 10px 18px; border-radius: 8px; cursor: pointer"
-              @click="() => {activeIndex = '图像'}"
+              @click="() => {
+                activeIndex = '图像'
+                router.push({ name: 'Image' });
+              }"
           >
             <div>
               <icon-file-image size="30"/>
@@ -90,12 +94,15 @@ const activeIndex = ref('');
         </a-space>
       </div>
       <div
-          v-if="false"
           style="margin-top: auto; display: flex; flex-direction: column; align-items: center"
       >
         <div class="nav-item"
              :class="activeIndex === '设置' ? 'active-item' : ''"
              style="padding: 10px 18px; border-radius: 8px; cursor: pointer; margin-bottom: 20px"
+             @click="() => {
+                 activeIndex = '设置';
+                 router.push({ name: 'Settings' });
+             }"
         >
           <div>
             <icon-settings size="30"/>
