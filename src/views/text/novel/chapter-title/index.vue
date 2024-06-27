@@ -106,13 +106,15 @@ onMounted(async () => {
         <a-card
             v-for="(item, index) in textChapters"
             :key="index"
-            style="border: 1px #ccc solid; border-radius: 8px"
+            style="border: 1px #ccc solid; border-radius: 8px; cursor: pointer"
             hoverable
             :style="index == activeChapterIndex && {backgroundColor: '#c3f6f6'}"
             @click="chapterSelect(item, index)"
         >
-          <div v-if="collapsed" style="text-align: center"
-               :style="item?.stage === '合并完成' && {backgroundColor: 'green'}">
+          <div
+              v-if="collapsed"
+              style="text-align: center"
+          >
             {{ index }}
           </div>
           <div v-else>

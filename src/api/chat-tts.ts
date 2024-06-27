@@ -2,7 +2,7 @@ import axios from "@/axios/default-axios.ts";
 import customAxios from "@/axios/custom-axios.ts";
 
 export interface ChatTtsConfig {
-    id: number;
+    id?: number;
     configId: string;
     configName: string;
     temperature: number;

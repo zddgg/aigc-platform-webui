@@ -50,3 +50,7 @@ export function createConfig(params: FormData) {
 export function deleteConfig(params: FishSpeechConfig) {
     return axios.post('/api/fishSpeech/deleteConfig', params);
 }
+
+export function refreshCache() {
+    return axios.post('/api/fishSpeech/refreshCache');
+}

@@ -193,6 +193,8 @@ const handleQueryConfigs = async () => {
         return {
           label: item.configName,
           value: item.configId,
+          type: 'gpt-sovits',
+          ...item
         }
       });
   fsConfigs.value = (await queryFsConfigs())
@@ -201,6 +203,8 @@ const handleQueryConfigs = async () => {
         return {
           label: item.configName,
           value: item.configId,
+          type: 'fish-speech',
+          ...item
         }
       });
 }
@@ -208,14 +212,13 @@ const handleQueryConfigs = async () => {
 const onModelChange = (value: any) => {
   if (modelType.value !== (value as string[])[0]) {
     modelType.value = (value as string[])[0]
-    configId.value = modelType.value === 'gpt-sovits'
-        ? gsvConfigs.value[0].value as string
-        : fsConfigs.value[0].value as string
+    configId.value = '-1'
   }
 }
 
 const computedConfigs = computed(() => {
-  return modelType.value === 'gpt-sovits' ? gsvConfigs.value : fsConfigs.value;
+  const arr = modelType.value === 'gpt-sovits' ? gsvConfigs.value : fsConfigs.value;
+  return [{label: '空-API服务端配置', value: '-1'}, ...arr];
 })
 
 const onAudioCardSelect = (refAudio: RefAudio) => {
@@ -458,8 +461,81 @@ watch(
               <a-select
                   v-model="configId"
                   size="small"
-                  :options="computedConfigs"
               >
+                <a-option
+                    v-for="(item, index) in computedConfigs"
+                    :key="index"
+                    :value="item.value"
+                >
+                  <span>
+                    {{ item.label }}
+                  </span>
+                  <a-popover v-if="item.value !== '-1'" position="left">
+                    <icon-eye style="margin-left: 10px"/>
+                    <template #content>
+                      <div v-if="item.type === 'gpt-sovits'">
+                        <a-descriptions
+                            :title="item.configName"
+                            :column="2"
+                            bordered
+                            layout="inline-vertical"
+                        >
+                          <a-descriptions-item label="top_K">
+                            {{ item.topK }}
+                          </a-descriptions-item>
+                          <a-descriptions-item label="top_P">
+                            {{ item.topP }}
+                          </a-descriptions-item>
+                          <a-descriptions-item label="temperature">
+                            {{ item.temperature }}
+                          </a-descriptions-item>
+                          <a-descriptions-item label="repetitionPenalty">
+                            {{ item.repetitionPenalty }}
+                          </a-descriptions-item>
+                          <a-descriptions-item label="batchSize">
+                            {{ item.batchSize }}
+                          </a-descriptions-item>
+                          <a-descriptions-item label="parallelInfer">
+                            {{ item.parallelInfer }}
+                          </a-descriptions-item>
+                          <a-descriptions-item label="splitBucket">
+                            {{ item.splitBucket }}
+                          </a-descriptions-item>
+                          <a-descriptions-item label="seed">
+                            {{ item.seed }}
+                          </a-descriptions-item>
+                          <a-descriptions-item label="textSplitMethod">
+                            {{ item.textSplitMethod }}
+                          </a-descriptions-item>
+                          <a-descriptions-item label="fragmentInterval">
+                            {{ item.fragmentInterval }}
+                          </a-descriptions-item>
+                          <a-descriptions-item label="speedFactor">
+                            {{ item.speedFactor }}
+                          </a-descriptions-item>
+                        </a-descriptions>
+                      </div>
+                      <div v-if="item.type === 'fish-speech'">
+                        <a-descriptions
+                            :title="item.configName"
+                            :column="2"
+                            bordered
+                            layout="inline-vertical"
+                        >
+                          <a-descriptions-item label="top_P">
+                            {{ item.topP }}
+                          </a-descriptions-item>
+                          <a-descriptions-item label="temperature">
+                            {{ item.temperature }}
+                          </a-descriptions-item>
+                          <a-descriptions-item label="repetitionPenalty">
+                            {{ item.repetitionPenalty }}
+                          </a-descriptions-item>
+                        </a-descriptions>
+                      </div>
+                    </template>
+                  </a-popover>
+                </a-option>
               </a-select>
             </a-descriptions-item>
           </a-descriptions>

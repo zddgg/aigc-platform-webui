@@ -113,7 +113,7 @@ watch(
       </a-space>
       <n-scrollbar style="height: 500px; margin-top: 10px">
         <div style="margin-right: 10px">
-          <a-grid :cols="3" :col-gap="10" :row-gap="10">
+          <a-grid :cols="2" :col-gap="10" :row-gap="10">
             <a-grid-item
                 v-for="(item, index) in computedConfigs"
                 :key="index"

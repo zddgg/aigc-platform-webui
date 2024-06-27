@@ -21,6 +21,12 @@ const handleQueryConfig = async () => {
   groupOptions.value = [...new Set(data.map((item) => item.modelGroup))];
 }
 
+const refresh = () => {
+  handleQueryConfig();
+}
+
+defineExpose({refresh})
+
 onMounted(() => {
   handleQueryConfig();
 })
