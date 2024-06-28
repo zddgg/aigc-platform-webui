@@ -214,7 +214,10 @@ watch(
                     v-if="['gpt-sovits'].includes(item.audioModelType)"
                     label="配置"
                 >
-                  <a-typography-text ellipsis>
+                  <a-typography-text
+                      v-if="item.gptSovitsConfig?.configName"
+                      ellipsis
+                  >
                     {{ `${item.gptSovitsConfig?.configName}` }}
                   </a-typography-text>
                 </a-descriptions-item>
@@ -239,7 +242,10 @@ watch(
                     v-if="['fish-speech'].includes(item.audioModelType)"
                     label="配置"
                 >
-                  <a-typography-text ellipsis>
+                  <a-typography-text
+                      v-if="item.fishSpeechConfig?.configName"
+                      ellipsis
+                  >
                     {{ `${item.fishSpeechConfig?.configName}` }}
                   </a-typography-text>
                 </a-descriptions-item>
