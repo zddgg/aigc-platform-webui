@@ -264,7 +264,11 @@ watch(
                     label="配置"
                 >
                   <a-typography-text ellipsis>
-                    {{ props.chapterInfo?.gptSovitsConfig?.configName }}
+                    {{
+                      props.chapterInfo?.audioConfigId === '-1'
+                          ? '空-API服务端配置'
+                          : `${props.chapterInfo?.gptSovitsConfig?.configName}`
+                    }}
                   </a-typography-text>
                 </a-descriptions-item>
                 <a-descriptions-item
@@ -350,7 +354,11 @@ watch(
                       label="配置"
                   >
                     <a-typography-text ellipsis>
-                      {{ currentRole.gptSovitsConfig?.configName }}
+                      {{
+                        currentRole?.audioConfigId === '-1'
+                            ? '空-API服务端配置'
+                            : `${currentRole.gptSovitsConfig?.configName}`
+                      }}
                     </a-typography-text>
                   </a-descriptions-item>
                   <a-descriptions-item
