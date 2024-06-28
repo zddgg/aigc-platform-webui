@@ -25,7 +25,9 @@ export class FetchStream {
   timer = 0;
 
   constructor(options: IFetchStreamOptions) {
-    this.url = options.url;
+    this.url = import.meta.env.MODE !== 'development'
+      ? `${import.meta.env.VITE_API_BASE_URL}${options.url}`
+      : options.url;
     this.requestInit = options.requestInit;
     this.onMessage = options.onMessage;
     this.onDone = options.onDone;
@@ -58,7 +60,7 @@ export class FetchStream {
         const readNextChunk = () => {
           reader
             .read()
-            .then(({ value, done }) => {
+            .then(({value, done}) => {
               if (done) {
                 this.onDone?.(); // 流已结束
               } else {
