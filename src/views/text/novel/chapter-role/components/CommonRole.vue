@@ -354,7 +354,7 @@ watch(
             <a-option>老年</a-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="model-type">
+        <a-form-item label="类型">
           <a-input v-model="currentRole.audioModelType" readonly/>
         </a-form-item>
       </a-form>
