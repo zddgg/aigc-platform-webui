@@ -214,11 +214,12 @@ watch(
                     v-if="['gpt-sovits'].includes(item.audioModelType)"
                     label="配置"
                 >
-                  <a-typography-text
-                      v-if="item.gptSovitsConfig?.configName"
-                      ellipsis
-                  >
-                    {{ `${item.gptSovitsConfig?.configName}` }}
+                  <a-typography-text ellipsis>
+                    {{
+                      item.audioConfigId === '-1'
+                          ? '空-API服务端配置'
+                          : `${item.gptSovitsConfig?.configName}`
+                    }}
                   </a-typography-text>
                 </a-descriptions-item>
                 <a-descriptions-item
@@ -226,7 +227,9 @@ watch(
                     label="音频"
                 >
                   <a-typography-text ellipsis>
-                    {{ `${item.refAudio?.audioGroup}/${item.refAudio?.audioName}/${item.refAudio?.moodName}/${item.refAudio?.moodAudioName}` }}
+                    {{
+                      `${item.refAudio?.audioGroup}/${item.refAudio?.audioName}/${item.refAudio?.moodName}/${item.refAudio?.moodAudioName}`
+                    }}
                   </a-typography-text>
                 </a-descriptions-item>
 
@@ -242,11 +245,12 @@ watch(
                     v-if="['fish-speech'].includes(item.audioModelType)"
                     label="配置"
                 >
-                  <a-typography-text
-                      v-if="item.fishSpeechConfig?.configName"
-                      ellipsis
-                  >
-                    {{ `${item.fishSpeechConfig?.configName}` }}
+                  <a-typography-text ellipsis>
+                    {{
+                      item.audioConfigId === '-1'
+                          ? '空-API服务端配置'
+                          : `${item.fishSpeechConfig?.configName}`
+                    }}
                   </a-typography-text>
                 </a-descriptions-item>
                 <a-descriptions-item

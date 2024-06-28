@@ -234,7 +234,7 @@ const onAudioCardSelect = (refAudio: RefAudio) => {
     ]
   }
   if (!configId.value) {
-    configId.value = gsvConfigs.value[0].value as string;
+    configId.value = '-1';
   }
 }
 
