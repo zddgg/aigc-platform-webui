@@ -89,7 +89,7 @@ const handleAiInference = () => {
   try {
     setLoading(true);
     roleInference(
-        '/api/textChapter/roleInference',
+        '/api/sse/textChapter/roleInference',
         {
           projectId: route.query.projectId as string,
           chapterId: route.query.chapterId as string,
