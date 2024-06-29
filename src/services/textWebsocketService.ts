@@ -8,7 +8,7 @@ export interface IWebSocketService {
     disconnect(): void;
 }
 
-class WebSocketService implements IWebSocketService {
+class TextWebsocketService implements IWebSocketService {
     private socket: WebSocket | null;
     private resultHandlers: Map<string, (data: any) => void>;
     private stageHandler: (data: any) => void;
@@ -24,7 +24,7 @@ class WebSocketService implements IWebSocketService {
 
     connect(projectId: string) {
         if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-            this.socket = new WebSocket(`${import.meta.env.VITE_WS_BASE_URL}/ws?projectId=${projectId}`);
+            this.socket = new WebSocket(`${import.meta.env.VITE_WS_BASE_URL}/ws/text?projectId=${projectId}`);
 
             this.socket.onopen = () => {
                 console.log('WebSocket connection opened.');
@@ -77,4 +77,4 @@ class WebSocketService implements IWebSocketService {
     }
 }
 
-export default new WebSocketService();
+export default new TextWebsocketService();

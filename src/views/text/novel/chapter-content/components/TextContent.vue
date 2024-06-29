@@ -8,7 +8,7 @@ import {Message, Notification} from "@arco-design/web-vue";
 import RoleChangeModel from "@/views/text/novel/chapter-content/components/RoleChangeModel.vue";
 import AudioSelect from '@/views/audio-select/index.vue'
 import {scrollToTop} from '@/utils/view-utils.ts'
-import {IWebSocketService} from "@/services/websocketService.ts";
+import {IWebSocketService} from "@/services/textWebsocketService.ts";
 import useLoading from "@/hooks/loading.ts";
 import {AudioModelConfig} from "@/api/model.ts";
 import {ROLE_CHANGE} from "@/services/eventTypes.ts";
@@ -263,7 +263,7 @@ const onRoleChange = () => {
   eventBus?.emit(ROLE_CHANGE);
 }
 
-const WebSocketService = inject<IWebSocketService>('WebSocketService') as IWebSocketService;
+const TextWebsocketService = inject<IWebSocketService>('TextWebsocketService') as IWebSocketService;
 
 const roleChangeEvent = () => {
   handleQueryChapterInfo();
@@ -282,7 +282,7 @@ watch(
       scrollToTop('text-content')
       stopAudio();
       if (route.query.chapter as string) {
-        WebSocketService.addResultHandler(
+        TextWebsocketService.addResultHandler(
             `${route.query.project as string}-${route.query.chapter as string}`, handleChapterInfoUpdate
         );
       }

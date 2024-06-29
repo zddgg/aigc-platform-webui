@@ -47,20 +47,6 @@ const form = ref<FishSpeechConfig>(
     } as FishSpeechConfig
 )
 
-const base64DecodeUnicode = (str: string) => {
-  // 解码 Base64
-  const bytes = atob(str);
-  // 将解码后的字节序列转换为 Uint8Array
-  const len = bytes.length;
-  const buffer = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    buffer[i] = bytes.charCodeAt(i);
-  }
-  // 将 Uint8Array 转换为字符串
-  const decoder = new TextDecoder('utf-8');
-  return decoder.decode(buffer);
-}
-
 const blob = ref<Blob | null>(null)
 const generateAudio = async () => {
   const res = await createFormRef.value?.validate();
@@ -87,10 +73,6 @@ const generateAudio = async () => {
       audioElement.value.src = url;
     }
 
-  } catch (error: any) {
-    console.log(error)
-    const msg = error.response.headers.get('msg');
-    Message.error(base64DecodeUnicode(msg));
   } finally {
     setLoading(false);
   }

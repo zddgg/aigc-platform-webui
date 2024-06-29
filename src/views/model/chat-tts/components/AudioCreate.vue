@@ -80,9 +80,6 @@ const generateAudio = async () => {
     if (audioElement.value) {
       audioElement.value.src = url;
     }
-  } catch (error: any) {
-    const msg = error.response.headers.get('msg');
-    Message.error(base64DecodeUnicode(msg));
   } finally {
     setLoading(false);
   }

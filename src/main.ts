@@ -8,7 +8,9 @@ import '@arco-design/web-vue/dist/arco.css';
 import naive from 'naive-ui'
 import '@/axios/default-axios.ts';
 import '@/assets/style.css';
+import GlobalWebsocketService from "@/services/globalWebsocketService.ts";
 
+GlobalWebsocketService.connect();
 
 const app = createApp(App);
 app.use(router)
