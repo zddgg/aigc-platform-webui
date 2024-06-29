@@ -49,7 +49,6 @@ const form = ref<GptSovitsConfig>(
       fragmentInterval: 0.3,
       speedFactor: 1,
 
-
       configName: '',
       text: '四川美食确实以辣闻名，但也有不辣的选择。比如甜水面、赖汤圆、蛋烘糕、叶儿粑等，这些小吃口味温和，甜而不腻，也很受欢迎。',
       saveAudio: false,
@@ -59,20 +58,6 @@ const form = ref<GptSovitsConfig>(
 const getRandomInt = () => {
   const max = Math.pow(2, 32);
   return Math.floor(Math.random() * max);
-}
-
-const base64DecodeUnicode = (str: string) => {
-  // 解码 Base64
-  const bytes = atob(str);
-  // 将解码后的字节序列转换为 Uint8Array
-  const len = bytes.length;
-  const buffer = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    buffer[i] = bytes.charCodeAt(i);
-  }
-  // 将 Uint8Array 转换为字符串
-  const decoder = new TextDecoder('utf-8');
-  return decoder.decode(buffer);
 }
 
 const blob = ref<Blob | null>(null)
@@ -101,10 +86,6 @@ const generateAudio = async () => {
       audioElement.value.src = url;
     }
 
-  } catch (error: any) {
-    console.log(error)
-    const msg = error.response.headers.get('msg');
-    Message.error(base64DecodeUnicode(msg));
   } finally {
     setLoading(false);
   }

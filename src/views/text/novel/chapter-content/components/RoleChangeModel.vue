@@ -167,7 +167,10 @@ watch(
       if (props.visible) {
         await handleQueryRoles();
         await handleQueryCommonRoles();
-        form.value = {} as any;
+        form.value = {
+          role: '',
+          loadModel: true,
+        } as any;
         formRef.value?.resetFields();
         currentRole.value = {} as any;
       }
@@ -385,7 +388,11 @@ watch(
                       label="配置"
                   >
                     <a-typography-text ellipsis>
-                      {{ `${currentRole?.fishSpeechConfig?.configName}` }}
+                      {{
+                        currentRole?.audioConfigId === '-1'
+                            ? '空-API服务端配置'
+                            : `${currentRole.fishSpeechConfig?.configName}`
+                      }}
                     </a-typography-text>
                   </a-descriptions-item>
                   <a-descriptions-item

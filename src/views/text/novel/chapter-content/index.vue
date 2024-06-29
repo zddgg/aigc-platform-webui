@@ -7,7 +7,7 @@ import {TextContentConfig} from "@/views/text/novel/chapter-content/useChapterCo
 import TableContent from "@/views/text/novel/chapter-content/components/TableContent.vue";
 import {Message, Modal} from "@arco-design/web-vue";
 import BatchChangeModal from "@/views/text/novel/chapter-content/components/BatchChangeModal.vue";
-import WebSocketService from "@/services/websocketService.ts";
+import TextWebsocketService from "@/services/textWebsocketService.ts";
 import {ROLE_CHANGE} from "@/services/eventTypes.ts";
 import {EventBus} from "@/vite-env";
 import {
@@ -182,14 +182,14 @@ const handleStopCreateAudio = async () => {
 }
 
 onUnmounted(() => {
-  WebSocketService.disconnect();
+  TextWebsocketService.disconnect();
 });
 
 function connectWebSocket() {
-  WebSocketService.connect(route.query.projectId as string);
+  TextWebsocketService.connect(route.query.projectId as string);
 }
 
-provide('WebSocketService', WebSocketService);
+provide('TextWebsocketService', TextWebsocketService);
 
 const taskNum = ref(0);
 const creatingIds = ref<string[]>([])
@@ -203,7 +203,7 @@ const stageHandler = (data: any) => {
 
 onMounted(() => {
   connectWebSocket();
-  WebSocketService.addStageHandler(stageHandler)
+  TextWebsocketService.addStageHandler(stageHandler)
 });
 
 

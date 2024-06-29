@@ -7,7 +7,7 @@ import {TextContentConfig} from "@/views/text/novel/chapter-content/useChapterCo
 import RoleChangeModel from "@/views/text/novel/chapter-content/components/RoleChangeModel.vue";
 import AudioSelect from '@/views/audio-select/index.vue'
 import useLoading from "@/hooks/loading.ts";
-import {IWebSocketService} from '@/services/websocketService.ts';
+import {IWebSocketService} from '@/services/textWebsocketService.ts';
 import {IconSettings} from "@arco-design/web-vue/es/icon";
 import CombineExport from "@/views/text/novel/chapter-content/components/CombineExport.vue";
 import {EventBus} from "@/vite-env";
@@ -234,7 +234,7 @@ const handleCreateAudio = async (record: ChapterInfo) => {
   }
 }
 
-const WebSocketService = inject<IWebSocketService>('WebSocketService') as IWebSocketService;
+const TextWebsocketService = inject<IWebSocketService>('TextWebsocketService') as IWebSocketService;
 
 
 const playNext = () => {
@@ -358,7 +358,7 @@ watch(
             .then(() => {
               eventBus?.emit(ROLE_CHANGE);
             });
-        WebSocketService.addResultHandler(
+        TextWebsocketService.addResultHandler(
             `${route.query.projectId as string}-${route.query.chapterId as string}`, handleChapterInfoUpdate
         );
       }

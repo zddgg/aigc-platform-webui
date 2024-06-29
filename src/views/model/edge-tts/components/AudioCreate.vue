@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {onMounted, ref} from "vue";
 import useLoading from "@/hooks/loading.ts";
-import {FormInstance, Message} from "@arco-design/web-vue";
+import {FormInstance} from "@arco-design/web-vue";
 import {configs as queryConfigs, EdgeTtsConfig, playAudio, settings as querySettings} from "@/api/edge-tts.ts";
 import {SelectOptionData} from "@arco-design/web-vue/es/select/interface";
 
@@ -20,20 +20,6 @@ const form = ref<EdgeTtsConfig>(
       text: '四川美食确实以辣闻名，但也有不辣的选择。比如甜水面、赖汤圆、蛋烘糕、叶儿粑等，这些小吃口味温和，甜而不腻，也很受欢迎。',
     } as EdgeTtsConfig
 )
-
-const base64DecodeUnicode = (str: string) => {
-  // 解码 Base64
-  const bytes = atob(str);
-  // 将解码后的字节序列转换为 Uint8Array
-  const len = bytes.length;
-  const buffer = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    buffer[i] = bytes.charCodeAt(i);
-  }
-  // 将 Uint8Array 转换为字符串
-  const decoder = new TextDecoder('utf-8');
-  return decoder.decode(buffer);
-}
 
 const blob = ref<Blob | null>(null)
 const generateAudio = async () => {
@@ -55,9 +41,6 @@ const generateAudio = async () => {
       if (audioElement.value) {
         audioElement.value.src = url;
       }
-    } catch (error: any) {
-      const msg = error.response.headers.get('msg');
-      Message.error(base64DecodeUnicode(msg));
     } finally {
       setLoading(false);
     }
