@@ -139,7 +139,7 @@ const handleQueryChapterInfo = async () => {
   chapterInfos.value = data.map((item) => {
     return {
       ...item,
-      disabled: !item.audioModelType
+      disabled: !item.audioUrl
     }
   });
   selectedIndexes.value = data.filter(item => item.audioExportFlag).map(item => item.index)
@@ -315,6 +315,7 @@ const handleUpdateControls = async () => {
       && !batchControls.value.enableSpeed
       && !batchControls.value.enableInterval) {
     Message.warning("请选择要批量更新的配置？")
+    return;
   }
   try {
     setLoading(true);
@@ -352,12 +353,10 @@ defineExpose({playAllAudio, onCombineExport})
 
 watch(
     () => route.query.chapterId,
-    () => {
+    async () => {
       if (route.query.chapterId) {
-        handleQueryChapterInfo()
-            .then(() => {
-              eventBus?.emit(ROLE_CHANGE);
-            });
+        await handleQueryChapterInfo()
+        eventBus?.emit(ROLE_CHANGE)
         TextWebsocketService.addResultHandler(
             `${route.query.projectId as string}-${route.query.chapterId as string}`, handleChapterInfoUpdate
         );
