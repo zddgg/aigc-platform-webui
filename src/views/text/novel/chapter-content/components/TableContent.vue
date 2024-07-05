@@ -272,34 +272,50 @@ const handleAudioEnded = () => {
   }
 };
 
+// 新增音频上下文和增益节点
+let audioContext: AudioContext | null = null;
+let gainNode: GainNode | null = null;
+
+const setupAudioContext = () => {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioContext.createMediaElementSource(audioElement.value!);
+    gainNode = audioContext.createGain();
+    source.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+  }
+};
+
 const onVolumeChangeEnd = async (chapterInfo: ChapterInfo) => {
   if (audioElement.value && activeAudioKey.value === `${chapterInfo.paragraphIndex}-${chapterInfo.sentenceIndex}`) {
-    audioElement.value.volume = chapterInfo.audioVolume;
+    if (gainNode) {
+      gainNode.gain.value = chapterInfo.audioVolume;
+    }
   }
-  await updateVolume(chapterInfo)
-}
+  await updateVolume(chapterInfo);
+};
 
 const onSpeedChange = async (chapterInfo: ChapterInfo) => {
   if (audioElement.value && activeAudioKey.value === `${chapterInfo.paragraphIndex}-${chapterInfo.sentenceIndex}`) {
     audioElement.value.playbackRate = chapterInfo.audioSpeed;
   }
-  await updateSpeed(chapterInfo)
-}
+  await updateSpeed(chapterInfo);
+};
 
 const onIntervalChange = async (chapterInfo: ChapterInfo) => {
-  await updateInterval(chapterInfo)
-}
+  await updateInterval(chapterInfo);
+};
 
 const onCombineExport = () => {
   if (!selectedIndexes.value.length) {
     Modal.warning({
       title: '没有选择导出内容',
       content: '请选择导出内容'
-    })
+    });
   } else {
     combineExportModalVisible.value = true;
   }
-}
+};
 
 const batchControls = ref({
   enableVolume: false,
@@ -308,13 +324,13 @@ const batchControls = ref({
   speed: 1.0,
   enableInterval: false,
   interval: 300,
-})
+});
 
 const handleUpdateControls = async () => {
   if (!batchControls.value.enableVolume
       && !batchControls.value.enableSpeed
       && !batchControls.value.enableInterval) {
-    Message.warning("请选择要批量更新的配置？")
+    Message.warning("请选择要批量更新的配置？");
     return;
   }
   try {
@@ -322,26 +338,27 @@ const handleUpdateControls = async () => {
     const {msg} = await updateControls({
       projectId: route.query.projectId as string,
       chapterId: route.query.chapterId as string,
-      ...batchControls.value
+      ...batchControls.value,
     });
     batchControls.value = {
       ...batchControls.value,
       enableVolume: false,
       enableSpeed: false,
       enableInterval: false,
-    }
+    };
     Message.success(msg);
-    await handleQueryChapterInfo()
+    await handleQueryChapterInfo();
   } finally {
-    setLoading(false)
+    setLoading(false);
   }
-}
+};
 
 const roleChangeEvent = () => {
   handleQueryChapterInfo();
-}
+};
 
 onMounted(() => {
+  setupAudioContext();
   eventBus?.on(ROLE_CHANGE, roleChangeEvent);
 });
 
@@ -349,14 +366,14 @@ onBeforeUnmount(() => {
   eventBus?.off(ROLE_CHANGE, roleChangeEvent);
 });
 
-defineExpose({playAllAudio, onCombineExport})
+defineExpose({playAllAudio, onCombineExport});
 
 watch(
     () => route.query.chapterId,
     async () => {
       if (route.query.chapterId) {
-        await handleQueryChapterInfo()
-        eventBus?.emit(ROLE_CHANGE)
+        await handleQueryChapterInfo();
+        eventBus?.emit(ROLE_CHANGE);
         TextWebsocketService.addResultHandler(
             `${route.query.projectId as string}-${route.query.chapterId as string}`, handleChapterInfoUpdate
         );
@@ -366,7 +383,6 @@ watch(
     },
     {immediate: true}
 );
-
 </script>
 
 <template>
