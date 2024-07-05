@@ -277,9 +277,10 @@ let audioContext: AudioContext | null = null;
 let gainNode: GainNode | null = null;
 
 const setupAudioContext = () => {
-  if (!audioContext) {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const source = audioContext.createMediaElementSource(audioElement.value!);
+  if (!audioContext && audioElement.value) {
+    // 创建音频上下文
+    audioContext = new AudioContext();
+    const source = audioContext.createMediaElementSource(audioElement.value);
     gainNode = audioContext.createGain();
     source.connect(gainNode);
     gainNode.connect(audioContext.destination);
