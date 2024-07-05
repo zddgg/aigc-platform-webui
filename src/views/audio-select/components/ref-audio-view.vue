@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {computed, PropType, ref, watch} from "vue";
+import {computed, onMounted, PropType, ref, watch} from "vue";
 import {Mood, queryRefAudios, RefAudio} from "@/api/ref-audio.ts";
 import {voiceNameFormat} from "@/utils/model-util.ts";
 import {CascaderOption} from "naive-ui";
@@ -7,6 +7,7 @@ import {configs as queryGsvConfigs, GptSovitsModel, models as queryGsvModels} fr
 import {configs as queryFsConfigs, FishSpeechModel, models as queryFsModels} from "@/api/fish-speech.ts";
 import {AudioModelConfig} from "@/api/model.ts";
 import {SelectOptionData} from "@arco-design/web-vue/es/select/interface";
+import {LangDict, queryLangDicts} from "@/api/dict.ts";
 
 const props = defineProps({
   visible: {
@@ -253,6 +254,16 @@ const modelSelect = (mood: Mood) => {
   emits('modelSelect', audioModelConfig)
 }
 
+const langDicts = ref<LangDict[]>([])
+
+const handleLangDicts = async () => {
+  const {data} = await queryLangDicts()
+  langDicts.value = data;
+}
+
+onMounted(() => {
+  handleLangDicts()
+})
 
 watch(
     () => props.visible,
@@ -333,7 +344,8 @@ watch(
         />
         <a-select
             v-model="selectLanguage"
-            :options="languageOptions"
+            :options="langDicts"
+            :field-names="{value: 'enName', label: 'zhName'}"
             allow-clear
             placeholder="语言"
             size="small"
@@ -427,7 +439,7 @@ watch(
                 {{ currentAudio?.ageGroup }}
               </a-descriptions-item>
               <a-descriptions-item label="语言">
-                {{ currentAudio?.language }}
+                {{ langDicts.find((item) => item.enName === currentAudio?.language)?.zhName ?? currentAudio?.language }}
               </a-descriptions-item>
             </a-descriptions>
           </div>

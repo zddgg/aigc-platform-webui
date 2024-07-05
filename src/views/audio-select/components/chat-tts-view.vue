@@ -24,7 +24,6 @@ const chatTtsConfigs = ref<ChatTtsConfig[]>([])
 const currentConfig = ref<ChatTtsConfig>({} as ChatTtsConfig)
 const searchInput = ref<string>('')
 
-
 const computedConfigs = computed(() => {
   let tmp = chatTtsConfigs.value;
   if (searchInput.value) {

@@ -3,7 +3,8 @@ import {computed, onMounted, ref} from "vue";
 import {SelectOptionData} from "@arco-design/web-vue/es/select/interface";
 import useLoading from "@/hooks/loading.ts";
 import {voiceNameFormat} from "@/utils/model-util.ts";
-import {configs as queryConfigs, EdgeTtsConfig, playOrCreateAudio, settings as querySettings} from "@/api/edge-tts.ts";
+import {configs as queryConfigs, EdgeTtsConfig, playOrCreateAudio} from "@/api/edge-tts.ts";
+import {LangDict, queryLangDicts} from "@/api/dict.ts";
 
 const {loading, setLoading} = useLoading();
 
@@ -13,7 +14,6 @@ const selectGender = ref<string>('')
 const genderOptions = ref<SelectOptionData[]>([])
 const selectLanguage = ref<string>('')
 const voiceNameInput = ref<string>('')
-const settingOptions = ref<SelectOptionData[]>([])
 
 const handleQueryConfigs = async () => {
   const {data} = await queryConfigs()
@@ -23,18 +23,6 @@ const handleQueryConfigs = async () => {
         label: gender === 'Male' ? '男' : gender === 'Female' ? '女' : gender,
         value: gender
       }));
-}
-
-const handleQuerySettings = async () => {
-  const {data} = await querySettings()
-  settingOptions.value = data
-      .filter(item => item.showFlag)
-      .map(item => {
-        return {
-          label: item.zhName || item.enName,
-          value: item.enName,
-        }
-      });
 }
 
 const computedVoices = computed(() => {
@@ -100,9 +88,16 @@ const handleAudioEnded = () => {
   activeAudioKey.value = '';
 };
 
+const langDicts = ref<LangDict[]>([])
+
+const handleLangDicts = async () => {
+  const {data} = await queryLangDicts()
+  langDicts.value = data;
+}
+
 onMounted(() => {
   handleQueryConfigs();
-  handleQuerySettings();
+  handleLangDicts()
 })
 </script>
 
@@ -122,7 +117,8 @@ onMounted(() => {
             v-model="selectLanguage"
             placeholder="语言"
             allow-clear
-            :options="settingOptions"
+            :options="langDicts"
+            :field-names="{value: 'enName', label: 'zhName'}"
             style="width: 200px"
         >
         </a-select>

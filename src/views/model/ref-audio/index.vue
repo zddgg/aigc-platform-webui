@@ -5,6 +5,7 @@ import {queryRefAudios, RefAudio, refreshCache} from "@/api/ref-audio.ts";
 import GroupSort from "@/views/model/ref-audio/components/GroupSort.vue";
 import {Message} from "@arco-design/web-vue";
 import {voiceNameFormat} from "@/utils/model-util.ts";
+import {LangDict, queryLangDicts} from "@/api/dict.ts";
 
 const audioElement = ref<HTMLAudioElement | null>(null); // ref 对象引用到 audio 元素
 
@@ -118,8 +119,16 @@ const handleRefresh = async () => {
   Message.success(msg);
 }
 
+const langDicts = ref<LangDict[]>([])
+
+const handleLangDicts = async () => {
+  const {data} = await queryLangDicts()
+  langDicts.value = data;
+}
+
 onMounted(() => {
   handleQueryAudios();
+  handleLangDicts()
 })
 </script>
 
@@ -213,7 +222,9 @@ onMounted(() => {
                       {{ item1.ageGroup ?? '未知' }}
                     </a-descriptions-item>
                     <a-descriptions-item label="语言">
-                      {{ item1.language ?? '未知' }}
+                      {{
+                        langDicts.find((item2) => item2.enName === item1.language)?.zhName ?? item1.language ?? '未知'
+                      }}
                     </a-descriptions-item>
                   </a-descriptions>
                 </div>

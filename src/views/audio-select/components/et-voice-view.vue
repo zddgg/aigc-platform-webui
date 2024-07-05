@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import {computed, PropType, ref, watch} from "vue";
+import {computed, onMounted, PropType, ref, watch} from "vue";
 import useLoading from "@/hooks/loading.ts";
 import {voiceNameFormat} from "@/utils/model-util.ts";
 import {AudioModelConfig} from "@/api/model.ts";
 import {SelectOptionData} from "@arco-design/web-vue/es/select/interface";
 import {configs as queryConfigs, EdgeTtsConfig, playOrCreateAudio, settings as querySettings} from "@/api/edge-tts.ts";
+import {LangDict, queryLangDicts} from "@/api/dict.ts";
 
 const props = defineProps({
   visible: {
@@ -116,6 +117,17 @@ const modelSelect = () => {
   emits('modelSelect', audioModelConfig);
 }
 
+const langDicts = ref<LangDict[]>([])
+
+const handleLangDicts = async () => {
+  const {data} = await queryLangDicts()
+  langDicts.value = data;
+}
+
+onMounted(() => {
+  handleLangDicts()
+})
+
 watch(
     () => props.visible,
     async () => {
@@ -162,7 +174,8 @@ watch(
         />
         <a-select
             v-model="selectLanguage"
-            :options="settingOptions"
+            :options="langDicts"
+            :field-names="{value: 'enName', label: 'zhName'}"
             allow-clear
             placeholder="语言"
             size="small"
