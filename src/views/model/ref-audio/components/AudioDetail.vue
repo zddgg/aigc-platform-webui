@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import {PropType, ref, watch} from "vue";
+import {onMounted, PropType, ref, watch} from "vue";
 import {FormInstance, Message} from "@arco-design/web-vue";
 import {updateRefAudio, RefAudio} from "@/api/ref-audio.ts";
 import {voiceNameFormat} from "@/utils/model-util.ts";
+import {LangDict, queryLangDicts} from "@/api/dict.ts";
 
 const props = defineProps({
   visible: {
@@ -63,6 +64,17 @@ const close = () => {
   emits('update:visible', false);
   stopAudio();
 }
+
+const langDicts = ref<LangDict[]>([])
+
+const handleLangDicts = async () => {
+  const {data} = await queryLangDicts()
+  langDicts.value = data;
+}
+
+onMounted(() => {
+  handleLangDicts()
+})
 
 watch(
     () => props.visible,
@@ -127,11 +139,11 @@ watch(
               </a-col>
               <a-col :span="12">
                 <a-form-item label="语言">
-                  <a-select v-model="form.language">
-                    <a-option>中文</a-option>
-                    <a-option>英文</a-option>
-                    <a-option>日文</a-option>
-                    <a-option>韩文</a-option>
+                  <a-select
+                      v-model="form.language"
+                      :options="langDicts"
+                      :field-names="{value: 'enName', label: 'zhName'}"
+                  >
                   </a-select>
                 </a-form-item>
               </a-col>
