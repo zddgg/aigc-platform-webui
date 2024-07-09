@@ -16,7 +16,9 @@ import {AudioModelConfig} from "@/api/model.ts";
 import {
   audioModelChange,
   ChapterInfo,
-  chapterInfos as queryChapterInfoList, createAudio,
+  chapterInfos as queryChapterInfoList,
+  createAudio,
+  deleteChapterInfo,
   updateChapterText,
   updateControls,
   updateInterval,
@@ -272,51 +274,34 @@ const handleAudioEnded = () => {
   }
 };
 
-// 新增音频上下文和增益节点
-let audioContext: AudioContext | null = null;
-let gainNode: GainNode | null = null;
-
-const setupAudioContext = () => {
-  if (!audioContext && audioElement.value) {
-    // 创建音频上下文
-    audioContext = new AudioContext();
-    const source = audioContext.createMediaElementSource(audioElement.value);
-    gainNode = audioContext.createGain();
-    source.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-  }
-};
-
 const onVolumeChangeEnd = async (chapterInfo: ChapterInfo) => {
   if (audioElement.value && activeAudioKey.value === `${chapterInfo.paragraphIndex}-${chapterInfo.sentenceIndex}`) {
-    if (gainNode) {
-      gainNode.gain.value = chapterInfo.audioVolume;
-    }
+    audioElement.value.volume = chapterInfo.audioVolume;
   }
-  await updateVolume(chapterInfo);
-};
+  await updateVolume(chapterInfo)
+}
 
 const onSpeedChange = async (chapterInfo: ChapterInfo) => {
   if (audioElement.value && activeAudioKey.value === `${chapterInfo.paragraphIndex}-${chapterInfo.sentenceIndex}`) {
     audioElement.value.playbackRate = chapterInfo.audioSpeed;
   }
-  await updateSpeed(chapterInfo);
-};
+  await updateSpeed(chapterInfo)
+}
 
 const onIntervalChange = async (chapterInfo: ChapterInfo) => {
-  await updateInterval(chapterInfo);
-};
+  await updateInterval(chapterInfo)
+}
 
 const onCombineExport = () => {
   if (!selectedIndexes.value.length) {
     Modal.warning({
       title: '没有选择导出内容',
       content: '请选择导出内容'
-    });
+    })
   } else {
     combineExportModalVisible.value = true;
   }
-};
+}
 
 const batchControls = ref({
   enableVolume: false,
@@ -325,13 +310,13 @@ const batchControls = ref({
   speed: 1.0,
   enableInterval: false,
   interval: 300,
-});
+})
 
 const handleUpdateControls = async () => {
   if (!batchControls.value.enableVolume
       && !batchControls.value.enableSpeed
       && !batchControls.value.enableInterval) {
-    Message.warning("请选择要批量更新的配置？");
+    Message.warning("请选择要批量更新的配置？")
     return;
   }
   try {
@@ -339,27 +324,32 @@ const handleUpdateControls = async () => {
     const {msg} = await updateControls({
       projectId: route.query.projectId as string,
       chapterId: route.query.chapterId as string,
-      ...batchControls.value,
+      ...batchControls.value
     });
     batchControls.value = {
       ...batchControls.value,
       enableVolume: false,
       enableSpeed: false,
       enableInterval: false,
-    };
+    }
     Message.success(msg);
-    await handleQueryChapterInfo();
+    await handleQueryChapterInfo()
   } finally {
-    setLoading(false);
+    setLoading(false)
   }
-};
+}
+
+const handleDeleteChapterInfo = async (chapterInfo: ChapterInfo) => {
+  const {msg} = await deleteChapterInfo(chapterInfo)
+  eventBus?.emit(ROLE_CHANGE)
+  Message.success(msg);
+}
 
 const roleChangeEvent = () => {
   handleQueryChapterInfo();
-};
+}
 
 onMounted(() => {
-  setupAudioContext();
   eventBus?.on(ROLE_CHANGE, roleChangeEvent);
 });
 
@@ -367,14 +357,14 @@ onBeforeUnmount(() => {
   eventBus?.off(ROLE_CHANGE, roleChangeEvent);
 });
 
-defineExpose({playAllAudio, onCombineExport});
+defineExpose({playAllAudio, onCombineExport})
 
 watch(
     () => route.query.chapterId,
     async () => {
       if (route.query.chapterId) {
-        await handleQueryChapterInfo();
-        eventBus?.emit(ROLE_CHANGE);
+        await handleQueryChapterInfo()
+        eventBus?.emit(ROLE_CHANGE)
         TextWebsocketService.addResultHandler(
             `${route.query.projectId as string}-${route.query.chapterId as string}`, handleChapterInfoUpdate
         );
@@ -384,6 +374,7 @@ watch(
     },
     {immediate: true}
 );
+
 </script>
 
 <template>
@@ -397,10 +388,13 @@ watch(
         :row-selection="rowSelection"
         v-model:selected-keys="selectedIndexes"
     >
+      <template #drag-handle-icon>
+        <icon-drag-dot-vertical class="handle cursor-move"/>
+      </template>
       <template #index="{ record }">
-        <span style="white-space: nowrap">
-          {{ record.index }}
-        </span>
+          <span style="white-space: nowrap">
+            {{ record.index }}
+          </span>
       </template>
       <template #role="{ record }">
         <div>
@@ -453,6 +447,13 @@ watch(
             <div v-if="['fish-speech'].includes(record.audioModelType)">
               <a-typography-text style="display: block; white-space: nowrap">
                 {{ `${record.fishSpeechModel?.modelGroup}/${record.fishSpeechModel?.modelName}` }}
+              </a-typography-text>
+              <a-typography-text style="display: block; white-space: nowrap">
+                {{
+                  record.audioConfigId === '-1'
+                      ? '空'
+                      : `${record.fishSpeechConfig?.configName}`
+                }}
               </a-typography-text>
               <a-typography-text style="display: block; white-space: nowrap">
                 {{ `${record.refAudio?.audioGroup}/${record.refAudio?.audioName}/${record.refAudio?.moodName}` }}
@@ -602,41 +603,56 @@ watch(
         </a-card>
       </template>
       <template #operations="{ record }">
-        <a-space direction="vertical" size="small">
-          <a-button
-              v-if="activeAudioKey === record.index"
-              type="outline"
-              status="danger"
-              size="mini"
-              @click="stopAudio"
-          >
-            <icon-mute-fill/>
-          </a-button>
-          <a-button
-              v-else
-              type="outline"
-              size="mini"
-              :disabled="!record.audioModelType || !record.audioUrl"
-              @click="playAudio(record)"
-          >
-            <icon-play-arrow/>
-          </a-button>
-          <a-popconfirm
-              type="warning"
-              content="确认生成?"
-              @ok="handleCreateAudio(record)"
-          >
+        <a-space direction="vertical">
+          <div>
             <a-button
+                v-if="activeAudioKey === record.index"
+                type="outline"
+                status="danger"
+                size="mini"
+                @click="stopAudio"
+            >
+              <icon-mute-fill/>
+            </a-button>
+            <a-button
+                v-else
                 type="outline"
                 size="mini"
-                :status="props.creatingIds?.includes(record.index) ? 'danger' : 'normal'"
-                :disabled="!record.audioModelType || props.creatingIds?.includes(record.index)"
+                :disabled="!record.audioModelType || !record.audioUrl"
+                @click="playAudio(record)"
             >
-              <icon-refresh
-                  :spin="props.creatingIds?.includes(record.index)"
-              />
+              <icon-play-arrow/>
             </a-button>
-          </a-popconfirm>
+          </div>
+          <div>
+            <a-popconfirm
+                type="warning"
+                content="确认生成?"
+                @ok="handleCreateAudio(record)"
+            >
+              <a-button
+                  type="outline"
+                  size="mini"
+                  :status="props.creatingIds?.includes(record.index) ? 'danger' : 'normal'"
+                  :disabled="!record.audioModelType || props.creatingIds?.includes(record.index)"
+              >
+                <icon-refresh
+                    :spin="props.creatingIds?.includes(record.index)"
+                />
+              </a-button>
+            </a-popconfirm>
+          </div>
+          <div v-if="textContentConfig.textEdit">
+            <a-popconfirm
+                type="error"
+                content="确认删除?"
+                @ok="handleDeleteChapterInfo(record)"
+            >
+              <a-button size="mini">
+                <icon-delete/>
+              </a-button>
+            </a-popconfirm>
+          </div>
         </a-space>
       </template>
     </a-table>

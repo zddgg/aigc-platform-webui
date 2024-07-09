@@ -72,6 +72,10 @@ const onDeleteRole = (role: TextRole) => {
   roleDeleteModalVisible.value = true;
 }
 
+const onSaveToCommon = (role: TextRole) => {
+  console.log(role)
+}
+
 const refreshInner = () => {
   handleQueryRoles();
 }
@@ -158,7 +162,7 @@ watch(
                 <a-typography-text ellipsis>
                   {{
                     item.audioConfigId === '-1'
-                        ? '空-API服务端配置'
+                        ? '空'
                         : `${item.gptSovitsConfig?.configName}`
                   }}
                 </a-typography-text>
@@ -189,7 +193,7 @@ watch(
                 <a-typography-text ellipsis>
                   {{
                     item.audioConfigId === '-1'
-                        ? '空-API服务端配置'
+                        ? '空'
                         : `${item.fishSpeechConfig?.configName}`
                   }}
                 </a-typography-text>
@@ -234,6 +238,7 @@ watch(
                   <template #content>
                     <a-doption @click="onRoleRename(item)">角色改名</a-doption>
                     <a-doption @click="onDeleteRole(item)">删除角色</a-doption>
+                    <a-doption @click="onSaveToCommon(item)">保存预置</a-doption>
                   </template>
                 </a-dropdown-button>
                 <a-button

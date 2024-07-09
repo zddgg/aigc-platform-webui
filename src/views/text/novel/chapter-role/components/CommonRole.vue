@@ -217,7 +217,7 @@ watch(
                   <a-typography-text ellipsis>
                     {{
                       item.audioConfigId === '-1'
-                          ? '空-API服务端配置'
+                          ? '空'
                           : `${item.gptSovitsConfig?.configName}`
                     }}
                   </a-typography-text>
@@ -248,7 +248,7 @@ watch(
                   <a-typography-text ellipsis>
                     {{
                       item.audioConfigId === '-1'
-                          ? '空-API服务端配置'
+                          ? '空'
                           : `${item.fishSpeechConfig?.configName}`
                     }}
                   </a-typography-text>

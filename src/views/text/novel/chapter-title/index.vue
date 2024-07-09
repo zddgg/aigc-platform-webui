@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import {inject, onBeforeUnmount, onMounted, ref} from "vue";
+import {inject, onBeforeUnmount, onMounted, reactive, ref} from "vue";
 import {useRoute, useRouter} from "vue-router";
 import ChapterSplitModal from "@/views/text/novel/chapter-title/components/ChapterSplitModal.vue";
 import {ROLE_CHANGE} from "@/services/eventTypes.ts";
 import {EventBus} from "@/vite-env";
-import {chapters as queryTextChapterList, TextChapter} from "@/api/text-chapter.ts";
+import {deleteChapter, pageChapters, TextChapter, TextChapterPage} from "@/api/text-chapter.ts";
+import ChapterEditModal from "@/views/text/novel/chapter-title/components/ChapterEditModal.vue";
+import {Message, Modal} from "@arco-design/web-vue";
+import {Pagination} from "@/types/global.ts";
+import useLoading from "@/hooks/loading.ts";
+import ChapterAddModal from "@/views/text/novel/chapter-title/components/ChapterAddModal.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -12,18 +17,49 @@ const router = useRouter();
 const emits = defineEmits(['toggleCollapse', 'refresh'])
 const eventBus = inject<EventBus>('eventBus');
 
+const {loading, setLoading} = useLoading();
+
 const collapsed = ref(false);
 const chapterSplitModalVisible = ref(false);
+const chapterAddModalVisible = ref(false);
+const chapterEditModalVisible = ref(false);
 
 const activeChapterIndex = ref(0)
 const textChapters = ref<TextChapter[]>([])
+const currentChapter = ref<TextChapter | null>(null)
 
-const handleQueryChapters = async () => {
-  const {data} = await queryTextChapterList({
-    projectId: route.query.projectId as string,
-  });
-  textChapters.value = data;
-}
+const basePagination: Pagination = {
+  current: 1,
+  pageSize: 50,
+};
+const pagination = reactive({
+  ...basePagination,
+});
+
+const fetchData = async (
+    params: Pagination = {
+      current: 1,
+      pageSize: 50,
+    }
+) => {
+  setLoading(true);
+  try {
+    const {data} = await pageChapters({
+      ...params,
+      projectId: route.query.projectId as string,
+    })
+    textChapters.value = data.records
+    pagination.current = params.current;
+    pagination.total = data.total;
+    pagination.pages = data.pages
+  } finally {
+    setLoading(false);
+  }
+};
+
+const onPageChange = (current: number) => {
+  fetchData({...pagination, current} as TextChapterPage);
+};
 
 const chapterSelect = (textChapter: TextChapter, index: number) => {
   activeChapterIndex.value = index;
@@ -42,20 +78,57 @@ const toggleCollapse = () => {
   emits('toggleCollapse', collapsed.value);
 }
 
-const refresh = () => {
-  handleQueryChapters().then(() => {
-    router.push({
-      name: route.name as string,
-      query: {
-        ...route.query,
-        chapterId: textChapters.value[0].chapterId,
+const refresh = async () => {
+  await fetchData(pagination)
+  await router.push({
+    name: route.name as string,
+    query: {
+      ...route.query,
+      chapterId: textChapters.value[0].chapterId,
+    }
+  })
+}
+
+const handleDeleteChapter = (textChapter: TextChapter) => {
+  Modal.error({
+    title: '删除章节',
+    content:
+        '会删除章节相关数据，包括章节文本、角色台词、模型配置、语音配置、生成的音频等',
+    async onOk() {
+      try {
+        const {msg} = await deleteChapter(textChapter);
+        Message.success(msg);
+        eventBus?.emit(ROLE_CHANGE)
+      } finally {
       }
-    })
+    },
   });
 }
 
+const onPrevPage = () => {
+  if (pagination.current > 1) {
+    pagination.current = pagination.current - 1
+  } else {
+    pagination.current = Math.max(pagination.current, 1);
+  }
+
+  fetchData(pagination)
+}
+
+const onNextPage = () => {
+  if (pagination.current < (pagination.pages ?? 0)) {
+    pagination.current = pagination.current + 1
+  } else {
+    pagination.current = Math.min(pagination.current, (pagination.pages ?? 0));
+  }
+
+  console.log(pagination)
+
+  fetchData(pagination)
+}
+
 const roleChangeEvent = () => {
-  handleQueryChapters();
+  fetchData(pagination);
 }
 
 onMounted(() => {
@@ -67,7 +140,7 @@ onBeforeUnmount(() => {
 });
 
 onMounted(async () => {
-  await handleQueryChapters();
+  await fetchData(pagination);
   if (textChapters.value && textChapters.value.length > 0) {
     await router.push({
       name: route.name as string,
@@ -89,33 +162,45 @@ onMounted(async () => {
             type="outline"
             @click="() => (chapterSplitModalVisible = true)"
         >
-          章节解析
+          章节设置
         </a-button>
-        <a-button
-            v-if="textChapters && textChapters.length !== 0"
-            type="outline"
-            @click="toggleCollapse"
-        >
-          <icon-menu-unfold v-if="collapsed"/>
-          <icon-menu-fold v-else/>
-        </a-button>
+        <a-space size="medium">
+          <a-button
+              v-if="!collapsed && textChapters && textChapters.length !== 0"
+              type="outline"
+              size="mini"
+              @click="() => (chapterAddModalVisible = true)"
+          >
+            <icon-plus/>
+          </a-button>
+          <a-button
+              v-if="textChapters && textChapters.length !== 0"
+              type="outline"
+              size="mini"
+              @click="toggleCollapse"
+          >
+            <icon-menu-unfold v-if="collapsed"/>
+            <icon-menu-fold v-else/>
+          </a-button>
+        </a-space>
       </div>
     </a-affix>
-    <n-scrollbar style="max-height: calc(100vh - 76px); padding-right: 10px">
+    <n-scrollbar style="height: calc(100vh - 60px - 40px); padding-right: 10px">
       <a-space direction="vertical" style="width: 100%">
         <a-card
+            :id="`chapter-title-${item.chapterId}`"
             v-for="(item, index) in textChapters"
             :key="index"
-            style="border: 1px #ccc solid; border-radius: 8px; cursor: pointer"
+            style="border: 1px #ccc solid; border-radius: 8px"
             hoverable
-            :style="index == activeChapterIndex && {backgroundColor: '#c3f6f6'}"
+            :style="route.query.chapterId === item.chapterId && {backgroundColor: '#c3f6f6'}"
             @click="chapterSelect(item, index)"
         >
           <div
               v-if="collapsed"
               style="text-align: center"
           >
-            {{ index }}
+            {{ (item.sortOrder ?? 0) + 1 }}
           </div>
           <div v-else>
             <a-descriptions :column="1" size="small">
@@ -141,29 +226,52 @@ onMounted(async () => {
                 {{ item.roleNum ?? 0 }}
               </a-descriptions-item>
             </a-descriptions>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px">
-              <div v-if="item.stage" style="cursor: pointer">
-                <a-tag
-                    v-if="item.stage === '合并完成'"
-                    color="green"
-                >
-                  <template #icon>
-                    <icon-check-circle-fill/>
-                  </template>
-                  <span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; white-space: nowrap">
+              <div>
+                <div v-if="item.stage" style="cursor: pointer">
+                  <a-tag
+                      v-if="item.stage === '合并完成'"
+                      color="green"
+                      size="small"
+                  >
+                    <template #icon>
+                      <icon-check-circle-fill/>
+                    </template>
+                    <span>
                     {{ item.stage }}
                 </span>
+                  </a-tag>
+                  <a-tag
+                      v-else
+                      color="blue"
+                      size="small"
+                  >
+                    <template #icon>
+                      <icon-clock-circle/>
+                    </template>
+                    <span>
+                    {{ item.stage }}
+                  </span>
+                  </a-tag>
+                </div>
+              </div>
+              <div>
+                <a-tag
+                    size="small"
+                    style="cursor: pointer; margin-left: 5px"
+                    @click="() => {
+                        currentChapter = item;
+                        chapterEditModalVisible = true;
+                      }"
+                >
+                  <icon-edit/>
                 </a-tag>
                 <a-tag
-                    v-else
-                    color="blue"
+                    size="small"
+                    style="cursor: pointer; margin-left: 5px"
+                    @click="handleDeleteChapter(item)"
                 >
-                  <template #icon>
-                    <icon-clock-circle/>
-                  </template>
-                  <span>
-                    {{ item.stage }}
-                </span>
+                  <icon-delete/>
                 </a-tag>
               </div>
             </div>
@@ -171,10 +279,45 @@ onMounted(async () => {
         </a-card>
       </a-space>
     </n-scrollbar>
+    <div style="height: 40px; width: 100%; display: flex; justify-content: center; align-items: center">
+      <a-pagination
+          v-if="!collapsed"
+          :total="pagination.total || 0"
+          :page-size="pagination.pageSize"
+          size="mini"
+          simple
+          @change="onPageChange"
+      />
+      <div v-else style="padding-right: 10px">
+        <a-button-group size="mini">
+          <a-button
+              style="padding: 10px"
+              @click="onPrevPage"
+          >
+            <icon-left/>
+          </a-button>
+          <a-button
+              style="padding: 10px"
+              @click="onNextPage"
+          >
+            <icon-right/>
+          </a-button>
+        </a-button-group>
+      </div>
+    </div>
+
     <chapter-split-modal
         v-model:visible="chapterSplitModalVisible"
         @refresh="refresh"
     />
+    <chapter-add-modal
+        v-model:visible="chapterAddModalVisible"
+    />
+    <chapter-edit-modal
+        v-model:visible="chapterEditModalVisible"
+        :chapter-id="currentChapter?.chapterId"
+    />
+
   </div>
 </template>
 
