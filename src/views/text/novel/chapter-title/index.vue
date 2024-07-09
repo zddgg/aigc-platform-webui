@@ -8,7 +8,6 @@ import {deleteChapter, pageChapters, TextChapter, TextChapterPage} from "@/api/t
 import ChapterEditModal from "@/views/text/novel/chapter-title/components/ChapterEditModal.vue";
 import {Message, Modal} from "@arco-design/web-vue";
 import {Pagination} from "@/types/global.ts";
-import useLoading from "@/hooks/loading.ts";
 import ChapterAddModal from "@/views/text/novel/chapter-title/components/ChapterAddModal.vue";
 
 const route = useRoute();
@@ -16,8 +15,6 @@ const router = useRouter();
 
 const emits = defineEmits(['toggleCollapse', 'refresh'])
 const eventBus = inject<EventBus>('eventBus');
-
-const {loading, setLoading} = useLoading();
 
 const collapsed = ref(false);
 const chapterSplitModalVisible = ref(false);
@@ -42,19 +39,14 @@ const fetchData = async (
       pageSize: 50,
     }
 ) => {
-  setLoading(true);
-  try {
-    const {data} = await pageChapters({
-      ...params,
-      projectId: route.query.projectId as string,
-    })
-    textChapters.value = data.records
-    pagination.current = params.current;
-    pagination.total = data.total;
-    pagination.pages = data.pages
-  } finally {
-    setLoading(false);
-  }
+  const {data} = await pageChapters({
+    ...params,
+    projectId: route.query.projectId as string,
+  })
+  textChapters.value = data.records
+  pagination.current = params.current;
+  pagination.total = data.total;
+  pagination.pages = data.pages
 };
 
 const onPageChange = (current: number) => {
@@ -226,7 +218,8 @@ onMounted(async () => {
                 {{ item.roleNum ?? 0 }}
               </a-descriptions-item>
             </a-descriptions>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; white-space: nowrap">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; white-space: nowrap">
               <div>
                 <div v-if="item.stage" style="cursor: pointer">
                   <a-tag
