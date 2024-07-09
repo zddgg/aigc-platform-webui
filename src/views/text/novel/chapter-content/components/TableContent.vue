@@ -16,7 +16,9 @@ import {AudioModelConfig} from "@/api/model.ts";
 import {
   audioModelChange,
   ChapterInfo,
-  chapterInfos as queryChapterInfoList, createAudio,
+  chapterInfos as queryChapterInfoList,
+  createAudio,
+  deleteChapterInfo,
   updateChapterText,
   updateControls,
   updateInterval,
@@ -337,6 +339,12 @@ const handleUpdateControls = async () => {
   }
 }
 
+const handleDeleteChapterInfo = async (chapterInfo: ChapterInfo) => {
+  const {msg} = await deleteChapterInfo(chapterInfo)
+  eventBus?.emit(ROLE_CHANGE)
+  Message.success(msg);
+}
+
 const roleChangeEvent = () => {
   handleQueryChapterInfo();
 }
@@ -380,10 +388,13 @@ watch(
         :row-selection="rowSelection"
         v-model:selected-keys="selectedIndexes"
     >
+      <template #drag-handle-icon>
+        <icon-drag-dot-vertical class="handle cursor-move"/>
+      </template>
       <template #index="{ record }">
-        <span style="white-space: nowrap">
-          {{ record.index }}
-        </span>
+          <span style="white-space: nowrap">
+            {{ record.index }}
+          </span>
       </template>
       <template #role="{ record }">
         <div>
@@ -436,6 +447,13 @@ watch(
             <div v-if="['fish-speech'].includes(record.audioModelType)">
               <a-typography-text style="display: block; white-space: nowrap">
                 {{ `${record.fishSpeechModel?.modelGroup}/${record.fishSpeechModel?.modelName}` }}
+              </a-typography-text>
+              <a-typography-text style="display: block; white-space: nowrap">
+                {{
+                  record.audioConfigId === '-1'
+                      ? '空'
+                      : `${record.fishSpeechConfig?.configName}`
+                }}
               </a-typography-text>
               <a-typography-text style="display: block; white-space: nowrap">
                 {{ `${record.refAudio?.audioGroup}/${record.refAudio?.audioName}/${record.refAudio?.moodName}` }}
@@ -585,41 +603,56 @@ watch(
         </a-card>
       </template>
       <template #operations="{ record }">
-        <a-space direction="vertical" size="small">
-          <a-button
-              v-if="activeAudioKey === record.index"
-              type="outline"
-              status="danger"
-              size="mini"
-              @click="stopAudio"
-          >
-            <icon-mute-fill/>
-          </a-button>
-          <a-button
-              v-else
-              type="outline"
-              size="mini"
-              :disabled="!record.audioModelType || !record.audioUrl"
-              @click="playAudio(record)"
-          >
-            <icon-play-arrow/>
-          </a-button>
-          <a-popconfirm
-              type="warning"
-              content="确认生成?"
-              @ok="handleCreateAudio(record)"
-          >
+        <a-space direction="vertical">
+          <div>
             <a-button
+                v-if="activeAudioKey === record.index"
+                type="outline"
+                status="danger"
+                size="mini"
+                @click="stopAudio"
+            >
+              <icon-mute-fill/>
+            </a-button>
+            <a-button
+                v-else
                 type="outline"
                 size="mini"
-                :status="props.creatingIds?.includes(record.index) ? 'danger' : 'normal'"
-                :disabled="!record.audioModelType || props.creatingIds?.includes(record.index)"
+                :disabled="!record.audioModelType || !record.audioUrl"
+                @click="playAudio(record)"
             >
-              <icon-refresh
-                  :spin="props.creatingIds?.includes(record.index)"
-              />
+              <icon-play-arrow/>
             </a-button>
-          </a-popconfirm>
+          </div>
+          <div>
+            <a-popconfirm
+                type="warning"
+                content="确认生成?"
+                @ok="handleCreateAudio(record)"
+            >
+              <a-button
+                  type="outline"
+                  size="mini"
+                  :status="props.creatingIds?.includes(record.index) ? 'danger' : 'normal'"
+                  :disabled="!record.audioModelType || props.creatingIds?.includes(record.index)"
+              >
+                <icon-refresh
+                    :spin="props.creatingIds?.includes(record.index)"
+                />
+              </a-button>
+            </a-popconfirm>
+          </div>
+          <div v-if="textContentConfig.textEdit">
+            <a-popconfirm
+                type="error"
+                content="确认删除?"
+                @ok="handleDeleteChapterInfo(record)"
+            >
+              <a-button size="mini">
+                <icon-delete/>
+              </a-button>
+            </a-popconfirm>
+          </div>
         </a-space>
       </template>
     </a-table>

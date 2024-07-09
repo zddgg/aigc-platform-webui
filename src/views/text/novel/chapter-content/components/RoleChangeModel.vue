@@ -269,7 +269,7 @@ watch(
                   <a-typography-text ellipsis>
                     {{
                       props.chapterInfo?.audioConfigId === '-1'
-                          ? '空-API服务端配置'
+                          ? '空'
                           : `${props.chapterInfo?.gptSovitsConfig?.configName}`
                     }}
                   </a-typography-text>
@@ -359,7 +359,7 @@ watch(
                     <a-typography-text ellipsis>
                       {{
                         currentRole?.audioConfigId === '-1'
-                            ? '空-API服务端配置'
+                            ? '空'
                             : `${currentRole.gptSovitsConfig?.configName}`
                       }}
                     </a-typography-text>
@@ -390,7 +390,7 @@ watch(
                     <a-typography-text ellipsis>
                       {{
                         currentRole?.audioConfigId === '-1'
-                            ? '空-API服务端配置'
+                            ? '空'
                             : `${currentRole.fishSpeechConfig?.configName}`
                       }}
                     </a-typography-text>

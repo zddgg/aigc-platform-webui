@@ -219,7 +219,7 @@ const onModelChange = (value: any) => {
 
 const computedConfigs = computed(() => {
   const arr = modelType.value === 'gpt-sovits' ? gsvConfigs.value : fsConfigs.value;
-  return [{label: '空-API服务端配置', value: '-1'}, ...arr];
+  return [{label: '空', value: '-1'}, ...arr];
 })
 
 const onAudioCardSelect = (refAudio: RefAudio) => {

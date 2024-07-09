@@ -26,7 +26,8 @@ const toggleCollapse = (value: boolean) => {
   <div style="display: flex; padding: 0 20px">
     <div
         v-show="route.query.projectType as string === 'long_text'"
-        :style="!collapsed && {width: '15%'}" style="padding-top: 10px; margin-right: 20px"
+        :style="!collapsed && {width: '15%'}"
+        style="padding-top: 10px; margin-right: 20px"
     >
       <chapter-title
           @toggle-collapse="toggleCollapse"

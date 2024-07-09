@@ -1,17 +1,77 @@
-<script setup lang="ts">
-
-</script>
-
 <template>
-  <div style="padding: 20px">
-    <div style="width: 100%">
-      <span style="font-size: 20px">
-        这里设置什么呢...🤗
-      </span>
-    </div>
-  </div>
+  <VueDraggable v-model="data" target="tbody" :animation="150" :on-change="onChange">
+    <a-table :data="data" :columns="columns" :pagination="false" row-key="name">
+      <template #columns>
+        <a-table-column :width="150" title="Name" data-index="name"/>
+        <a-table-column title="Salary" data-index="salary"/>
+      </template>
+    </a-table>
+  </VueDraggable>
+  <a-button @click="test">test</a-button>
 </template>
 
-<style scoped>
+<script setup lang="ts">
+import {ref} from 'vue'
+import {VueDraggable} from 'vue-draggable-plus'
 
-</style>
+const change = ref(false)
+
+const onChange = () => {
+  change.value = true
+}
+
+const columns = [
+  {
+    title: 'Name',
+    dataIndex: 'name',
+  },
+  {
+    title: 'Salary',
+    dataIndex: 'salary',
+  },
+  {
+    title: 'Address',
+    dataIndex: 'address',
+  },
+  {
+    title: 'Email',
+    dataIndex: 'email',
+  },
+];
+const data = ref([{
+  key: '1',
+  name: 'Jane Doe',
+  salary: 23000,
+  address: '32 Park Road, London',
+  email: 'jane.doe@example.com'
+}, {
+  key: '2',
+  name: 'Alisa Ross',
+  salary: 25000,
+  address: '35 Park Road, London',
+  email: 'alisa.ross@example.com'
+}, {
+  key: '3',
+  name: 'Kevin Sandra',
+  salary: 22000,
+  address: '31 Park Road, London',
+  email: 'kevin.sandra@example.com'
+}, {
+  key: '4',
+  name: 'Ed Hellen',
+  salary: 17000,
+  address: '42 Park Road, London',
+  email: 'ed.hellen@example.com'
+}, {
+  key: '5',
+  name: 'William Smith',
+  salary: 27000,
+  address: '62 Park Road, London',
+  email: 'william.smith@example.com'
+}]);
+
+const test = () => {
+  console.log(data.value)
+  console.log(change.value)
+}
+</script>

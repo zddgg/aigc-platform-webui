@@ -17,7 +17,6 @@ import {
   startCreateAudio,
   stopCreateAudio
 } from "@/api/text-chapter.ts";
-import LinesParseModal from "@/views/text/novel/chapter-content/components/LinesParseModal.vue";
 
 const route = useRoute();
 const {loading, setLoading} = useLoading();
@@ -28,7 +27,6 @@ const eventBus = inject<EventBus>('eventBus');
 const batchChangeModalVisible = ref(false);
 
 const selectedIndexes = ref<string[]>([])
-const linesParseModalVisible = ref(false);
 
 const textContentConfig = ref<TextContentConfig>({
   textViewType: 'table'
@@ -228,14 +226,6 @@ watch(
           <a-space size="large">
             <div>
               <a-button
-                  type="outline"
-                  @click="() => (linesParseModalVisible = true)"
-              >
-                台词解析
-              </a-button>
-            </div>
-            <div>
-              <a-button
                   type="primary"
                   :loading="loading"
                   @click="onAiInference"
@@ -402,11 +392,6 @@ watch(
         </a-space>
       </div>
     </a-modal>
-
-    <lines-parse-modal
-        v-model:visible="linesParseModalVisible"
-        @refresh="refresh"
-    />
 
   </div>
 </template>

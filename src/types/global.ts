@@ -27,12 +27,14 @@ export interface Pagination {
   current: number;
   pageSize: number;
   total?: number;
+  pages?: number;
 }
 
 export interface PaginationResp<T> {
   current: number;
   pageSize: number;
   total: number;
+  pages: number;
   records: T[];
 }
 
