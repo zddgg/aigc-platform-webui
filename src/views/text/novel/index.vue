@@ -40,7 +40,7 @@ const toggleCollapse = (value: boolean) => {
           @refresh="chapterRoleRef?.refreshTextRole()"
       />
     </div>
-    <div style="width: 20%; margin-left: 20px; padding-top: 10px">
+    <div style="width: 15%; margin-left: 20px; padding-top: 10px">
       <chapter-role
           ref="chapterRoleRef"
           @role-model-change="refreshChapterContent"

@@ -1,19 +1,21 @@
 <script setup lang="ts">
 import {useRoute} from "vue-router";
 import {inject, onBeforeUnmount, onMounted, ref, watch} from "vue";
-import {roles as queryRoles, TextRole, updateRole,} from "@/api/text-chapter.ts";
-import {Message} from "@arco-design/web-vue";
+import {roles as queryRoles, saveToCommonRole, TextRole, updateRole,} from "@/api/text-chapter.ts";
+import {Message, Modal} from "@arco-design/web-vue";
 import AudioSelect from '@/views/audio-select/index.vue'
 import RoleRename from "@/views/text/novel/chapter-role/components/RoleRename.vue";
 import RoleDelete from "@/views/text/novel/chapter-role/components/RoleDelete.vue";
 import {EventBus} from "@/vite-env";
-import {ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {COMMON_ROLE_CHANGE, ROLE_CHANGE} from "@/services/eventTypes.ts";
 import {AudioModelConfig} from "@/api/model.ts";
 import {voiceNameFormat} from "@/utils/model-util.ts";
 
 const route = useRoute();
 
 const emits = defineEmits(['roleModelChange'])
+
+const eventBus = inject<EventBus>('eventBus');
 
 const modelSelectVisible = ref<boolean>(false);
 const roleRenameModalVisible = ref<boolean>(false);
@@ -72,8 +74,27 @@ const onDeleteRole = (role: TextRole) => {
   roleDeleteModalVisible.value = true;
 }
 
-const onSaveToCommon = (role: TextRole) => {
-  console.log(role)
+const onSaveToCommonRole = async (role: TextRole) => {
+  const {data, msg} = await saveToCommonRole(role)
+  if (!data) {
+    Modal.confirm({
+      title: '已存在预置角色',
+      content: '是否覆盖预置角色配置？',
+      okText: '是',
+      cancelText: '否',
+      async onOk() {
+        const {msg} = await saveToCommonRole({
+          ...role,
+          cover: true
+        });
+        Message.success(msg);
+        eventBus?.emit(COMMON_ROLE_CHANGE);
+      }
+    });
+  } else {
+    Message.success(msg);
+    eventBus?.emit(COMMON_ROLE_CHANGE);
+  }
 }
 
 const refreshInner = () => {
@@ -81,8 +102,6 @@ const refreshInner = () => {
 }
 
 defineExpose({refreshInner})
-
-const eventBus = inject<EventBus>('eventBus');
 
 const roleChangeEvent = () => {
   handleQueryRoles();
@@ -131,13 +150,11 @@ watch(
           <template #header>
             <span>{{ `${item.role}(${item.roleCount})` }}</span>
             <span style="margin-left: 10px; color: #707070">性别: </span>
-            <span style="margin-left: 10px">
-                    {{ item.gender ?? '未知' }}
-                  </span>
-            <span style="margin-left: 10px; color: #707070">年龄段: </span>
-            <span style="margin-left: 10px">
-                    {{ item.ageGroup ?? '未知' }}
-                  </span>
+            <span
+                style="margin-left: 10px"
+            >
+              {{ item.gender ?? '未知' }}
+            </span>
           </template>
           <div>
             <a-descriptions
@@ -238,7 +255,7 @@ watch(
                   <template #content>
                     <a-doption @click="onRoleRename(item)">角色改名</a-doption>
                     <a-doption @click="onDeleteRole(item)">删除角色</a-doption>
-                    <a-doption @click="onSaveToCommon(item)">保存预置</a-doption>
+                    <a-doption @click="onSaveToCommonRole(item)">保存预置</a-doption>
                   </template>
                 </a-dropdown-button>
                 <a-button

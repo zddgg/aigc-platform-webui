@@ -44,6 +44,7 @@ export interface TextRole extends AudioModelConfig {
   gender: string;
   ageGroup: string;
   roleCount: number;
+  cover: boolean;
 }
 
 export interface ChapterInfo extends TextRole {
@@ -119,6 +120,10 @@ export function textRoleChange(params: {
   changeModel: boolean;
 }) {
   return axios.post('/api/textChapter/textRoleChange', params);
+}
+
+export function saveToCommonRole(params: TextRole) {
+  return axios.post('/api/textChapter/saveToCommonRole', params);
 }
 
 export function commonRoles(params: { projectId: string }) {
