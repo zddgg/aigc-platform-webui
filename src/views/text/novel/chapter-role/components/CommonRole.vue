@@ -185,13 +185,11 @@ watch(
           <template #header>
             <span>{{ item.role }}</span>
             <span style="margin-left: 10px; color: #707070">性别: </span>
-            <span style="margin-left: 10px">
-                    {{ item.gender ?? '未知' }}
-                  </span>
-            <span style="margin-left: 10px; color: #707070">年龄段: </span>
-            <span style="margin-left: 10px">
-                    {{ item.ageGroup ?? '未知' }}
-                  </span>
+            <span
+                style="margin-left: 10px"
+            >
+              {{ item.gender ?? '未知' }}
+            </span>
           </template>
           <div>
             <div>
