@@ -211,7 +211,8 @@ const handleChapterInfoUpdate = (data: ChapterInfo) => {
         && item.sentenceIndex === data.sentenceIndex) {
       return {
         ...item,
-        audioUrl: data.audioUrl
+        audioUrl: data.audioUrl,
+        disabled: !data.audioUrl
       }
     }
     return item;
