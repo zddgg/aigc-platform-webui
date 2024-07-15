@@ -2,7 +2,6 @@
 import {ref} from "vue";
 import AudioCreate from "@/views/model/chat-tts/components/AudioCreate.vue";
 import ConfigParamList from "@/views/model/chat-tts/components/ConfigParamList.vue";
-import {TabPane, Tabs} from 'ant-design-vue';
 
 const activeKey = ref('1');
 
@@ -21,18 +20,20 @@ const handleTabClick = (key: any) => {
 
 <template>
   <div>
-    <tabs
-        v-model:activeKey="activeKey"
-        :destroyInactiveTabPane="true"
+    <n-tabs
+        v-model:value="activeKey"
         @tabClick="handleTabClick"
+        type="card"
+        size="small"
+        animated
     >
-      <tab-pane key="1" tab="配置参数列表">
+      <n-tab-pane name="1" tab="配置参数列表">
         <config-param-list @config-edit="configEdit"/>
-      </tab-pane>
-      <tab-pane key="2" tab="音频生成">
+      </n-tab-pane>
+      <n-tab-pane name="2" tab="音频生成">
         <audio-create :config-edit-id="configEditId"/>
-      </tab-pane>
-    </tabs>
+      </n-tab-pane>
+    </n-tabs>
   </div>
 </template>
 

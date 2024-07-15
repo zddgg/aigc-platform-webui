@@ -3,17 +3,8 @@ import {ref} from "vue";
 import ConfigParamList from "@/views/model/fish-speech/components/ConfigParamList.vue";
 import AudioCreate from "@/views/model/fish-speech/components/AudioCreate.vue";
 import ModelList from "@/views/model/fish-speech/components/ModelList.vue";
-import {TabPane, Tabs} from 'ant-design-vue';
-import {refreshCache} from "@/api/fish-speech.ts";
 
 const activeKey = ref('1');
-
-const modelListRef = ref<{ refresh: Function } | null>(null);
-
-const handleRefreshCache = async () => {
-  await refreshCache();
-  modelListRef.value?.refresh();
-}
 
 const configEditId = ref<number | undefined>(undefined);
 const configEdit = (id: number | undefined) => {
@@ -30,31 +21,23 @@ const handleTabClick = (key: any) => {
 
 <template>
   <div>
-    <tabs
-        v-model:activeKey="activeKey"
-        :destroyInactiveTabPane="true"
+    <n-tabs
+        v-model:value="activeKey"
         @tabClick="handleTabClick"
+        type="card"
+        size="small"
+        animated
     >
-      <template #rightExtra>
-        <a-button
-            v-if="activeKey === '1'"
-            type="outline"
-            style="margin-right: 20px"
-            @click="handleRefreshCache"
-        >
-          刷新缓存
-        </a-button>
-      </template>
-      <tab-pane key="1" tab="模型列表">
-        <model-list ref="modelListRef"/>
-      </tab-pane>
-      <tab-pane key="2" tab="配置参数列表">
+      <n-tab-pane name="1" tab="模型列表">
+        <model-list/>
+      </n-tab-pane>
+      <n-tab-pane name="2" tab="配置参数列表">
         <config-param-list @config-edit="configEdit"/>
-      </tab-pane>
-      <tab-pane key="3" tab="音频生成">
+      </n-tab-pane>
+      <n-tab-pane name="3" tab="音频生成">
         <audio-create :config-edit-id="configEditId"/>
-      </tab-pane>
-    </tabs>
+      </n-tab-pane>
+    </n-tabs>
   </div>
 </template>
 

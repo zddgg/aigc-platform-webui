@@ -172,12 +172,13 @@ onMounted(() => {
       </a-space>
     </a-card>
     <div>
-      <a-tabs v-model:active-key="activateKey" size="large">
-        <template #extra>
+      <n-tabs v-model:value="activateKey" type="card" size="small" animated>
+        <template #suffix>
           <a-space>
             <a-button
                 type="outline"
                 style="margin-right: 20px"
+                size="small"
                 @click="() => (groupSortVisible = true)"
             >
               排序配置
@@ -186,13 +187,14 @@ onMounted(() => {
               <a-button
                   type="outline"
                   style="margin-right: 20px"
+                  size="small"
               >
                 刷新缓存
               </a-button>
             </a-popconfirm>
           </a-space>
         </template>
-        <a-tab-pane v-for="(item) in groupOptions" :key="item" :title="item">
+        <n-tab-pane v-for="(item) in groupOptions" :name="item" :tab="item">
           <a-space size="medium" wrap align="start">
             <a-card
                 v-for="(item1, index1) in computedAudios.flatMap(value => value.list)"
@@ -229,8 +231,8 @@ onMounted(() => {
                   </a-descriptions>
                 </div>
               </div>
-              <div>
-                <a-space v-if="item1.tags" wrap>
+              <div v-if="item1.tags && item1.tags.length">
+                <a-space wrap>
                   <a-tag
                       v-for="(item2, index2) in item1.tags"
                       :key="index2"
@@ -312,13 +314,14 @@ onMounted(() => {
                   </div>
                 </a-space>
               </div>
+              <a-divider  style="margin: 10px 0" />
               <div style="text-align: right">
                 <a-button size="small" type="primary" @click="editAudio(item1)">编辑</a-button>
               </div>
             </a-card>
           </a-space>
-        </a-tab-pane>
-      </a-tabs>
+        </n-tab-pane>
+      </n-tabs>
     </div>
     <audio-detail
         v-model:visible="audioDetailVisible"
