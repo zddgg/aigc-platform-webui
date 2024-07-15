@@ -6,17 +6,17 @@ import AudioCreate from "@/views/model/edge-tts/components/AudioCreate.vue";
 
 <template>
   <div>
-    <a-tabs default-active-key="1">
-      <a-tab-pane key="1" title="声音列表">
+    <n-tabs type="card" size="small" animated>
+      <n-tab-pane name="1" tab="声音列表">
         <voice-list/>
-      </a-tab-pane>
-      <a-tab-pane key="2" title="声音配置">
+      </n-tab-pane>
+      <n-tab-pane name="2" tab="声音配置">
         <voice-config/>
-      </a-tab-pane>
-      <a-tab-pane key="3" title="音频生成">
+      </n-tab-pane>
+      <n-tab-pane name="3" tab="音频生成">
         <audio-create/>
-      </a-tab-pane>
-    </a-tabs>
+      </n-tab-pane>
+    </n-tabs>
   </div>
 </template>
 

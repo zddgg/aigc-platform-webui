@@ -5,6 +5,8 @@ import {GptSovitsModel, models as queryModels} from "@/api/gpt-sovits.ts";
 const gsvModels = ref<GptSovitsModel[]>([])
 const groupOptions = ref<string[]>([])
 
+const activeKey = ref('1');
+
 const computedGsvModels = computed(() => {
   return Object.entries(gsvModels.value.reduce((result: any, item: GptSovitsModel) => {
     if (!result[item.modelGroup]) {
@@ -19,13 +21,12 @@ const handleQueryConfig = async () => {
   const {data} = await queryModels();
   gsvModels.value = data;
   groupOptions.value = [...new Set(data.map((item) => item.modelGroup))];
+  activeKey.value = groupOptions.value[0]
 }
 
-const refresh = () => {
+const handleRefreshCache = () => {
   handleQueryConfig();
 }
-
-defineExpose({refresh})
 
 onMounted(() => {
   handleQueryConfig();
@@ -34,8 +35,18 @@ onMounted(() => {
 
 <template>
   <div>
-    <a-tabs :default-active-key="groupOptions[0]" size="large">
-      <a-tab-pane v-for="(item) in groupOptions" :key="item" :title="item">
+    <n-tabs v-model:value="activeKey" type="card" size="small" animated>
+      <template #suffix>
+        <a-button
+            type="outline"
+            style="margin-right: 20px"
+            size="small"
+            @click="handleRefreshCache"
+        >
+          刷新缓存
+        </a-button>
+      </template>
+      <n-tab-pane v-for="(item) in groupOptions" :name="item" :tab="item">
         <a-space size="medium" wrap>
           <a-card
               v-for="(item1, index1) in computedGsvModels
@@ -60,8 +71,8 @@ onMounted(() => {
             </a-descriptions>
           </a-card>
         </a-space>
-      </a-tab-pane>
-    </a-tabs>
+      </n-tab-pane>
+    </n-tabs>
   </div>
 </template>
 
