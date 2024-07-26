@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import {PropType, ref, watch} from "vue";
-import RefAudioView from "@/views/audio-select/components/ref-audio-view.vue";
 import EtVoiceView from "@/views/audio-select/components/et-voice-view.vue";
 import ChatTtsView from "@/views/audio-select/components/chat-tts-view.vue";
 import {AudioModelConfig} from "@/api/model.ts";
+import GptSovitsView from "@/views/audio-select/components/gpt-sovits-view.vue";
+import FishSpeechView from "@/views/audio-select/components/fish-speech-view.vue";
+import {GPT_SOVITS} from "@/types/model-types.ts";
 
 const props = defineProps({
   visible: {
@@ -35,14 +37,7 @@ watch(
     () => {
       showModal.value = props.visible
       if (props.visible) {
-        activeTabKey.value = props.audioModelConfig?.audioModelType === 'gpt-sovits'
-        || props.audioModelConfig?.audioModelType === 'fish-speech'
-            ? '1'
-            : props.audioModelConfig?.audioModelType === 'chat-tts'
-                ? '2'
-                : props.audioModelConfig?.audioModelType === 'edge-tts'
-                    ? '3'
-                    : '1';
+        activeTabKey.value = props.audioModelConfig?.audioModelType ?? GPT_SOVITS;
       }
     },
     {immediate: true}
@@ -75,15 +70,23 @@ watch(
               </template>
             </a-button>
           </template>
-          <a-tab-pane key="1" title="gpt-sovits/fish-speech">
-            <ref-audio-view
+          <a-tab-pane key="gpt-sovits" title="gpt-sovits">
+            <gpt-sovits-view
                 v-model:visible="props.visible"
                 :active-tab-key="activeTabKey"
                 :audio-model-config="props.audioModelConfig"
                 @model-select="modelSelect"
             />
           </a-tab-pane>
-          <a-tab-pane key="2" title="chat-tts">
+          <a-tab-pane key="fish-speech" title="fish-speech">
+            <fish-speech-view
+                v-model:visible="props.visible"
+                :active-tab-key="activeTabKey"
+                :audio-model-config="props.audioModelConfig"
+                @model-select="modelSelect"
+            />
+          </a-tab-pane>
+          <a-tab-pane key="chat-tts" title="chat-tts">
             <chat-tts-view
                 v-model:visible="props.visible"
                 :active-tab-key="activeTabKey"
@@ -91,7 +94,7 @@ watch(
                 @model-select="modelSelect"
             />
           </a-tab-pane>
-          <a-tab-pane key="3" title="edge-tts">
+          <a-tab-pane key="edge-tts" title="edge-tts">
             <et-voice-view
                 v-model:visible="props.visible"
                 :active-tab-key="activeTabKey"

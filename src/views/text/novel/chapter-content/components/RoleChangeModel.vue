@@ -85,7 +85,7 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
       const {msg} = await textRoleChange({
         projectId: route.query.projectId as string,
         chapterId: route.query.chapterId as string,
-        chapterInfoId: props.chapterInfo?.id as string,
+        chapterInfoId: props.chapterInfo?.id as number,
         formRoleName: currentRole.value.role.replace('预置角色-', ''),
         fromRoleType: currentRole.value.role.startsWith('预置角色') ? 'commonRole' : 'role',
         changeModel: form.value.loadModel,

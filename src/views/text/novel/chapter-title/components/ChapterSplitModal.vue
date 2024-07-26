@@ -9,7 +9,7 @@ import {FormInstance, Message, Modal} from "@arco-design/web-vue";
 import {chapters4Sort as queryTextChapterList, chapterSort, TextChapter} from "@/api/text-chapter.ts";
 import {EventBus} from "@/vite-env";
 import {VueDraggable} from "vue-draggable-plus";
-import {ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {ROLE_CHANGE} from "@/types/event-types.ts";
 
 const route = useRoute();
 const props = defineProps({

@@ -1,22 +1,21 @@
 <script setup lang="ts">
 import {ref} from "vue";
-import ConfigParamList from "@/views/model/fish-speech/components/ConfigParamList.vue";
-import AudioCreate from "@/views/model/fish-speech/components/AudioCreate.vue";
+import AudioCreate from "@/views/model/cosy-voice/components/AudioCreate.vue";
+import ConfigParamList from "@/views/model/cosy-voice/components/ConfigParamList.vue";
 
-const activeKey = ref('2');
+const activeKey = ref('1');
 
 const configEditId = ref<number | undefined>(undefined);
 const configEdit = (id: number | undefined) => {
   configEditId.value = id;
-  activeKey.value = '3';
+  activeKey.value = '2';
 }
 
 const handleTabClick = (key: any) => {
-  if (key === '3') {
+  if (key === '2') {
     configEditId.value = undefined;
   }
 }
-
 </script>
 
 <template>
@@ -28,10 +27,10 @@ const handleTabClick = (key: any) => {
         size="small"
         animated
     >
-      <n-tab-pane name="2" tab="配置参数列表">
+      <n-tab-pane name="1" tab="配置参数列表">
         <config-param-list @config-edit="configEdit"/>
       </n-tab-pane>
-      <n-tab-pane name="3" tab="音频生成">
+      <n-tab-pane name="2" tab="音频生成">
         <audio-create :config-edit-id="configEditId"/>
       </n-tab-pane>
     </n-tabs>
@@ -39,4 +38,13 @@ const handleTabClick = (key: any) => {
 </template>
 
 <style scoped>
+.icon-hover {
+  padding: 2px;
+  border-radius: 2px;
+  margin-left: 10px;
+}
+
+.icon-hover:hover {
+  background-color: #e5e5e5;
+}
 </style>

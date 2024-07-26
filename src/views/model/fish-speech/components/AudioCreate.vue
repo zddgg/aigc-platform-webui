@@ -257,19 +257,6 @@ onMounted(async () => {
             <a-space size="medium" direction="vertical" style="width: 100%">
               <a-row :gutter="20">
                 <a-col :span="12">
-                  <a-card :body-style="{padding: '20px 20px 0'}">
-                    <a-form-item
-                        label="模型"
-                        field="modelId"
-                        :rules="[{required: true, message: '请选择一个模型'}]"
-                    >
-                      <a-cascader
-                          v-model="form.modelId"
-                          :options="modelDataOptions"/>
-                    </a-form-item>
-                  </a-card>
-                </a-col>
-                <a-col :span="12">
                   <a-card :body-style="{padding: '20px'}">
                     <a-form-item
                         label="参考音频"

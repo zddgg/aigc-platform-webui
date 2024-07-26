@@ -7,9 +7,10 @@ import GptSovits from "@/views/model/gpt-sovits/index.vue";
 import FishSpeech from "@/views/model/fish-speech/index.vue";
 import EdgeTts from "@/views/model/edge-tts/index.vue";
 import ChatTts from "@/views/model/chat-tts/index.vue";
+import CosyVoice from "@/views/model/cosy-voice/index.vue";
 
 const modelTypes = [
-  '文本大模型', '音频生成服务', '参考音频', 'gpt-sovits', 'fish-speech', 'chat-tts', 'edge-tts'
+  '文本大模型', '音频生成服务', '参考音频', 'gpt-sovits', 'fish-speech', 'chat-tts', 'edge-tts', 'cosy-voice'
 ]
 const activeModelType = ref('文本大模型')
 
@@ -63,6 +64,9 @@ const changeModelType = (item: string) => {
           </div>
           <div v-if="activeModelType === 'edge-tts'">
             <edge-tts/>
+          </div>
+          <div v-if="activeModelType === 'cosy-voice'">
+            <cosy-voice/>
           </div>
         </div>
       </n-scrollbar>

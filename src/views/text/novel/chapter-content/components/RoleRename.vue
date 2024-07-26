@@ -2,7 +2,7 @@
 import {inject, PropType, ref, watch} from "vue";
 import {FormInstance, Message} from "@arco-design/web-vue";
 import {useRoute} from "vue-router";
-import {COMMON_ROLE_CHANGE, ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {COMMON_ROLE_CHANGE, ROLE_CHANGE} from "@/types/event-types.ts";
 import {EventBus} from "@/vite-env";
 import {
   commonRoles as queryCommonRoles,

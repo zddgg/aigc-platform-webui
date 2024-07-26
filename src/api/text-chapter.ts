@@ -47,8 +47,14 @@ export interface TextRole extends AudioModelConfig {
   cover: boolean;
 }
 
+export interface PhoneticAnno {
+  type: string;
+  index: number,
+  pinyin: string
+}
+
 export interface ChapterInfo extends TextRole {
-  id: string;
+  id: number;
   index: string;
   projectId: string;
   chapterId: string;
@@ -63,6 +69,9 @@ export interface ChapterInfo extends TextRole {
   audioState: number;
   audioLength: number;
   audioExportFlag: boolean;
+  sortOrder: number;
+  phoneticInfo: string;
+  audioInstruct: string;
 
   audioUrl: string;
 }
@@ -114,7 +123,7 @@ export function roleCombine(params: {
 export function textRoleChange(params: {
   projectId: string,
   chapterId: string,
-  chapterInfoId: string;
+  chapterInfoId: number;
   formRoleName: string;
   fromRoleType: string;
   changeModel: boolean;
@@ -236,4 +245,20 @@ export function chapterExpose(params: {
 
 export function deleteChapterInfo(params: ChapterInfo) {
   return axios.post('/api/textChapter/deleteChapterInfo', params);
+}
+
+export function addChapterInfo(params: ChapterInfo) {
+  return axios.post('/api/textChapter/addChapterInfo', params);
+}
+
+export function chapterInfoSort(params: ChapterInfo[]) {
+  return axios.post('/api/textChapter/chapterInfoSort', params);
+}
+
+export function addPhoneticAnno(params: PhoneticAnno & {chapterInfoId: number}) {
+  return axios.post('/api/textChapter/addPhoneticAnno', params);
+}
+
+export function removePhoneticAnno(params: PhoneticAnno & {chapterInfoId: number}) {
+  return axios.post('/api/textChapter/removePhoneticAnno', params);
 }

@@ -13,7 +13,7 @@ import {
 } from "@/api/text-chapter.ts";
 import {VueDraggable} from 'vue-draggable-plus'
 import {EventBus} from "@/vite-env";
-import {ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {ROLE_CHANGE} from "@/types/event-types.ts";
 
 const route = useRoute();
 const props = defineProps({

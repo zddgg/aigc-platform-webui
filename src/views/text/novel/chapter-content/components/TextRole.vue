@@ -4,16 +4,14 @@ import {inject, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import {roles as queryRoles, saveToCommonRole, TextRole, updateRole,} from "@/api/text-chapter.ts";
 import {Message, Modal} from "@arco-design/web-vue";
 import AudioSelect from '@/views/audio-select/index.vue'
-import RoleRename from "@/views/text/novel/chapter-role/components/RoleRename.vue";
-import RoleDelete from "@/views/text/novel/chapter-role/components/RoleDelete.vue";
+import RoleRename from "./RoleRename.vue";
+import RoleDelete from "./RoleDelete.vue";
 import {EventBus} from "@/vite-env";
-import {COMMON_ROLE_CHANGE, ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {COMMON_ROLE_CHANGE, ROLE_CHANGE} from "@/types/event-types.ts";
 import {AudioModelConfig} from "@/api/model.ts";
 import {voiceNameFormat} from "@/utils/model-util.ts";
 
 const route = useRoute();
-
-const emits = defineEmits(['roleModelChange'])
 
 const eventBus = inject<EventBus>('eventBus');
 
@@ -129,10 +127,7 @@ watch(
 
 <template>
   <div>
-    <div v-if="!roles || !roles.length">
-      <a-empty/>
-    </div>
-    <div v-else>
+    <div>
       <a-button
           v-if="roles && roles.length"
           type="outline"
@@ -195,14 +190,6 @@ watch(
                 </a-typography-text>
               </a-descriptions-item>
 
-              <a-descriptions-item
-                  v-if="['fish-speech'].includes(item.audioModelType)"
-                  label="模型"
-              >
-                <a-typography-text ellipsis>
-                  {{ `${item.fishSpeechModel?.modelGroup}/${item.fishSpeechModel?.modelName}` }}
-                </a-typography-text>
-              </a-descriptions-item>
               <a-descriptions-item
                   v-if="['fish-speech'].includes(item.audioModelType)"
                   label="配置"

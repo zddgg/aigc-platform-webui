@@ -4,7 +4,7 @@ import { roles as queryRoles, TextRole, roleCombine} from "@/api/text-chapter.ts
 import {FormInstance, Message} from "@arco-design/web-vue";
 import {useRoute} from "vue-router";
 import {EventBus} from "@/vite-env";
-import {ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {ROLE_CHANGE} from "@/types/event-types.ts";
 
 const route = useRoute();
 const props = defineProps({

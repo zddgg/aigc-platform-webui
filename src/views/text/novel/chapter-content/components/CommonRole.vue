@@ -3,7 +3,7 @@ import {useRoute} from "vue-router";
 import {inject, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import {FormInstance, Message, Modal} from "@arco-design/web-vue";
 import AudioSelect from '@/views/audio-select/index.vue'
-import RoleRename from "@/views/text/novel/chapter-role/components/RoleRename.vue";
+import RoleRename from "./RoleRename.vue";
 import {AudioModelConfig} from "@/api/model.ts";
 import {
   commonRoles as queryCommonRoles,
@@ -12,7 +12,7 @@ import {
   TextRole,
   updateCommonRole,
 } from "@/api/text-chapter.ts";
-import {COMMON_ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {COMMON_ROLE_CHANGE} from "@/types/event-types.ts";
 import {EventBus} from "@/vite-env";
 import {voiceNameFormat} from "@/utils/model-util.ts";
 
@@ -164,10 +164,7 @@ watch(
 
 <template>
   <div>
-    <div v-if="!commonRoles || !commonRoles.length">
-      <a-empty/>
-    </div>
-    <div v-else>
+    <div>
       <a-button
           v-if="commonRoles && commonRoles.length"
           type="outline"

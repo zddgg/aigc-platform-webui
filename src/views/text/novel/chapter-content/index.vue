@@ -2,13 +2,14 @@
 import {inject, onMounted, onUnmounted, provide, ref, watch} from "vue";
 import {useRoute} from "vue-router";
 import useLoading from "@/hooks/loading.ts";
-import TextContent from "@/views/text/novel/chapter-content/components/TextContent.vue";
-import {TextContentConfig} from "@/views/text/novel/chapter-content/useChapterContent.ts";
-import TableContent from "@/views/text/novel/chapter-content/components/TableContent.vue";
+import {TextContentConfig} from "./useChapterContent.ts";
+import TableContent from "./components/TableContent.vue";
+import BatchChangeModal from "./components/BatchChangeModal.vue";
+import CommonRole from "./components/CommonRole.vue";
+import TextRole from "./components/TextRole.vue";
 import {Message, Modal} from "@arco-design/web-vue";
-import BatchChangeModal from "@/views/text/novel/chapter-content/components/BatchChangeModal.vue";
 import TextWebsocketService from "@/services/textWebsocketService.ts";
-import {ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {ROLE_CHANGE} from "@/types/event-types.ts";
 import {EventBus} from "@/vite-env";
 import {
   checkRoleInference,
@@ -28,9 +29,7 @@ const batchChangeModalVisible = ref(false);
 
 const selectedIndexes = ref<string[]>([])
 
-const textContentConfig = ref<TextContentConfig>({
-  textViewType: 'table'
-} as TextContentConfig)
+const textContentConfig = ref<TextContentConfig>({} as TextContentConfig)
 
 const textContentRef = ref<
     {
@@ -49,7 +48,6 @@ const tableContentRef = ref<
 const refresh = () => {
   eventBus?.emit(ROLE_CHANGE);
 }
-
 
 const aiResultText = ref<string>('')
 
@@ -153,9 +151,6 @@ const onStartCreateAudio = (actionType: 'all' | 'modified') => {
   })
 }
 
-
-defineExpose({refresh})
-
 const scrollToTop = (id: string) => {
   const targetElement = document.getElementById(id);
   if (targetElement) {
@@ -221,13 +216,14 @@ watch(
 <template>
   <div>
     <a-affix>
-      <div class="text-space-header">
-        <div style="width: 90%; display: flex; justify-content: space-between; align-items: center">
-          <a-space size="large">
+      <div class="text-space-header" style="border-bottom: 1px solid rgb(229,230,235)">
+        <div style="width: 90%; display: flex">
+          <a-space size="large" align="start">
             <div>
               <a-button
                   type="primary"
                   :loading="loading"
+                  size="small"
                   @click="onAiInference"
               >
                 角色推理
@@ -236,6 +232,7 @@ watch(
             <div>
               <a-dropdown-button
                   type="primary"
+                  size="small"
               >
                 批量生成
                 <template #icon>
@@ -258,6 +255,7 @@ watch(
             <div>
               <a-button
                   type="primary"
+                  size="small"
                   @click="playAllAudio"
               >
                 顺序播放
@@ -266,6 +264,7 @@ watch(
             <div v-if="false">
               <a-button
                   type="primary"
+                  size="small"
                   @click="() => (batchChangeModalVisible = true)"
               >
                 批量处理
@@ -274,10 +273,15 @@ watch(
             <div>
               <a-button
                   type="primary"
+                  size="small"
                   @click="onCombineExport"
               >
                 合并导出
               </a-button>
+            </div>
+            <div style="display: flex; place-items: center">
+              <span style="margin-right: 10px">编辑</span>
+              <a-switch v-model="textContentConfig.edit"/>
             </div>
           </a-space>
           <div v-if="taskNum">
@@ -293,90 +297,56 @@ watch(
               </a-button>
             </a-space>
           </div>
-          <div>
-            <a-space size="small">
-              <a-trigger
-                  trigger="click"
-                  :unmount-on-close="false"
-              >
-                <a-button type="outline" size="mini">
-                  <icon-down/>
-                </a-button>
-                <template #content>
-                  <a-card>
-                    <a-space direction="vertical" style="width: 100%">
-                      <div v-if="textContentConfig.textViewType !== 'table'">
-                        <a-checkbox v-model="textContentConfig.showRole">角色</a-checkbox>
-                      </div>
-                      <div v-if="textContentConfig.textViewType !== 'table'">
-                        <a-checkbox v-model="textContentConfig.showModal">模型</a-checkbox>
-                      </div>
-                      <div>
-                        <a-checkbox v-model="textContentConfig.showLines">台词</a-checkbox>
-                      </div>
-                      <div v-if="textContentConfig.textViewType !== 'table'">
-                        <a-checkbox v-model="textContentConfig.showAudio">音频</a-checkbox>
-                      </div>
-                      <div>
-                        <a-checkbox v-model="textContentConfig.textEdit">文本编辑</a-checkbox>
-                      </div>
-                    </a-space>
-                  </a-card>
-                </template>
-              </a-trigger>
-              <a-dropdown>
-                <a-button type="outline" size="mini">
-                  <icon-file v-if="textContentConfig.textViewType === 'text'"/>
-                  <icon-list v-if="textContentConfig.textViewType === 'text-list'"/>
-                  <icon-apps v-if="textContentConfig.textViewType === 'table'"/>
-                </a-button>
-                <template #content>
-                  <a-doption @click="() => (textContentConfig.textViewType = 'text')">
-                    <template #icon>
-                      <icon-file/>
-                    </template>
-                    <template #default>文本模式</template>
-                  </a-doption>
-                  <a-doption @click="() => (textContentConfig.textViewType = 'text-list')">
-                    <template #icon>
-                      <icon-list/>
-                    </template>
-                    <template #default>列表模式</template>
-                  </a-doption>
-                  <a-doption @click="() => (textContentConfig.textViewType = 'table')">
-                    <template #icon>
-                      <icon-apps/>
-                    </template>
-                    <template #default>表格模式</template>
-                  </a-doption>
-                </template>
-              </a-dropdown>
-            </a-space>
-          </div>
         </div>
       </div>
     </a-affix>
-    <n-scrollbar
-        style="max-height: calc(100vh - 76px); padding-right: 10px; overflow: auto"
-    >
-      <div id="text-content">
-        <div v-if="textContentConfig.textViewType === 'table'">
-          <table-content
-              ref="tableContentRef"
-              v-model:text-content-config="textContentConfig"
-              v-model:selected-indexes="selectedIndexes"
-              v-model:creating-ids="creatingIds"
-          />
-        </div>
-        <div v-else>
-          <text-content
-              ref="textContentRef"
-              v-model:text-content-config="textContentConfig"
-              v-model:creating-ids="creatingIds"
-          />
-        </div>
+    <div style="display: flex; margin-top: 10px">
+      <div style="flex: 1; margin-left: 10px">
+        <n-scrollbar
+            style="max-height: calc(100vh - 90px); padding-right: 10px; overflow: auto"
+        >
+          <div id="text-content">
+            <table-content
+                ref="tableContentRef"
+                v-model:text-content-config="textContentConfig"
+                v-model:selected-indexes="selectedIndexes"
+                v-model:creating-ids="creatingIds"
+            />
+          </div>
+        </n-scrollbar>
       </div>
-    </n-scrollbar>
+      <a-divider direction="vertical" style="margin: 0"/>
+      <div style="width: 20%; margin-left: 10px">
+        <n-scrollbar
+            style="max-height: calc(100vh - 90px); overflow: auto"
+        >
+          <a-card :bordered="false" style="border-radius: 8px" :body-style="{ padding: '0 10px 0 0' }">
+            <n-tabs
+                default-value="1"
+                justify-content="space-evenly"
+                type="line"
+            >
+              <n-tab-pane
+                  name="1"
+                  tab="文中角色"
+                  display-directive="show:lazy"
+              >
+                <text-role/>
+              </n-tab-pane>
+              <n-tab-pane
+                  name="2"
+                  tab="预置角色"
+                  display-directive="show:lazy"
+              >
+                <common-role/>
+              </n-tab-pane>
+            </n-tabs>
+          </a-card>
+        </n-scrollbar>
+      </div>
+    </div>
+
+
     <batch-change-modal
         v-model:visible="batchChangeModalVisible"
     />
@@ -399,15 +369,9 @@ watch(
 <style scoped>
 .text-space-header {
   width: 100%;
+  height: 40px;
   display: flex;
   justify-content: center;
-  align-items: center;
-  border-radius: 8px;
-  margin-bottom: 10px;
 }
 
-.buttons-right {
-  display: flex;
-  justify-content: center;
-}
 </style>

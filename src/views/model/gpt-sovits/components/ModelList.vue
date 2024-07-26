@@ -24,9 +24,11 @@ const handleQueryConfig = async () => {
   activeKey.value = groupOptions.value[0]
 }
 
-const handleRefreshCache = () => {
+const modelListRefresh = () => {
   handleQueryConfig();
 }
+
+defineExpose({modelListRefresh})
 
 onMounted(() => {
   handleQueryConfig();
@@ -36,16 +38,6 @@ onMounted(() => {
 <template>
   <div>
     <n-tabs v-model:value="activeKey" type="card" size="small" animated>
-      <template #suffix>
-        <a-button
-            type="outline"
-            style="margin-right: 20px"
-            size="small"
-            @click="handleRefreshCache"
-        >
-          刷新缓存
-        </a-button>
-      </template>
       <n-tab-pane v-for="(item) in groupOptions" :name="item" :tab="item">
         <a-space size="medium" wrap>
           <a-card
