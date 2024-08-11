@@ -1,22 +1,41 @@
 <script setup lang="ts">
-import VoiceList from "@/views/model/edge-tts/components/VoiceList.vue";
-import VoiceConfig from "@/views/model/edge-tts/components/VoiceConfig.vue";
+import ConfigParamList from "@/views/model/edge-tts/components/ConfigParamList.vue";
 import AudioCreate from "@/views/model/edge-tts/components/AudioCreate.vue";
+import BatchSetting from "@/views/model/edge-tts/components/BatchSetting.vue";
+import {ref} from "vue";
+
+const configListRef = ref<{configRefresh: Function} | null>(null)
+
+const batchSettingVisible = ref<boolean>(false)
+
 </script>
 
 <template>
   <div>
     <n-tabs type="card" size="small" animated>
-      <n-tab-pane name="1" tab="声音列表">
-        <voice-list/>
+      <template #suffix>
+        <a-space>
+          <a-button
+              type="outline"
+              style="margin-right: 20px"
+              size="small"
+              @click="() => (batchSettingVisible = true)"
+          >
+            批量设置
+          </a-button>
+        </a-space>
+      </template>
+      <n-tab-pane name="1" tab="配置参数列表">
+        <config-param-list ref="configListRef"/>
       </n-tab-pane>
-      <n-tab-pane name="2" tab="声音配置">
-        <voice-config/>
-      </n-tab-pane>
-      <n-tab-pane name="3" tab="音频生成">
+      <n-tab-pane name="2" tab="音频生成">
         <audio-create/>
       </n-tab-pane>
     </n-tabs>
+    <batch-setting
+        v-model:visible="batchSettingVisible"
+        @change="configListRef?.configRefresh()"
+    />
   </div>
 </template>
 

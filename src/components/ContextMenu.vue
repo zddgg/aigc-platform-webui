@@ -41,7 +41,6 @@ const {x, y, showMenu} = useContextMenu(containerRef);
 
 // 菜单的点击事件
 function handleClick(item: string) {
-  console.log(item)
   // 选中菜单后关闭菜单
   showMenu.value = false;
   // 并返回选中的菜单

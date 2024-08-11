@@ -3,8 +3,7 @@ import {useRoute} from "vue-router";
 import {inject, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import {FormInstance, Message, Modal} from "@arco-design/web-vue";
 import AudioSelect from '@/views/audio-select/index.vue'
-import RoleRename from "./RoleRename.vue";
-import {AudioModelConfig} from "@/api/model.ts";
+import {AudioModelInfo} from "@/api/model.ts";
 import {
   commonRoles as queryCommonRoles,
   createCommonRole,
@@ -15,6 +14,7 @@ import {
 import {COMMON_ROLE_CHANGE} from "@/types/event-types.ts";
 import {EventBus} from "@/vite-env";
 import {voiceNameFormat} from "@/utils/model-util.ts";
+import RoleEdit from "@/views/text/novel/chapter-content/components/RoleEdit.vue";
 
 const route = useRoute();
 const eventBus = inject<EventBus>('eventBus');
@@ -55,15 +55,11 @@ const refresh = () => {
   handleQueryCommonRoles();
 }
 
-const handleRoleModelChange = async (modelConfig: AudioModelConfig) => {
-  currentRole.value = {
-    ...currentRole.value,
-    ...modelConfig,
-  }
-
+const handleRoleModelChange = async (modelConfig: AudioModelInfo) => {
   const {msg} = await updateCommonRole({
-    ...currentRole.value,
     projectId: route.query.projectId as string,
+    ...modelConfig,
+    ids: [currentRole.value.id],
   })
 
   Message.success(msg);
@@ -72,14 +68,14 @@ const handleRoleModelChange = async (modelConfig: AudioModelConfig) => {
 
 const addCommonRoleFormRef = ref<FormInstance>()
 const addCommonRoleVisible = ref<boolean>(false)
-const handleAddCommonRole = (modelConfig: AudioModelConfig) => {
+const handleAddCommonRole = (modelConfig: AudioModelInfo) => {
   currentRole.value = {
     ...modelConfig
   } as TextRole;
   addCommonRoleVisible.value = true;
 }
 
-const modelSelect = (modelConfig: AudioModelConfig) => {
+const modelSelect = (modelConfig: AudioModelInfo) => {
   if (selectModelType.value === 'roleModelChange') {
     handleRoleModelChange(modelConfig);
   }
@@ -195,83 +191,77 @@ watch(
                   size="medium"
               >
                 <a-descriptions-item label="类型">
-                  {{ item.audioModelType }}
+                  {{ item.amType }}
                 </a-descriptions-item>
                 <a-descriptions-item
-                    v-if="['gpt-sovits'].includes(item.audioModelType)"
+                    v-if="['gpt-sovits'].includes(item.amType)"
                     label="模型"
                 >
                   <a-typography-text ellipsis>
-                    {{ `${item.gptSovitsModel?.modelGroup}/${item.gptSovitsModel?.modelName}` }}
+                    {{ `${item.amMfGroup}/${item.amMfRole}` }}
                   </a-typography-text>
                 </a-descriptions-item>
                 <a-descriptions-item
-                    v-if="['gpt-sovits'].includes(item.audioModelType)"
+                    v-if="['gpt-sovits'].includes(item.amType)"
                     label="配置"
                 >
                   <a-typography-text ellipsis>
                     {{
-                      item.audioConfigId === '-1'
+                      item.amMcId === '-1'
                           ? '空'
-                          : `${item.gptSovitsConfig?.configName}`
+                          : `${item.amMcName}`
                     }}
                   </a-typography-text>
                 </a-descriptions-item>
                 <a-descriptions-item
-                    v-if="['gpt-sovits'].includes(item.audioModelType)"
+                    v-if="['gpt-sovits'].includes(item.amType)"
                     label="音频"
                 >
                   <a-typography-text ellipsis>
                     {{
-                      `${item.refAudio?.audioGroup}/${item.refAudio?.audioName}/${item.refAudio?.moodName}/${item.refAudio?.moodAudioName}`
+                      `${item.amPaGroup}/${item.amPaRole}/${item.amPaMood}/${item.amPaAudio}`
                     }}
                   </a-typography-text>
                 </a-descriptions-item>
 
                 <a-descriptions-item
-                    v-if="['fish-speech'].includes(item.audioModelType)"
-                    label="模型"
-                >
-                  <a-typography-text ellipsis>
-                    {{ `${item.fishSpeechModel?.modelGroup}/${item.fishSpeechModel?.modelName}` }}
-                  </a-typography-text>
-                </a-descriptions-item>
-                <a-descriptions-item
-                    v-if="['fish-speech'].includes(item.audioModelType)"
+                    v-if="['fish-speech'].includes(item.amType)"
                     label="配置"
                 >
                   <a-typography-text ellipsis>
                     {{
-                      item.audioConfigId === '-1'
+                      item.amMcId === '-1'
                           ? '空'
-                          : `${item.fishSpeechConfig?.configName}`
+                          : `${item.amMcName}`
                     }}
                   </a-typography-text>
                 </a-descriptions-item>
                 <a-descriptions-item
-                    v-if="['fish-speech'].includes(item.audioModelType)"
+                    v-if="['fish-speech'].includes(item.amType)"
                     label="音频"
                 >
                   <a-typography-text ellipsis>
-                    {{ `${item.refAudio?.audioGroup}/${item.refAudio?.audioName}/${item.refAudio?.moodName}` }}
+                    {{
+                      `${item.amPaGroup}/${item.amPaRole}/${item.amPaMood}/${item.amPaAudio}`
+                    }}
                   </a-typography-text>
                 </a-descriptions-item>
 
                 <a-descriptions-item
-                    v-if="['chat-tts'].includes(item.audioModelType)"
+                    v-if="['chat-tts'].includes(item.amType)"
                     label="配置"
                 >
                   <a-typography-text ellipsis>
-                    {{ item.chatTtsConfig?.configName }}
+                    {{ item.amMcName }}
                   </a-typography-text>
                 </a-descriptions-item>
 
                 <a-descriptions-item
-                    v-if="['edge-tts'].includes(item.audioModelType)"
+                    v-if="['edge-tts'].includes(item.amType)"
                     label="配置"
                 >
                   <a-typography-text ellipsis>
-                    {{ voiceNameFormat(item.audioConfigId) }}
+                    {{ voiceNameFormat(item.amMcName) }}
                   </a-typography-text>
                 </a-descriptions-item>
               </a-descriptions>
@@ -287,7 +277,7 @@ watch(
                     <icon-down/>
                   </template>
                   <template #content>
-                    <a-doption @click="onRoleRename(item)">角色改名</a-doption>
+                    <a-doption @click="onRoleRename(item)">角色修改</a-doption>
                     <a-doption @click="onDeleteRole(item)">删除角色</a-doption>
                   </template>
                 </a-dropdown-button>
@@ -316,7 +306,7 @@ watch(
 
     <audio-select
         v-model:visible="modelSelectVisible"
-        :audio-model-config="currentRole"
+        :audio-model-info="currentRole"
         @model-select="modelSelect"
     />
 
@@ -341,8 +331,8 @@ watch(
             <a-option>女</a-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="年龄" field="ageGroup">
-          <a-select v-model="currentRole.ageGroup">
+        <a-form-item label="年龄" field="age">
+          <a-select v-model="currentRole.age">
             <a-option>少年</a-option>
             <a-option>青年</a-option>
             <a-option>中年</a-option>
@@ -350,12 +340,12 @@ watch(
           </a-select>
         </a-form-item>
         <a-form-item label="类型">
-          <a-input v-model="currentRole.audioModelType" readonly/>
+          <a-input v-model="currentRole.amType" readonly/>
         </a-form-item>
       </a-form>
     </a-modal>
 
-    <role-rename
+    <role-edit
         v-model:visible="roleRenameModalVisible"
         :role="currentRole"
         :role-type="'commonRole'"

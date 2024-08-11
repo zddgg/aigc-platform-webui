@@ -32,6 +32,13 @@ class GlobalWebsocketService implements IWebSocketService {
                         position: 'topRight',
                     })
                 }
+                if (data.type === 'success') {
+                    Notification.success({
+                        title: data.title,
+                        content: data.message,
+                        position: 'topRight',
+                    })
+                }
             };
 
             this.socket.onclose = () => {

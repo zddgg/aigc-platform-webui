@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import {computed, PropType, ref, watch} from "vue";
-import {ChatTtsConfig, configs as queryChatTtsConfigs} from "@/api/chat-tts.ts";
-import {AudioModelConfig} from "@/api/model.ts";
+import {computed, onMounted, PropType, ref, watch} from "vue";
+import {AudioModelInfoKey} from "@/api/model.ts";
+import {AmModelConfig, getByModelType as queryModelConfigs, playOrCreateAudio} from "@/api/am-model-config.ts";
+import {CHAT_TTS} from "@/types/model-types.ts";
+import useLoading from "@/hooks/loading.ts";
 
 const props = defineProps({
   visible: {
@@ -11,44 +13,59 @@ const props = defineProps({
   activeTabKey: {
     type: String,
   },
-  audioModelConfig: {
-    type: Object as PropType<AudioModelConfig>
+  audioModelInfo: {
+    type: Object as PropType<AudioModelInfoKey>
   }
 })
 
 const emits = defineEmits(['modelSelect'])
+const {loading, setLoading} = useLoading();
 
 const audioElement = ref<HTMLAudioElement | null>(null); // ref 对象引用到 audio 元素
 
-const chatTtsConfigs = ref<ChatTtsConfig[]>([])
-const currentConfig = ref<ChatTtsConfig>({} as ChatTtsConfig)
+const modelConfigs = ref<AmModelConfig[]>([])
+const currentConfig = ref<AmModelConfig>({} as AmModelConfig)
 const searchInput = ref<string>('')
 
 const computedConfigs = computed(() => {
-  let tmp = chatTtsConfigs.value;
+  let tmp = modelConfigs.value;
   if (searchInput.value) {
-    tmp = tmp.filter(item => item.configName.includes(searchInput.value.toLowerCase()))
+    tmp = tmp.filter(item => item.mcName.includes(searchInput.value.toLowerCase()))
   }
   return tmp;
 })
 
-const handleQueryChatTtsConfig = async () => {
-  const {data} = await queryChatTtsConfigs()
-  chatTtsConfigs.value = data
+const handleQueryModelConfigs = async () => {
+  const {data} = await queryModelConfigs({modelType: CHAT_TTS})
+  modelConfigs.value = data;
 }
 
 const activeAudioKey = ref<string>('')
+const createAudioKey = ref('')
 
-const playAudio = (key: string, url: string) => {
-  activeAudioKey.value = key;
-  if (audioElement.value) {
-    // 设置音频源
-    audioElement.value.src = url;
+const playAudio = async (modelConfig: AmModelConfig) => {
+  try {
+    createAudioKey.value = modelConfig.mcName;
+    setLoading(true);
+    const response = await playOrCreateAudio({mcId: modelConfig.mcId});
+    const url = URL.createObjectURL(response.data);
 
-    // 播放音频
-    audioElement.value.play();
+    activeAudioKey.value = modelConfig.mcName;
+
+    if (audioElement.value) {
+      // 设置音频源
+      audioElement.value.src = url;
+
+      // 播放音频
+      audioElement.value.play();
+    }
+  } catch (e) {
+    activeAudioKey.value = '';
+  } finally {
+    createAudioKey.value = '';
+    setLoading(false);
   }
-};
+}
 
 const stopAudio = () => {
   if (audioElement.value) {
@@ -64,18 +81,21 @@ const handleAudioEnded = () => {
 };
 
 const modelSelect = () => {
-  const audioModelConfig: AudioModelConfig = {
-    audioModelType: 'chat-tts',
-    audioConfigId: currentConfig.value.configId,
-  } as AudioModelConfig;
-  emits('modelSelect', audioModelConfig);
+  const audioModelInfo: AudioModelInfoKey = {
+    amType: CHAT_TTS,
+    amMcId: currentConfig.value.mcId,
+  } as AudioModelInfoKey;
+  emits('modelSelect', audioModelInfo);
 }
+
+onMounted(() => {
+  handleQueryModelConfigs();
+})
 
 watch(
     () => props.visible,
     () => {
       if (props.visible) {
-        handleQueryChatTtsConfig();
       }
     },
     {immediate: true}
@@ -88,8 +108,11 @@ watch(
         stopAudio();
       }
       if (props.activeTabKey === '2') {
-        if (props.audioModelConfig) {
-          currentConfig.value = props.audioModelConfig?.chatTtsConfig as ChatTtsConfig;
+        if (props.audioModelInfo) {
+          const find = modelConfigs.value.find(item => item.mcId === props.audioModelInfo?.amMcId);
+          if (find) {
+            currentConfig.value = {...find};
+          }
         }
       }
     },
@@ -126,14 +149,14 @@ watch(
                 <a-descriptions :column="1" size="small" :align="{ label: 'right' }">
                   <template #title>
                     <a-typography-text ellipsis>
-                      {{ item.configName }}
+                      {{ item.mcName }}
                     </a-typography-text>
                   </template>
                   <a-descriptions-item label="audio_seed">
-                    {{ item.audioSeedInput }}
+                    {{ JSON.parse(item.mcParamsJson).audio_seed }}
                   </a-descriptions-item>
                   <a-descriptions-item label="text_seed">
-                    {{ item.textSeedInput }}
+                    {{ JSON.parse(item.mcParamsJson).text_seed }}
                   </a-descriptions-item>
                 </a-descriptions>
               </a-card>
@@ -144,36 +167,36 @@ watch(
     </div>
     <a-divider direction="vertical"/>
     <div
-        v-if="currentConfig?.configName"
+        v-if="currentConfig?.mcName"
         style="width: 40%"
     >
       <div>
         <a-descriptions :column="2" layout="inline-vertical" size="medium" bordered>
           <template #title>
             <a-typography-text ellipsis>
-              {{ currentConfig.configName }}
+              {{ currentConfig.mcName }}
             </a-typography-text>
           </template>
           <a-descriptions-item label="audio_seed">
-            {{ currentConfig.audioSeedInput }}
+            {{ JSON.parse(currentConfig.mcParamsJson).audio_seed }}
           </a-descriptions-item>
           <a-descriptions-item label="text_seed">
-            {{ currentConfig.textSeedInput }}
+            {{ JSON.parse(currentConfig.mcParamsJson).text_seed }}
           </a-descriptions-item>
           <a-descriptions-item label="top_P">
-            {{ currentConfig.topP }}
+            {{ JSON.parse(currentConfig.mcParamsJson).params_infer_code?.top_P }}
           </a-descriptions-item>
           <a-descriptions-item label="top_K">
-            {{ currentConfig.topK }}
+            {{ JSON.parse(currentConfig.mcParamsJson).params_infer_code?.top_K }}
           </a-descriptions-item>
           <a-descriptions-item label="temperature">
-            {{ currentConfig.temperature }}
+            {{ JSON.parse(currentConfig.mcParamsJson).params_infer_code?.temperature }}
           </a-descriptions-item>
           <a-descriptions-item label="refine_flag">
-            {{ currentConfig.refineTextFlag }}
+            {{ !JSON.parse(currentConfig.mcParamsJson).skip_refine_text }}
           </a-descriptions-item>
-          <a-descriptions-item label="refine_params">
-            {{ currentConfig.refineTextParams }}
+          <a-descriptions-item label="params_refine_text">
+            {{ JSON.parse(currentConfig.mcParamsJson).params_refine_text?.prompt }}
           </a-descriptions-item>
         </a-descriptions>
       </div>
@@ -181,84 +204,34 @@ watch(
       <div style="display: flex; align-items: center; padding: 0 5px 5px 0">
         <div style="margin-left: 20px; width: 100%">
           <div style="display: flex;justify-content: space-between; align-items: center">
-            <a-space size="small">
+            <a-space size="medium">
               <div>
-                <span>{{ currentConfig.configName }}</span>
+                <span>{{ currentConfig.mcName }}</span>
               </div>
-              <div
-                  v-if="currentConfig.url"
-              >
+              <div>
                 <a-button
-                    v-if="activeAudioKey === currentConfig.configName"
-                    size="mini"
+                    v-if="activeAudioKey === currentConfig.mcName"
                     type="outline"
                     status="danger"
+                    size="mini"
                     @click="stopAudio"
                 >
-                  <icon-mute/>
+                  <icon-mute-fill/>
                 </a-button>
                 <a-button
                     v-else
-                    size="mini"
                     type="outline"
-                    style="text-align: right; margin-left: 5px"
-                    @click.stop="playAudio(currentConfig.configName, currentConfig.url)"
+                    size="mini"
+                    :disabled="createAudioKey === currentConfig.mcName && loading"
+                    @click="playAudio(currentConfig)"
                 >
-                  <icon-play-arrow/>
+                  <icon-refresh
+                      v-if="createAudioKey === currentConfig.mcName && loading"
+                      :spin="createAudioKey === currentConfig.mcName && loading"
+                  />
+                  <icon-play-arrow v-else/>
                 </a-button>
               </div>
-              <a-dropdown
-                  position="br"
-                  popup-container="select-view"
-              >
-                <a-button
-                    v-if="currentConfig.url"
-                    size="mini" type="outline"
-                >
-                  更多音频
-                  <icon-down/>
-                </a-button>
-                <template #content>
-                  <a-doption>
-                    <div
-                        style="
-                                        width: 500px;
-                                        display: flex;
-                                        justify-content: space-between;
-                                        align-items: center"
-                    >
-                      <div style="width: 90%">
-                        <div>
-                          <a-typography-paragraph style="margin: 0">
-                            {{ currentConfig.text }}
-                          </a-typography-paragraph>
-                        </div>
-                      </div>
-                      <div style="width: 10%">
-                        <a-button
-                            v-if="activeAudioKey === currentConfig.configName"
-                            size="mini"
-                            type="outline"
-                            status="danger"
-                            style="text-align: right; margin-left: 5px"
-                            @click.stop="stopAudio"
-                        >
-                          <icon-mute/>
-                        </a-button>
-                        <a-button
-                            v-else
-                            size="mini"
-                            type="outline"
-                            style="text-align: right; margin-left: 5px"
-                            @click.stop="playAudio(currentConfig.configName, currentConfig.url)"
-                        >
-                          <icon-play-arrow/>
-                        </a-button>
-                      </div>
-                    </div>
-                  </a-doption>
-                </template>
-              </a-dropdown>
             </a-space>
             <div>
               <a-button size="mini" type="primary" @click="modelSelect">使用</a-button>

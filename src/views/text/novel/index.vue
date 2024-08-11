@@ -3,6 +3,7 @@ import {ref} from "vue";
 import ChapterTitle from "@/views/text/novel/chapter-title/index.vue";
 import ChapterContent from "@/views/text/novel/chapter-content/index.vue";
 import {useRoute} from "vue-router";
+import {TextProjectType} from "@/types/global.ts";
 
 const route = useRoute();
 
@@ -16,12 +17,12 @@ const toggleCollapse = (value: boolean) => {
 <template>
   <div style="display: flex; padding: 20px">
     <div
-        v-show="route.query.projectType as string === 'long_text'"
+        v-show="route.query.projectType as string === TextProjectType.long_text"
         :style="!collapsed && {width: '240px'}"
     >
       <chapter-title @toggle-collapse="toggleCollapse"/>
     </div>
-    <a-divider direction="vertical" style="margin: 0"/>
+    <a-divider v-if="route.query.projectType as string === TextProjectType.long_text" direction="vertical" style="margin: 0"/>
     <div style="flex: 1">
       <chapter-content/>
     </div>

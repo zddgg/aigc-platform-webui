@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import {useRoute} from "vue-router";
 import {inject, onBeforeUnmount, onMounted, ref, watch} from "vue";
-import {roles as queryRoles, saveToCommonRole, TextRole, updateRole,} from "@/api/text-chapter.ts";
+import {roles as queryRoles, saveToCommonRole, TextRole, updateRoleModel,} from "@/api/text-chapter.ts";
 import {Message, Modal} from "@arco-design/web-vue";
 import AudioSelect from '@/views/audio-select/index.vue'
-import RoleRename from "./RoleRename.vue";
 import RoleDelete from "./RoleDelete.vue";
 import {EventBus} from "@/vite-env";
 import {COMMON_ROLE_CHANGE, ROLE_CHANGE} from "@/types/event-types.ts";
-import {AudioModelConfig} from "@/api/model.ts";
+import {AudioModelInfo} from "@/api/model.ts";
 import {voiceNameFormat} from "@/utils/model-util.ts";
+import RoleEdit from "@/views/text/novel/chapter-content/components/RoleEdit.vue";
+import {COSY_VOICE} from "@/types/model-types.ts";
 
 const route = useRoute();
 
@@ -42,21 +43,12 @@ const roleSelectModel = (role: TextRole) => {
   modelSelectVisible.value = true
 }
 
-const modelSelect = async (modelConfig: AudioModelConfig) => {
-
-  roles.value = roles.value.map(item => {
-    if (item.role === currentRole.value.role) {
-      return {
-        ...item,
-        ...modelConfig,
-      }
-    }
-    return item;
-  })
-
-  const {msg} = await updateRole({
-    ...currentRole.value,
+const modelSelect = async (modelConfig: AudioModelInfo) => {
+  const {msg} = await updateRoleModel({
+    projectId: currentRole.value.projectId,
+    chapterId: currentRole.value.chapterId,
     ...modelConfig,
+    ids: [currentRole.value.id]
   })
   Message.success(msg);
   eventBus?.emit(ROLE_CHANGE);
@@ -83,7 +75,7 @@ const onSaveToCommonRole = async (role: TextRole) => {
       async onOk() {
         const {msg} = await saveToCommonRole({
           ...role,
-          cover: true
+          coverCommonRole: true
         });
         Message.success(msg);
         eventBus?.emit(COMMON_ROLE_CHANGE);
@@ -157,75 +149,104 @@ watch(
                 size="medium"
             >
               <a-descriptions-item label="类型">
-                {{ item.audioModelType }}
+                {{ item.amType }}
               </a-descriptions-item>
               <a-descriptions-item
-                  v-if="['gpt-sovits'].includes(item.audioModelType)"
+                  v-if="['gpt-sovits'].includes(item.amType)"
                   label="模型"
               >
                 <a-typography-text ellipsis>
-                  {{ `${item.gptSovitsModel?.modelGroup}/${item.gptSovitsModel?.modelName}` }}
+                  {{ `${item.amMfGroup}/${item.amMfRole}` }}
                 </a-typography-text>
               </a-descriptions-item>
               <a-descriptions-item
-                  v-if="['gpt-sovits'].includes(item.audioModelType)"
+                  v-if="['gpt-sovits'].includes(item.amType)"
                   label="配置"
               >
                 <a-typography-text ellipsis>
                   {{
-                    item.audioConfigId === '-1'
+                    item.amMcId === '-1' || !item.amMcName
                         ? '空'
-                        : `${item.gptSovitsConfig?.configName}`
+                        : `${item.amMcName}`
                   }}
                 </a-typography-text>
               </a-descriptions-item>
               <a-descriptions-item
-                  v-if="['gpt-sovits'].includes(item.audioModelType)"
+                  v-if="['gpt-sovits'].includes(item.amType)"
                   label="音频"
               >
                 <a-typography-text ellipsis>
                   {{
-                    `${item.refAudio?.audioGroup}/${item.refAudio?.audioName}/${item.refAudio?.moodName}/${item.refAudio?.moodAudioName}`
+                    `${item.amPaGroup}/${item.amPaRole}/${item.amPaMood}/${item.amPaAudio}`
                   }}
                 </a-typography-text>
               </a-descriptions-item>
 
               <a-descriptions-item
-                  v-if="['fish-speech'].includes(item.audioModelType)"
+                  v-if="['fish-speech'].includes(item.amType)"
                   label="配置"
               >
                 <a-typography-text ellipsis>
                   {{
-                    item.audioConfigId === '-1'
+                    item.amMcId === '-1' || !item.amMcName
                         ? '空'
-                        : `${item.fishSpeechConfig?.configName}`
+                        : `${item.amMcName}`
                   }}
                 </a-typography-text>
               </a-descriptions-item>
               <a-descriptions-item
-                  v-if="['fish-speech'].includes(item.audioModelType)"
+                  v-if="['fish-speech'].includes(item.amType)"
                   label="音频"
               >
                 <a-typography-text ellipsis>
-                  {{ `${item.refAudio?.audioGroup}/${item.refAudio?.audioName}/${item.refAudio?.moodName}` }}
+                  {{
+                    `${item.amPaGroup}/${item.amPaRole}/${item.amPaMood}/${item.amPaAudio}`
+                  }}
                 </a-typography-text>
               </a-descriptions-item>
 
               <a-descriptions-item
-                  v-if="['chat-tts'].includes(item.audioModelType)"
+                  v-if="['chat-tts'].includes(item.amType)"
                   label="配置"
               >
                 <a-typography-text ellipsis>
-                  {{ item.chatTtsConfig?.configName }}
+                  {{ item.amMcName }}
                 </a-typography-text>
               </a-descriptions-item>
 
               <a-descriptions-item
-                  v-if="['edge-tts'].includes(item.audioModelType)"
+                  v-if="['edge-tts'].includes(item.amType)"
                   label="配置"
               >
                 <a-typography-text ellipsis>
-                  {{ voiceNameFormat(item.audioConfigId) }}
+                  {{ voiceNameFormat(item.amMcName) }}
+                </a-typography-text>
+              </a-descriptions-item>
+
+              <a-descriptions-item
+                  v-if="[COSY_VOICE].includes(item.amType) && JSON.parse(item.amMcParamsJson)?.mode !== 'custom'"
+                  label="角色"
+              >
+                <a-typography-text ellipsis>
+                  {{ JSON.parse(item.amMcParamsJson)?.role }}
+                </a-typography-text>
+              </a-descriptions-item>
+              <a-descriptions-item
+                  v-if="[COSY_VOICE].includes(item.amType) && JSON.parse(item.amMcParamsJson)?.mode === 'custom'"
+                  label="音频"
+              >
+                <a-typography-text ellipsis>
+                  {{
+                    `${item.amPaGroup}/${item.amPaRole}/${item.amPaMood}/${item.amPaAudio}`
+                  }}
+                </a-typography-text>
+              </a-descriptions-item>
+              <a-descriptions-item
+                  v-if="[COSY_VOICE].includes(item.amType) && JSON.parse(item.amMcParamsJson)?.mode === 'advanced'"
+                  label="提示"
+              >
+                <a-typography-text ellipsis>
+                  {{ JSON.parse(item.amMcParamsJson)?.instruct }}
                 </a-typography-text>
               </a-descriptions-item>
             </a-descriptions>
@@ -240,7 +261,7 @@ watch(
                     <icon-down/>
                   </template>
                   <template #content>
-                    <a-doption @click="onRoleRename(item)">角色改名</a-doption>
+                    <a-doption @click="onRoleRename(item)">角色修改</a-doption>
                     <a-doption @click="onDeleteRole(item)">删除角色</a-doption>
                     <a-doption @click="onSaveToCommonRole(item)">保存预置</a-doption>
                   </template>
@@ -261,10 +282,10 @@ watch(
     </div>
     <audio-select
         v-model:visible="modelSelectVisible"
-        :audio-model-config="currentRole"
+        :audio-model-info="currentRole"
         @model-select="modelSelect"
     />
-    <role-rename
+    <role-edit
         v-model:visible="roleRenameModalVisible"
         :role="currentRole"
         :role-type="'role'"

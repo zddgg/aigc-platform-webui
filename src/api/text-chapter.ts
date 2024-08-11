@@ -1,7 +1,12 @@
 import axios from '@/axios/default-axios.ts';
-import {AudioModelConfig} from "@/api/model.ts";
+import {AudioModelInfo, AudioModelInfoKey, AudioRoleInfo} from "@/api/model.ts";
 import {FetchStream, IFetchStreamOptions} from "@/api/stream.ts";
 import {Pagination, PaginationResp} from "@/types/global.ts";
+import customAxios from "@/axios/custom-axios.ts";
+
+export interface TextContentConfig {
+  edit: boolean;
+}
 
 export interface TextChapter {
   id: number;
@@ -14,7 +19,7 @@ export interface TextChapter {
   sortOrder: number;
   textNum: number;
   roleNum: number;
-  stage: string;
+  audioTaskState: number;
 }
 
 export interface TextChapterPage extends Pagination {
@@ -33,47 +38,46 @@ export function deleteChapter(params: TextChapter) {
   return axios.post('/api/textChapter/deleteChapter', params);
 }
 
-export function getTextChapter(params: { projectId: string, chapterId: string }) {
+export function getTextChapter(params: ChapterParam) {
   return axios.post<TextChapter>('/api/textChapter/getTextChapter', params);
 }
 
-export interface TextRole extends AudioModelConfig {
+export interface TextRole extends AudioRoleInfo, AudioModelInfo {
+  id: number;
   projectId: string;
   chapterId?: string;
-  role: string;
-  gender: string;
-  ageGroup: string;
   roleCount: number;
-  cover: boolean;
+  coverCommonRole: boolean;
 }
 
-export interface PhoneticAnno {
-  type: string;
+export interface PolyphonicInfo {
   index: number,
-  pinyin: string
+  markup: string
 }
 
-export interface ChapterInfo extends TextRole {
+export interface TextMarkupInfo {
+  polyphonicInfos: PolyphonicInfo[]
+}
+
+export interface ChapterInfo extends AudioRoleInfo {
   id: number;
   index: string;
   projectId: string;
   chapterId: string;
-  paragraphIndex: number;
-  sentenceIndex: number;
+  paraIndex: number;
+  sentIndex: number;
+  textId: string;
   text: string;
   textLang: string;
+  textSort: number;
   dialogueFlag: boolean;
   audioVolume: number;
   audioSpeed: number;
-  nextAudioInterval: number;
-  audioState: number;
+  audioInterval: number;
   audioLength: number;
-  audioExportFlag: boolean;
-  sortOrder: number;
-  phoneticInfo: string;
-  audioInstruct: string;
-
-  audioUrl: string;
+  audioTaskState: number;
+  audioFiles: string;
+  textMarkupInfo: TextMarkupInfo;
 }
 
 export function tmpDialogueParse(params: TextChapter) {
@@ -103,12 +107,12 @@ export function roles(params: { projectId: string, chapterId: string }) {
   return axios.post<TextRole[]>('/api/textChapter/roles', params);
 }
 
-export function updateRoleName(params: TextRole) {
-  return axios.post('/api/textChapter/updateRoleName', params);
-}
-
 export function updateRole(params: TextRole) {
   return axios.post('/api/textChapter/updateRole', params);
+}
+
+export function updateRoleModel(params: UpdateModelInfo) {
+  return axios.post('/api/textChapter/updateRoleModel', params);
 }
 
 export function roleCombine(params: {
@@ -123,7 +127,7 @@ export function roleCombine(params: {
 export function textRoleChange(params: {
   projectId: string,
   chapterId: string,
-  chapterInfoId: number;
+  chapterInfoIds: number[];
   formRoleName: string;
   fromRoleType: string;
   changeModel: boolean;
@@ -143,7 +147,7 @@ export function createCommonRole(params: TextRole) {
   return axios.post('/api/textChapter/createCommonRole', params);
 }
 
-export function updateCommonRole(params: TextRole) {
+export function updateCommonRole(params: UpdateModelInfo) {
   return axios.post('/api/textChapter/updateCommonRole', params);
 }
 
@@ -184,7 +188,16 @@ export function loadRoleInference(params: { projectId: string, chapterId: string
   return axios.post('/api/textChapter/loadRoleInference', params);
 }
 
-export function audioModelChange(params: ChapterInfo) {
+export interface ChapterParam {
+  projectId?: string;
+  chapterId?: string;
+}
+
+export interface UpdateModelInfo extends ChapterParam, AudioModelInfoKey {
+  ids?: number[]
+}
+
+export function audioModelChange(params: UpdateModelInfo) {
   return axios.post('/api/textChapter/audioModelChange', params);
 }
 
@@ -203,6 +216,7 @@ export function updateInterval(params: ChapterInfo) {
 export function updateControls(params: {
   projectId: string,
   chapterId: string,
+  chapterInfoIds: number[],
   enableVolume: boolean,
   volume: number,
   enableSpeed: boolean,
@@ -236,7 +250,7 @@ export function stopCreateAudio() {
 export function chapterExpose(params: {
   projectId: string,
   chapterId: string,
-  indexes: string[],
+  chapterInfoIds: number[],
   combineAudio: boolean;
   subtitle: boolean;
 }) {
@@ -255,10 +269,32 @@ export function chapterInfoSort(params: ChapterInfo[]) {
   return axios.post('/api/textChapter/chapterInfoSort', params);
 }
 
-export function addPhoneticAnno(params: PhoneticAnno & {chapterInfoId: number}) {
-  return axios.post('/api/textChapter/addPhoneticAnno', params);
+export function addPolyphonicInfo(params: PolyphonicInfo & { chapterInfoId: number }) {
+  return axios.post('/api/textChapter/addPolyphonicInfo', params);
 }
 
-export function removePhoneticAnno(params: PhoneticAnno & {chapterInfoId: number}) {
-  return axios.post('/api/textChapter/removePhoneticAnno', params);
+export function removePolyphonicInfo(params: PolyphonicInfo & { chapterInfoId: number }) {
+  return axios.post('/api/textChapter/removePolyphonicInfo', params);
+}
+
+export function playAudio(params: ChapterInfo) {
+  return customAxios.post('/api/textChapter/playAudio', params, {responseType: 'blob'});
+}
+
+export function chapterCondition(params: ChapterParam) {
+  return axios.post<ChapterInfo[]>('/api/textChapter/chapterCondition', params);
+}
+
+export function getChapterAudio(params: ChapterParam) {
+  return customAxios.post('/api/textChapter/getChapterAudio', params, {responseType: 'blob'});
+}
+
+export interface Subtitle {
+  startTime: number;
+  endTime: number;
+  text: string;
+}
+
+export function getChapterSubtitle(params: ChapterParam) {
+  return axios.post<Subtitle[]>('/api/textChapter/getChapterSubtitle', params);
 }

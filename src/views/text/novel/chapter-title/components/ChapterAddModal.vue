@@ -275,7 +275,7 @@ watch(
               </div>
               <div v-if="showSortTable">
                 <n-scrollbar style="height: 600px; padding-right: 10px">
-                  <vue-draggable v-model="textChapters" target="tbody" :on-change="() => (sortChanged = true)">
+                  <vue-draggable v-model="textChapters" target="tbody" :animation="150" :on-update="() => (sortChanged = true)">
                     <a-table
                         :data="textChapters"
                         :loading="chapterSortLoading.loading.value"

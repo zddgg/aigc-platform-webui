@@ -1,19 +1,32 @@
 <script setup lang="ts">
 import {onMounted, ref} from "vue";
-import {configs as queryConfigs, deleteConfig, GptSovitsConfig} from "@/api/gpt-sovits.ts";
 import {Message} from "@arco-design/web-vue";
+import {
+  AmModelConfig,
+  getByModelType as queryModelConfigs,
+  deleteConfig,
+  playOrCreateAudio
+} from "@/api/am-model-config.ts";
+import {GPT_SOVITS} from "@/types/model-types.ts";
+import useLoading from "@/hooks/loading.ts";
 
-const configs = ref<GptSovitsConfig[]>([])
+const {loading, setLoading} = useLoading();
 
-const handleQueryConfigs = async () => {
-  const {data} = await queryConfigs()
-  configs.value = data;
+const audioElement = ref<HTMLAudioElement | null>(null); // ref 对象引用到 audio 元素
+
+const modelConfigs = ref<AmModelConfig[]>([])
+const activeAudioKey = ref<string>('')
+const createAudioKey = ref('')
+
+const handleQueryModelConfigs = async () => {
+  const {data} = await queryModelConfigs({modelType: GPT_SOVITS})
+  modelConfigs.value = data;
 }
 
-const handleDeleteConfig = async (config: GptSovitsConfig) => {
+const handleDeleteConfig = async (config: AmModelConfig) => {
   const {msg} = await deleteConfig(config)
   Message.success(msg)
-  await handleQueryConfigs();
+  await handleQueryModelConfigs();
 }
 
 const emits = defineEmits(['configEdit'])
@@ -21,93 +34,125 @@ const configEdit = (id: number | undefined) => {
   emits('configEdit', id)
 }
 
+const playAudio = async (modelConfig: AmModelConfig) => {
+  try {
+    createAudioKey.value = modelConfig.mcName;
+    setLoading(true);
+    const response = await playOrCreateAudio({mcId: modelConfig.mcId});
+    const url = URL.createObjectURL(response.data);
+
+    activeAudioKey.value = modelConfig.mcName;
+
+    if (audioElement.value) {
+      // 设置音频源
+      audioElement.value.src = url;
+
+      // 播放音频
+      audioElement.value.play();
+    }
+  } catch (e) {
+    activeAudioKey.value = '';
+  } finally {
+    createAudioKey.value = '';
+    setLoading(false);
+  }
+}
+
+const stopAudio = () => {
+  if (audioElement.value) {
+    // 停止音频播放
+    audioElement.value.pause();
+    audioElement.value.currentTime = 0; // 将播放进度设置为音频开头
+  }
+  activeAudioKey.value = '';
+};
+
+const handleAudioEnded = () => {
+  activeAudioKey.value = '';
+};
+
 onMounted(() => {
-  handleQueryConfigs();
+  handleQueryModelConfigs();
 })
 </script>
 
 <template>
   <div>
-    <a-empty v-if="!configs || !configs.length"/>
+    <a-empty v-if="!modelConfigs || !modelConfigs.length"/>
     <a-space v-else wrap size="medium">
       <a-card
-          v-for="(item, index) in configs"
+          v-for="(item, index) in modelConfigs"
           :key="index"
           hoverable
           style="width: 360px"
       >
         <a-descriptions
-            :title="item.configName"
+            :title="item.mcName"
             :column="2"
             bordered
             layout="inline-vertical"
         >
-          <a-descriptions-item label="top_K">
-            {{ item.topK }}
+          <a-descriptions-item label="top_k">
+            {{ JSON.parse(item.mcParamsJson).top_k }}
           </a-descriptions-item>
-          <a-descriptions-item label="top_P">
-            {{ item.topP }}
+          <a-descriptions-item label="top_p">
+            {{ JSON.parse(item.mcParamsJson).top_p }}
           </a-descriptions-item>
           <a-descriptions-item label="temperature">
-            {{ item.temperature }}
-          </a-descriptions-item>
-          <a-descriptions-item label="repetitionPenalty">
-            {{ item.repetitionPenalty }}
-          </a-descriptions-item>
-          <a-descriptions-item label="batchSize">
-            {{ item.batchSize }}
-          </a-descriptions-item>
-          <a-descriptions-item label="parallelInfer">
-            {{ item.parallelInfer }}
-          </a-descriptions-item>
-          <a-descriptions-item label="splitBucket">
-            {{ item.splitBucket }}
-          </a-descriptions-item>
-          <a-descriptions-item label="seed">
-            {{ item.seed }}
-          </a-descriptions-item>
-          <a-descriptions-item label="textSplitMethod">
-            {{ item.textSplitMethod }}
-          </a-descriptions-item>
-          <a-descriptions-item label="fragmentInterval">
-            {{ item.fragmentInterval }}
-          </a-descriptions-item>
-          <a-descriptions-item label="speedFactor">
-            <div style="display: flex; justify-content: space-between">
-              <div>
-                <span>
-                  {{ item.speedFactor }}
-                </span>
-              </div>
-              <div>
-                <a-space>
-                  <a-button
-                      type="outline"
-                      size="mini"
-                      @click="configEdit(item.id)"
-                  >
-                    <icon-edit/>
-                  </a-button>
-                  <a-popconfirm
-                      type="error"
-                      content="确认删除？"
-                      @ok="handleDeleteConfig(item)"
-                  >
-                    <a-button
-                        type="outline"
-                        status="danger"
-                        size="mini"
-                    >
-                      <icon-delete/>
-                    </a-button>
-                  </a-popconfirm>
-                </a-space>
-              </div>
-            </div>
+            {{ JSON.parse(item.mcParamsJson).temperature }}
           </a-descriptions-item>
         </a-descriptions>
+        <div style="text-align: right; margin-top: 10px">
+          <a-space>
+            <div>
+              <a-button
+                  v-if="activeAudioKey === item.mcName"
+                  type="outline"
+                  status="danger"
+                  size="mini"
+                  @click="stopAudio"
+              >
+                <icon-mute-fill/>
+              </a-button>
+              <a-button
+                  v-else
+                  type="outline"
+                  size="mini"
+                  :disabled="createAudioKey === item.mcName && loading"
+                  @click="playAudio(item)"
+              >
+                <icon-refresh
+                    v-if="createAudioKey === item.mcName && loading"
+                    :spin="createAudioKey === item.mcName && loading"
+                />
+                <icon-play-arrow v-else/>
+              </a-button>
+            </div>
+            <a-button
+                type="outline"
+                size="mini"
+                @click="configEdit(item.id)"
+            >
+              <icon-edit/>
+            </a-button>
+            <a-popconfirm
+                type="error"
+                content="确认删除？"
+                @ok="handleDeleteConfig(item)"
+            >
+              <a-button
+                  type="outline"
+                  status="danger"
+                  size="mini"
+              >
+                <icon-delete/>
+              </a-button>
+            </a-popconfirm>
+          </a-space>
+        </div>
       </a-card>
     </a-space>
+    <audio ref="audioElement" @ended="handleAudioEnded"></audio>
   </div>
 </template>
 

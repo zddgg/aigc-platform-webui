@@ -1,21 +1,24 @@
 <script setup lang="ts">
 import {onMounted, ref} from "vue";
 import {useRouter} from "vue-router";
-import ProjectCreate from './components/ProjectCreate.vue'
 import {Message, Modal} from "@arco-design/web-vue";
 import useLoading from "@/hooks/loading.ts";
-import {deleteProject, list as queryTextProjectList, TextProject} from "@/api/text-project.ts";
+import {deleteProject, projectList, TextProject} from "@/api/text-project.ts";
+import ChapterText from "@/views/text/components/ChapterText.vue";
+import FormatText from "@/views/text/components/FormatText.vue";
+import {TextProjectType} from "@/types/global.ts";
 
 const router = useRouter();
 const {loading, setLoading} = useLoading();
 
-const projectCreateVisible = ref<boolean>(false);
-const projectType = ref<string>('long_text');
+const chapterTextVisible = ref<boolean>(false);
+const formatTextVisible = ref<boolean>(false);
+const projectType = ref<string>(TextProjectType.long_text);
 
 const textProjects = ref<TextProject[]>([])
 
 const handleProjectList = async () => {
-  const {data} = await queryTextProjectList()
+  const {data} = await projectList()
   textProjects.value = data;
 }
 
@@ -69,7 +72,7 @@ onMounted(() => {
             <a-card
                 style="width: 340px; height: 180px; display: flex; align-items: center"
                 :body-style="{width:'100%'}"
-                @click="() => (projectCreateVisible = true)"
+                @click="() => (chapterTextVisible = true)"
             >
               <div style=" text-align: center">
                 <div>
@@ -86,7 +89,7 @@ onMounted(() => {
               </div>
             </a-card>
             <a-card
-                v-for="(item, index) in textProjects.filter((item1) => item1.projectType === 'long_text')"
+                v-for="(item, index) in textProjects.filter((item1) => item1.projectType === TextProjectType.long_text)"
                 :key="index"
                 style="width: 350px"
             >
@@ -130,7 +133,7 @@ onMounted(() => {
             <a-card
                 style="width: 340px; height: 180px; display: flex; align-items: center"
                 :body-style="{width:'100%'}"
-                @click="() => (projectCreateVisible = true)"
+                @click="() => (chapterTextVisible = true)"
             >
               <div style=" text-align: center">
                 <div>
@@ -147,7 +150,7 @@ onMounted(() => {
               </div>
             </a-card>
             <a-card
-                v-for="(item, index) in textProjects.filter((item1) => item1.projectType === 'short_text')"
+                v-for="(item, index) in textProjects.filter((item1) => item1.projectType === TextProjectType.short_text)"
                 :key="index"
                 style="width: 350px"
             >
@@ -181,12 +184,81 @@ onMounted(() => {
           </a-space>
         </div>
       </a-tab-pane>
+      <a-tab-pane key="format_text">
+        <template #title>
+          <icon-list/>
+          格式化文本
+        </template>
+        <div>
+          <a-space wrap size="large" align="start">
+            <a-card
+                style="width: 340px; height: 180px; display: flex; align-items: center"
+                :body-style="{width:'100%'}"
+                @click="() => (formatTextVisible = true)"
+            >
+              <div style=" text-align: center">
+                <div>
+                  <icon-plus/>
+                </div>
+                <div>
+                  <div>
+                    <span>新建格式化文本项目</span>
+                  </div>
+                  <div>
+                    <span>（格式化文本）</span>
+                  </div>
+                </div>
+              </div>
+            </a-card>
+            <a-card
+                v-for="(item, index) in textProjects.filter((item1) => item1.projectType === TextProjectType.format_text)"
+                :key="index"
+                style="width: 350px"
+            >
+              <a-descriptions :title="item.projectName" :column="1" bordered>
+                <a-descriptions-item label="类型">
+                  {{ '格式化文本' }}
+                </a-descriptions-item>
+                <a-descriptions-item label="章节">
+                  {{ item.chapterCount }}
+                </a-descriptions-item>
+              </a-descriptions>
+              <div style="display: flex; justify-content: right; margin-top: 10px">
+                <a-space>
+                  <a-button
+                      type="outline"
+                      @click="textProjectRoute(item)"
+                  >
+                    进入空间
+                  </a-button>
+                  <a-button
+                      type="outline"
+                      status="danger"
+                      :loading="loading"
+                      @click="handleDeleteProject(item)"
+                  >
+                    删除
+                  </a-button>
+                </a-space>
+              </div>
+            </a-card>
+          </a-space>
+        </div>
+      </a-tab-pane>
     </a-tabs>
-    <project-create
-        v-model:visible="projectCreateVisible"
+    <chapter-text
+        v-model:visible="chapterTextVisible"
         :project-type="projectType"
         @close="() => handleProjectList()"
     />
+    <format-text
+        v-model:visible="formatTextVisible"
+        :project-type="projectType"
+        @close="() => handleProjectList()"
+    />
+    <a-modal>
+
+    </a-modal>
   </div>
 </template>
 

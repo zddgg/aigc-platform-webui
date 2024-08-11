@@ -7,7 +7,7 @@ import {EventBus} from "@/vite-env";
 import {deleteChapter, pageChapters, TextChapter, TextChapterPage} from "@/api/text-chapter.ts";
 import ChapterEditModal from "@/views/text/novel/chapter-title/components/ChapterEditModal.vue";
 import {Message, Modal} from "@arco-design/web-vue";
-import {Pagination} from "@/types/global.ts";
+import {AudioTaskState, Pagination} from "@/types/global.ts";
 import ChapterAddModal from "@/views/text/novel/chapter-title/components/ChapterAddModal.vue";
 
 const route = useRoute();
@@ -59,8 +59,8 @@ const chapterSelect = (textChapter: TextChapter, index: number) => {
     name: route.name as string,
     query: {
       ...route.query,
-      chapter: textChapter.chapterName,
       chapterId: textChapter.chapterId,
+      chapterName: textChapter.chapterName,
     }
   })
 }
@@ -114,8 +114,6 @@ const onNextPage = () => {
     pagination.current = Math.min(pagination.current, (pagination.pages ?? 0));
   }
 
-  console.log(pagination)
-
   fetchData(pagination)
 }
 
@@ -134,11 +132,16 @@ onBeforeUnmount(() => {
 onMounted(async () => {
   await fetchData(pagination);
   if (textChapters.value && textChapters.value.length > 0) {
+
+    const chapterId = route.query.chapterId as string
+    const chapterName = route.query.chapterName as string
+
     await router.push({
       name: route.name as string,
       query: {
         ...route.query,
-        chapterId: textChapters.value[0].chapterId,
+        chapterId: chapterId ?? textChapters.value[0].chapterId,
+        chapterName: chapterName ?? textChapters.value[0].chapterName,
       }
     })
   }
@@ -147,37 +150,35 @@ onMounted(async () => {
 
 <template>
   <div>
-    <a-affix>
-      <div class="text-space-header" style="border-bottom: 1px solid rgb(229,230,235)">
+    <div class="text-space-header" style="border-bottom: 1px solid rgb(229,230,235)">
+      <a-button
+          v-if="!collapsed"
+          type="outline"
+          size="small"
+          @click="() => (chapterSplitModalVisible = true)"
+      >
+        章节设置
+      </a-button>
+      <a-space size="medium" align="start">
         <a-button
-            v-if="!collapsed"
+            v-if="!collapsed && textChapters && textChapters.length !== 0"
             type="outline"
-            size="small"
-            @click="() => (chapterSplitModalVisible = true)"
+            size="mini"
+            @click="() => (chapterAddModalVisible = true)"
         >
-          章节设置
+          <icon-plus/>
         </a-button>
-        <a-space size="medium" align="start">
-          <a-button
-              v-if="!collapsed && textChapters && textChapters.length !== 0"
-              type="outline"
-              size="mini"
-              @click="() => (chapterAddModalVisible = true)"
-          >
-            <icon-plus/>
-          </a-button>
-          <a-button
-              v-if="textChapters && textChapters.length !== 0"
-              type="outline"
-              size="mini"
-              @click="toggleCollapse"
-          >
-            <icon-menu-unfold v-if="collapsed"/>
-            <icon-menu-fold v-else/>
-          </a-button>
-        </a-space>
-      </div>
-    </a-affix>
+        <a-button
+            v-if="textChapters && textChapters.length !== 0"
+            type="outline"
+            size="mini"
+            @click="toggleCollapse"
+        >
+          <icon-menu-unfold v-if="collapsed"/>
+          <icon-menu-fold v-else/>
+        </a-button>
+      </a-space>
+    </div>
     <div style="margin-top: 10px">
       <n-scrollbar style="height: calc(100vh - 130px); padding-right: 10px">
         <a-space direction="vertical" style="width: 100%">
@@ -223,9 +224,9 @@ onMounted(async () => {
               <div
                   style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; white-space: nowrap">
                 <div>
-                  <div v-if="item.stage" style="cursor: pointer">
+                  <div v-if="item.audioTaskState" style="cursor: pointer">
                     <a-tag
-                        v-if="item.stage === '合并完成'"
+                        v-if="item.audioTaskState === AudioTaskState.combined"
                         color="green"
                         size="small"
                     >
@@ -233,8 +234,8 @@ onMounted(async () => {
                         <icon-check-circle-fill/>
                       </template>
                       <span>
-                    {{ item.stage }}
-                </span>
+                        {{ '合并完成' }}
+                      </span>
                     </a-tag>
                     <a-tag
                         v-else
@@ -245,8 +246,8 @@ onMounted(async () => {
                         <icon-clock-circle/>
                       </template>
                       <span>
-                    {{ item.stage }}
-                  </span>
+                        {{ '处理中' }}
+                      </span>
                     </a-tag>
                   </div>
                 </div>

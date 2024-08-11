@@ -10,6 +10,7 @@ import {
   TextRole,
   textRoleChange
 } from "@/api/text-chapter.ts";
+import {COSY_VOICE} from "@/types/model-types.ts";
 
 const route = useRoute();
 const props = defineProps({
@@ -19,6 +20,13 @@ const props = defineProps({
   },
   chapterInfo: {
     type: Object as PropType<ChapterInfo>
+  },
+  chapterInfoIds: {
+    type: Array as PropType<Number[]>
+  },
+  editMode: {
+    type: String as PropType<'default' | 'batch'>,
+    default: ''
   }
 })
 
@@ -85,7 +93,7 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
       const {msg} = await textRoleChange({
         projectId: route.query.projectId as string,
         chapterId: route.query.chapterId as string,
-        chapterInfoId: props.chapterInfo?.id as number,
+        chapterInfoIds: props.editMode === 'batch' ? props.chapterInfoIds as number[] : [props.chapterInfo?.id as number],
         formRoleName: currentRole.value.role.replace('预置角色-', ''),
         fromRoleType: currentRole.value.role.startsWith('预置角色') ? 'commonRole' : 'role',
         changeModel: form.value.loadModel,
@@ -107,20 +115,12 @@ const close = () => {
 const currentRole = ref<TextRole>({} as TextRole)
 
 const onRoleChange = (value: any) => {
-
-  console.log(value)
-
   let find;
   if (value.startsWith('预置角色')) {
     find = commonRoles.value.find(item => `预置角色-${item.role}` === value)
-    console.log(find)
-
   } else {
     find = roles.value.find(item => item.role === value)
-    console.log(find)
-    console.log(11)
   }
-
 
   if (form.value.loadModel && find) {
     currentRole.value = {
@@ -185,7 +185,7 @@ watch(
   <div>
     <a-modal
         v-model:visible="showModal"
-        :title="props.chapterInfo?.role ?? '未命名'"
+        :title="props.editMode === 'batch' ? `批量变更角色(${props.chapterInfoIds?.length})` : props.chapterInfo?.role ?? '未命名'"
         :unmount-on-close="true"
         :width="760"
         @before-ok="handleBeforeOk"
@@ -242,7 +242,7 @@ watch(
         <a-divider/>
         <div>
           <a-row :gutter="24">
-            <a-col :span="12">
+            <a-col v-if="props.editMode === 'default'" :span="12">
               <a-descriptions
                   title="当前角色"
                   :column="1"
@@ -250,91 +250,122 @@ watch(
                   bordered
               >
                 <a-descriptions-item label="类型">
-                  {{ props.chapterInfo?.audioModelType }}
+                  {{ props.chapterInfo?.amType }}
                 </a-descriptions-item>
                 <a-descriptions-item
-                    v-if="['gpt-sovits'].includes(props.chapterInfo?.audioModelType as string)"
+                    v-if="['gpt-sovits'].includes(props.chapterInfo?.amType as string)"
                     label="模型"
                 >
                   <a-typography-text ellipsis>
                     {{
-                      `${props.chapterInfo?.gptSovitsModel?.modelGroup}/${props.chapterInfo?.gptSovitsModel?.modelName}`
+                      `${props.chapterInfo?.amMfGroup}/${props.chapterInfo?.amMfRole}`
                     }}
                   </a-typography-text>
                 </a-descriptions-item>
                 <a-descriptions-item
-                    v-if="['gpt-sovits'].includes(props.chapterInfo?.audioModelType as string)"
+                    v-if="['gpt-sovits'].includes(props.chapterInfo?.amType as string)"
                     label="配置"
                 >
                   <a-typography-text ellipsis>
                     {{
-                      props.chapterInfo?.audioConfigId === '-1'
+                      props.chapterInfo?.amMcId === '-1' || !props.chapterInfo?.amMcId
                           ? '空'
-                          : `${props.chapterInfo?.gptSovitsConfig?.configName}`
+                          : `${props.chapterInfo?.amMcName}`
                     }}
                   </a-typography-text>
                 </a-descriptions-item>
                 <a-descriptions-item
-                    v-if="['gpt-sovits'].includes(props.chapterInfo?.audioModelType as string)"
+                    v-if="['gpt-sovits'].includes(props.chapterInfo?.amType as string)"
                     label="音频"
                 >
                   <a-typography-text ellipsis>
                     {{
-                      `${props.chapterInfo?.refAudio?.audioGroup}/${props.chapterInfo?.refAudio?.audioName}/${props.chapterInfo?.refAudio?.moodName}/${props.chapterInfo?.refAudio?.moodAudioName}`
+                      `${props.chapterInfo?.amPaGroup}/${props.chapterInfo?.amPaRole}/${props.chapterInfo?.amPaMood}/${props.chapterInfo?.amPaAudio}`
                     }}
                   </a-typography-text>
                 </a-descriptions-item>
 
                 <a-descriptions-item
-                    v-if="['fish-speech'].includes(props.chapterInfo?.audioModelType as string)"
+                    v-if="['fish-speech'].includes(props.chapterInfo?.amType as string)"
                     label="模型"
                 >
                   <a-typography-text ellipsis>
                     {{
-                      `${props.chapterInfo?.fishSpeechModel?.modelGroup}/${props.chapterInfo?.fishSpeechModel?.modelName}`
+                      `${props.chapterInfo?.amMfGroup}/${props.chapterInfo?.amMfRole}`
                     }}
                   </a-typography-text>
                 </a-descriptions-item>
                 <a-descriptions-item
-                    v-if="['fish-speech'].includes(props.chapterInfo?.audioModelType as string)"
+                    v-if="['fish-speech'].includes(props.chapterInfo?.amType as string)"
                     label="配置"
                 >
                   <a-typography-text ellipsis>
-                    {{ `${props.chapterInfo?.fishSpeechConfig?.configName}` }}
+                    {{
+                      props.chapterInfo?.amMcId === '-1' || !props.chapterInfo?.amMcId
+                          ? '空'
+                          : `${props.chapterInfo?.amMcName}`
+                    }}
                   </a-typography-text>
                 </a-descriptions-item>
                 <a-descriptions-item
-                    v-if="['fish-speech'].includes(props.chapterInfo?.audioModelType as string)"
+                    v-if="['fish-speech'].includes(props.chapterInfo?.amType as string)"
                     label="音频"
                 >
                   <a-typography-text ellipsis>
                     {{
-                      `${props.chapterInfo?.refAudio?.audioGroup}/${props.chapterInfo?.refAudio?.audioName}/${props.chapterInfo?.refAudio?.moodName}`
+                      `${props.chapterInfo?.amPaGroup}/${props.chapterInfo?.amPaRole}/${props.chapterInfo?.amPaMood}/${props.chapterInfo?.amPaAudio}`
                     }}
                   </a-typography-text>
                 </a-descriptions-item>
 
                 <a-descriptions-item
-                    v-if="['chat-tts'].includes(props.chapterInfo?.audioModelType as string)"
+                    v-if="['chat-tts'].includes(props.chapterInfo?.amType as string)"
                     label="配置"
                 >
                   <a-typography-text ellipsis>
-                    {{ props.chapterInfo?.chatTtsConfig?.configName }}
+                    {{ props.chapterInfo?.amMcName }}
                   </a-typography-text>
                 </a-descriptions-item>
 
                 <a-descriptions-item
-                    v-if="['edge-tts'].includes(props.chapterInfo?.audioModelType as string)"
+                    v-if="['edge-tts'].includes(props.chapterInfo?.amType as string)"
                     label="配置"
                 >
                   <a-typography-text ellipsis>
-                    {{ voiceNameFormat(props.chapterInfo?.audioConfigId as string) }}
+                    {{ voiceNameFormat(props.chapterInfo?.amMcName as string) }}
+                  </a-typography-text>
+                </a-descriptions-item>
+
+                <a-descriptions-item
+                    v-if="[COSY_VOICE].includes(props.chapterInfo?.amType as string) && JSON.parse(props.chapterInfo?.amMcParamsJson ?? '{}')?.mode !== 'custom'"
+                    label="角色"
+                >
+                  <a-typography-text ellipsis>
+                    {{ JSON.parse(props.chapterInfo?.amMcParamsJson ?? '{}')?.role }}
+                  </a-typography-text>
+                </a-descriptions-item>
+                <a-descriptions-item
+                    v-if="[COSY_VOICE].includes(props.chapterInfo?.amType as string) && JSON.parse(props.chapterInfo?.amMcParamsJson ?? '{}')?.mode === 'custom'"
+                    label="音频"
+                >
+                  <a-typography-text ellipsis>
+                    {{
+                      `${props.chapterInfo?.amPaGroup}/${props.chapterInfo?.amPaRole}/${props.chapterInfo?.amPaMood}/${props.chapterInfo?.amPaAudio}`
+                    }}
+                  </a-typography-text>
+                </a-descriptions-item>
+                <a-descriptions-item
+                    v-if="[COSY_VOICE].includes(props.chapterInfo?.amType as string) && JSON.parse(props.chapterInfo?.amMcParamsJson ?? '{}')?.mode === 'advanced'"
+                    label="提示"
+                >
+                  <a-typography-text ellipsis>
+                    {{ JSON.parse(props.chapterInfo?.amMcParamsJson ?? '{}')?.instruct }}
                   </a-typography-text>
                 </a-descriptions-item>
               </a-descriptions>
             </a-col>
             <a-col :span="12">
-              <div v-if="currentRole?.audioModelType">
+              <div v-if="currentRole?.amType">
                 <a-descriptions
                     title="变更后角色"
                     :column="1"
@@ -342,85 +373,112 @@ watch(
                     bordered
                 >
                   <a-descriptions-item label="类型">
-                    {{ currentRole?.audioModelType }}
+                    {{ currentRole?.amType }}
                   </a-descriptions-item>
                   <a-descriptions-item
-                      v-if="['gpt-sovits'].includes(currentRole?.audioModelType)"
+                      v-if="['gpt-sovits'].includes(currentRole?.amType)"
                       label="模型"
                   >
                     <a-typography-text ellipsis>
-                      {{ `${currentRole?.gptSovitsModel?.modelGroup}/${currentRole?.gptSovitsModel?.modelName}` }}
+                      {{ `${currentRole?.amMfGroup}/${currentRole?.amMfRole}` }}
                     </a-typography-text>
                   </a-descriptions-item>
                   <a-descriptions-item
-                      v-if="['gpt-sovits'].includes(currentRole?.audioModelType)"
+                      v-if="['gpt-sovits'].includes(currentRole?.amType)"
                       label="配置"
                   >
                     <a-typography-text ellipsis>
                       {{
-                        currentRole?.audioConfigId === '-1'
+                        currentRole?.amMcId === '-1' || !currentRole.amMcName
                             ? '空'
-                            : `${currentRole.gptSovitsConfig?.configName}`
+                            : `${currentRole.amMcName}`
                       }}
                     </a-typography-text>
                   </a-descriptions-item>
                   <a-descriptions-item
-                      v-if="['gpt-sovits'].includes(currentRole?.audioModelType)"
+                      v-if="['gpt-sovits'].includes(currentRole?.amType)"
                       label="音频"
                   >
                     <a-typography-text ellipsis>
                       {{
-                        `${currentRole?.refAudio?.audioGroup}/${currentRole?.refAudio?.audioName}/${currentRole?.refAudio?.moodName}/${currentRole?.refAudio?.moodAudioName}`
+                        `${currentRole?.amPaGroup}/${currentRole?.amPaRole}/${currentRole?.amPaMood}/${currentRole?.amPaAudio}`
                       }}
                     </a-typography-text>
                   </a-descriptions-item>
 
                   <a-descriptions-item
-                      v-if="['fish-speech'].includes(currentRole?.audioModelType)"
+                      v-if="['fish-speech'].includes(currentRole?.amType)"
                       label="模型"
                   >
                     <a-typography-text ellipsis>
-                      {{ `${currentRole?.fishSpeechModel?.modelGroup}/${currentRole?.fishSpeechModel?.modelName}` }}
+                      {{ `${currentRole?.amMfGroup}/${currentRole?.amMfRole}` }}
                     </a-typography-text>
                   </a-descriptions-item>
                   <a-descriptions-item
-                      v-if="['fish-speech'].includes(currentRole?.audioModelType)"
+                      v-if="['fish-speech'].includes(currentRole?.amType)"
                       label="配置"
                   >
                     <a-typography-text ellipsis>
                       {{
-                        currentRole?.audioConfigId === '-1'
+                        currentRole?.amMcId === '-1' || !currentRole.amMcName
                             ? '空'
-                            : `${currentRole.fishSpeechConfig?.configName}`
+                            : `${currentRole.amMcName}`
                       }}
                     </a-typography-text>
                   </a-descriptions-item>
                   <a-descriptions-item
-                      v-if="['fish-speech'].includes(currentRole?.audioModelType)"
+                      v-if="['fish-speech'].includes(currentRole?.amType)"
                       label="音频"
                   >
                     <a-typography-text ellipsis>
                       {{
-                        `${currentRole?.refAudio?.audioGroup}/${currentRole?.refAudio?.audioName}/${currentRole?.refAudio?.moodName}`
+                        `${currentRole?.amPaGroup}/${currentRole?.amPaRole}/${currentRole?.amPaMood}/${currentRole?.amPaAudio}`
                       }}
                     </a-typography-text>
                   </a-descriptions-item>
 
                   <a-descriptions-item
-                      v-if="['chat-tts'].includes(currentRole?.audioModelType)"
+                      v-if="['chat-tts'].includes(currentRole?.amType)"
                       label="配置"
                   >
                     <a-typography-text ellipsis>
-                      {{ currentRole?.chatTtsConfig?.configName }}
+                      {{ currentRole?.amMcName }}
                     </a-typography-text>
                   </a-descriptions-item>
 
                   <a-descriptions-item
-                      v-if="['edge-tts'].includes(currentRole?.audioModelType)"
+                      v-if="['edge-tts'].includes(currentRole?.amType)"
                       label="配置"
                   >
                     <a-typography-text ellipsis>
-                      {{ voiceNameFormat(currentRole?.audioConfigId) }}
+                      {{ voiceNameFormat(currentRole?.amMcName) }}
+                    </a-typography-text>
+                  </a-descriptions-item>
+
+                  <a-descriptions-item
+                      v-if="[COSY_VOICE].includes(currentRole?.amType) && JSON.parse(currentRole?.amMcParamsJson ?? '{}')?.mode !== 'custom'"
+                      label="角色"
+                  >
+                    <a-typography-text ellipsis>
+                      {{ JSON.parse(currentRole?.amMcParamsJson ?? '{}')?.role }}
+                    </a-typography-text>
+                  </a-descriptions-item>
+                  <a-descriptions-item
+                      v-if="[COSY_VOICE].includes(currentRole?.amType) && JSON.parse(currentRole?.amMcParamsJson ?? '{}')?.mode === 'custom'"
+                      label="音频"
+                  >
+                    <a-typography-text ellipsis>
+                      {{
+                        `${currentRole?.amPaGroup}/${currentRole?.amPaRole}/${currentRole?.amPaMood}/${currentRole?.amPaAudio}`
+                      }}
+                    </a-typography-text>
+                  </a-descriptions-item>
+                  <a-descriptions-item
+                      v-if="[COSY_VOICE].includes(currentRole?.amType) && JSON.parse(currentRole?.amMcParamsJson ?? '{}')?.mode === 'advanced'"
+                      label="提示"
+                  >
+                    <a-typography-text ellipsis>
+                      {{ JSON.parse(currentRole?.amMcParamsJson ?? '{}')?.instruct }}
                     </a-typography-text>
                   </a-descriptions-item>
                 </a-descriptions>

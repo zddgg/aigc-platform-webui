@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import layout from '@/layout/index.vue'
 
-import {NConfigProvider, GlobalThemeOverrides} from 'naive-ui'
+import {GlobalThemeOverrides, NConfigProvider} from 'naive-ui'
 
 const themeOverrides: GlobalThemeOverrides = {
   common: {},
+  Slider: {
+    fillColor: '#165DFF',
+    fillColorHover: '#165DFF',
+  }
 }
 </script>
 

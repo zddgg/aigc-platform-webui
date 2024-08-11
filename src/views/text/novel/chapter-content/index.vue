@@ -2,9 +2,7 @@
 import {inject, onMounted, onUnmounted, provide, ref, watch} from "vue";
 import {useRoute} from "vue-router";
 import useLoading from "@/hooks/loading.ts";
-import {TextContentConfig} from "./useChapterContent.ts";
 import TableContent from "./components/TableContent.vue";
-import BatchChangeModal from "./components/BatchChangeModal.vue";
 import CommonRole from "./components/CommonRole.vue";
 import TextRole from "./components/TextRole.vue";
 import {Message, Modal} from "@arco-design/web-vue";
@@ -13,11 +11,17 @@ import {ROLE_CHANGE} from "@/types/event-types.ts";
 import {EventBus} from "@/vite-env";
 import {
   checkRoleInference,
+  getTextChapter,
   loadRoleInference,
   roleInference,
   startCreateAudio,
-  stopCreateAudio
+  stopCreateAudio,
+  TextChapter,
+  TextContentConfig
 } from "@/api/text-chapter.ts";
+import {AudioTaskEvent, AudioTaskState, TextProjectType} from "@/types/global.ts";
+import AudioPreview from "@/views/text/novel/chapter-content/components/AudioPreview.vue";
+import {getTextProject, TextProject} from "@/api/text-project.ts";
 
 const route = useRoute();
 const {loading, setLoading} = useLoading();
@@ -25,23 +29,19 @@ const {loading, setLoading} = useLoading();
 const emits = defineEmits(['refresh']);
 const eventBus = inject<EventBus>('eventBus');
 
-const batchChangeModalVisible = ref(false);
-
 const selectedIndexes = ref<string[]>([])
-
 const textContentConfig = ref<TextContentConfig>({} as TextContentConfig)
-
-const textContentRef = ref<
-    {
-      playAllAudio: Function,
-      onCombineExport: Function,
-    } | null
->(null);
+const audioPreviewModelVisible = ref<boolean>(false);
 
 const tableContentRef = ref<
     {
       playAllAudio: Function,
       onCombineExport: Function,
+      selectAllExport: Function,
+      handleBatchRoleChange: Function,
+      handleBatchModelChange: Function,
+      handleConditionSelect: Function,
+      onAudioParamsChange: Function,
     } | null
 >(null);
 
@@ -151,21 +151,8 @@ const onStartCreateAudio = (actionType: 'all' | 'modified') => {
   })
 }
 
-const scrollToTop = (id: string) => {
-  const targetElement = document.getElementById(id);
-  if (targetElement) {
-    targetElement.scrollIntoView({behavior: 'smooth'});
-  }
-};
-
 const playAllAudio = () => {
-  textContentRef.value?.playAllAudio()
   tableContentRef.value?.playAllAudio()
-}
-
-const onCombineExport = () => {
-  tableContentRef.value?.onCombineExport();
-  // do something
 }
 
 const stopLoading = ref<boolean>(false);
@@ -194,19 +181,43 @@ const stageHandler = (data: any) => {
   }
 }
 
+const textProject = ref<TextProject | null>(null)
+const textChapter = ref<TextChapter | null>(null)
+
+const handleQueryProject = async () => {
+  const {data} = await getTextProject({
+    projectId: route.query.projectId as string,
+  })
+  textProject.value = data
+}
+
+const handleQueryChapter = async () => {
+  const {data} = await getTextChapter({
+    projectId: route.query.projectId as string,
+    chapterId: route.query.chapterId as string,
+  })
+  textChapter.value = data
+}
+
+const handleAudioCombineEvent = () => {
+  handleQueryChapter();
+}
+
 onMounted(() => {
   connectWebSocket();
   TextWebsocketService.addStageHandler(stageHandler)
+  eventBus?.on(AudioTaskEvent.audio_combine, handleAudioCombineEvent);
 });
 
 
 watch(
-    () => route.query.chapter,
+    () => route.query.chapterId,
     () => {
-      scrollToTop('text-content');
       selectedIndexes.value = [];
-      if (route.query.chapter) {
+      if (route.query.chapterId) {
         onCheckAiResult();
+        handleQueryProject();
+        handleQueryChapter();
       }
     },
     {immediate: true}
@@ -219,7 +230,7 @@ watch(
       <div class="text-space-header" style="border-bottom: 1px solid rgb(229,230,235)">
         <div style="width: 90%; display: flex">
           <a-space size="large" align="start">
-            <div>
+            <div v-if="textProject?.projectType !== TextProjectType.format_text">
               <a-button
                   type="primary"
                   :loading="loading"
@@ -234,7 +245,7 @@ watch(
                   type="primary"
                   size="small"
               >
-                批量生成
+                音频生成
                 <template #icon>
                   <icon-down/>
                 </template>
@@ -247,61 +258,124 @@ watch(
                   <a-doption
                       @click="onStartCreateAudio('modified')"
                   >
-                    增量修改生成
+                    生成修改部分
+                  </a-doption>
+                  <a-doption
+                      v-if="textContentConfig.edit"
+                      @click="onStartCreateAudio('modified')"
+                  >
+                    生成选中部分
                   </a-doption>
                 </template>
               </a-dropdown-button>
             </div>
             <div>
-              <a-button
-                  type="primary"
-                  size="small"
-                  @click="playAllAudio"
-              >
-                顺序播放
-              </a-button>
+              <a-button-group>
+                <a-button
+                    size="small"
+                    type="primary"
+                    :status="textContentConfig.edit ? 'warning' : 'normal'"
+                    @click="() => {
+                      if (textContentConfig.edit) {
+                        tableContentRef?.selectAllExport(false)
+                      }
+                      textContentConfig.edit = !textContentConfig.edit
+                    }"
+                >
+                  {{ textContentConfig.edit ? '关闭编辑' : '编辑模式' }}
+                </a-button>
+                <a-dropdown
+                    v-if="textContentConfig.edit"
+                    position="br"
+                >
+                  <a-button
+                      type="primary"
+                      size="small"
+                  >
+                    <template #icon>
+                      <icon-down/>
+                    </template>
+                  </a-button>
+                  <template #content>
+                    <a-doption @click="tableContentRef?.selectAllExport(true)">
+                      全选
+                    </a-doption>
+                    <a-doption @click="tableContentRef?.handleConditionSelect(true)">
+                      条件选择
+                    </a-doption>
+                    <a-doption @click="tableContentRef?.selectAllExport(false)">
+                      取消全选
+                    </a-doption>
+                  </template>
+                </a-dropdown>
+              </a-button-group>
             </div>
-            <div v-if="false">
-              <a-button
+            <div v-if="textContentConfig.edit">
+              <a-dropdown-button
                   type="primary"
                   size="small"
-                  @click="() => (batchChangeModalVisible = true)"
               >
                 批量处理
-              </a-button>
+                <template #icon>
+                  <icon-down/>
+                </template>
+                <template #content>
+                  <a-doption @click="tableContentRef?.handleBatchRoleChange()">
+                    改角色
+                  </a-doption>
+                  <a-doption @click="tableContentRef?.handleBatchModelChange()">
+                    改模型
+                  </a-doption>
+                  <a-doption @click="tableContentRef?.onAudioParamsChange()">
+                    音频参数
+                  </a-doption>
+                  <a-doption @click="tableContentRef?.onCombineExport()">
+                    合并导出
+                  </a-doption>
+                </template>
+              </a-dropdown-button>
             </div>
             <div>
-              <a-button
+              <a-dropdown-button
                   type="primary"
                   size="small"
-                  @click="onCombineExport"
               >
-                合并导出
-              </a-button>
+                音频播放
+                <template #icon>
+                  <icon-down/>
+                </template>
+                <template #content>
+                  <a-doption @click="playAllAudio">
+                    顺序播放
+                  </a-doption>
+                  <a-doption
+                      v-if="textChapter?.audioTaskState === AudioTaskState.combined"
+                      @click="audioPreviewModelVisible = true"
+                  >
+                    音频预览
+                  </a-doption>
+                </template>
+              </a-dropdown-button>
             </div>
-            <div style="display: flex; place-items: center">
-              <span style="margin-right: 10px">编辑</span>
-              <a-switch v-model="textContentConfig.edit"/>
+            <div v-if="taskNum">
+              <a-space>
+                <span>任务队列: {{ taskNum }}</span>
+                <a-button
+                    size="small"
+                    status="danger"
+                    :loading="stopLoading"
+                    @click="handleStopCreateAudio"
+                >
+                  停止
+                </a-button>
+              </a-space>
             </div>
           </a-space>
-          <div v-if="taskNum">
-            <a-space>
-              <span>任务队列: {{ taskNum }}</span>
-              <a-button
-                  size="small"
-                  status="danger"
-                  :loading="stopLoading"
-                  @click="handleStopCreateAudio"
-              >
-                停止
-              </a-button>
-            </a-space>
-          </div>
         </div>
       </div>
     </a-affix>
     <div style="display: flex; margin-top: 10px">
-      <div style="flex: 1; margin-left: 10px">
+      <div style="flex: 1" :style="route.query.projectType as string === TextProjectType.long_text && {marginLeft: '10px'}">
         <n-scrollbar
             style="max-height: calc(100vh - 90px); padding-right: 10px; overflow: auto"
         >
@@ -345,11 +419,6 @@ watch(
         </n-scrollbar>
       </div>
     </div>
-
-
-    <batch-change-modal
-        v-model:visible="batchChangeModalVisible"
-    />
     <a-modal
         v-model:visible="aiResultModalVisible"
         title="检测到推理结果缓存"
@@ -362,7 +431,7 @@ watch(
         </a-space>
       </div>
     </a-modal>
-
+    <audio-preview v-model:visible="audioPreviewModelVisible"/>
   </div>
 </template>
 

@@ -1,37 +1,32 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from "vue";
-import {GptSovitsModel, models as queryModels} from "@/api/gpt-sovits.ts";
+import {AmModelFile, getByModelType} from "@/api/am-model-file.ts";
+import {GPT_SOVITS} from "@/types/model-types.ts";
 
-const gsvModels = ref<GptSovitsModel[]>([])
+const gsvModels = ref<AmModelFile[]>([])
 const groupOptions = ref<string[]>([])
 
 const activeKey = ref('1');
 
 const computedGsvModels = computed(() => {
-  return Object.entries(gsvModels.value.reduce((result: any, item: GptSovitsModel) => {
-    if (!result[item.modelGroup]) {
-      result[item.modelGroup] = [];
+  return Object.entries(gsvModels.value.reduce((result: any, item: AmModelFile) => {
+    if (!result[item.mfGroup]) {
+      result[item.mfGroup] = [];
     }
-    result[item.modelGroup].push(item);
+    result[item.mfGroup].push(item);
     return result;
-  }, {})).map(([group, items]) => ({group: group, list: items} as { group: string, list: GptSovitsModel[] }));
+  }, {})).map(([group, items]) => ({group: group, list: items} as { group: string, list: AmModelFile[] }));
 })
 
-const handleQueryConfig = async () => {
-  const {data} = await queryModels();
+const handleQueryModelFiles = async () => {
+  const {data} = await getByModelType({modelType: GPT_SOVITS});
   gsvModels.value = data;
-  groupOptions.value = [...new Set(data.map((item) => item.modelGroup))];
+  groupOptions.value = [...new Set(data.map((item) => item.mfGroup))];
   activeKey.value = groupOptions.value[0]
 }
 
-const modelListRefresh = () => {
-  handleQueryConfig();
-}
-
-defineExpose({modelListRefresh})
-
 onMounted(() => {
-  handleQueryConfig();
+  handleQueryModelFiles();
 })
 </script>
 
@@ -49,16 +44,17 @@ onMounted(() => {
           >
             <a-descriptions
                 size="large"
-                :title="item1.modelName"
+                :title="item1.mfRole"
                 :column="1"
                 bordered
                 style="min-width: 350px"
             >
-              <a-descriptions-item label="ckpt">
-                {{ item1.ckpt }}
-              </a-descriptions-item>
-              <a-descriptions-item label="pth">
-                {{ item1.pth }}
+              <a-descriptions-item
+                  v-for="(item2, index2) in JSON.parse(item1.mfJson)"
+                  :key="index2"
+                  :label="item2.fileType"
+              >
+                {{ item2.fileName }}
               </a-descriptions-item>
             </a-descriptions>
           </a-card>

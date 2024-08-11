@@ -3,10 +3,8 @@ import {ref} from "vue";
 import ConfigParamList from "@/views/model/gpt-sovits/components/ConfigParamList.vue";
 import AudioCreate from "@/views/model/gpt-sovits/components/AudioCreate.vue";
 import ModelList from "@/views/model/gpt-sovits/components/ModelList.vue";
-import {refreshCache} from "@/api/gpt-sovits.ts";
 
 const activeKey = ref('1');
-const modelListRef = ref<{modelListRefresh: Function} | null>(null)
 
 const configEditId = ref<number | undefined>(undefined);
 const configEdit = (id: number | undefined) => {
@@ -19,11 +17,6 @@ const handleTabClick = (key: any) => {
     configEditId.value = undefined;
   }
 }
-
-const handleRefreshCache = async () => {
-  await refreshCache()
-  await modelListRef.value?.modelListRefresh();
-}
 </script>
 
 <template>
@@ -35,19 +28,8 @@ const handleRefreshCache = async () => {
         size="small"
         animated
     >
-      <template #suffix>
-        <a-button
-            v-if="activeKey === '1'"
-            type="outline"
-            style="margin-right: 20px"
-            size="small"
-            @click="handleRefreshCache"
-        >
-          刷新缓存
-        </a-button>
-      </template>
-      <n-tab-pane name="1" tab="模型列表">
-        <model-list ref="modelListRef"/>
+      <n-tab-pane name="1" tab="模型文件列表">
+        <model-list/>
       </n-tab-pane>
       <n-tab-pane name="2" tab="配置参数列表">
         <config-param-list @config-edit="configEdit"/>

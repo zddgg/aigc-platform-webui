@@ -1,8 +1,18 @@
 <script setup lang="ts">
+
 import {onMounted, ref} from "vue";
+import {PromptAudio, queryPromptAudios} from "@/api/prompt-audio.ts";
+import {CascaderOption} from "naive-ui";
 import useLoading from "@/hooks/loading.ts";
+import {AmModelConfig, createConfig, getByModelType as queryModelConfigs, createAudio} from "@/api/am-model-config.ts";
 import {FormInstance, Message} from "@arco-design/web-vue";
-import {ChatTtsConfig, configs as queryChatTtsConfigs, createConfig, playAudio} from "@/api/chat-tts.ts"
+import {CHAT_TTS} from "@/types/model-types.ts";
+
+const {loading, setLoading} = useLoading();
+const createFormRef = ref<FormInstance>()
+const formRef = ref<FormInstance>()
+const blob = ref<Blob | null>(null)
+const audioElement = ref<HTMLAudioElement | null>(null);
 
 const props = defineProps({
   configEditId: {
@@ -10,34 +20,119 @@ const props = defineProps({
   }
 })
 
-const {loading, setLoading} = useLoading();
-const audioElement = ref<HTMLAudioElement | null>(null);
-const formRef = ref<FormInstance>()
+const defaultTextPrompt = '[oral_2][laugh_0][break_6]'
 
-const configCreateVisible = ref(false);
-const chatTtsConfigs = ref<ChatTtsConfig[]>([])
+const form = ref({
+  id: -1,
+  mfId: '',
+  paCascaderPath: [],
+  paId: '',
 
-const defaultParamsRefineText = '[oral_2][laugh_0][break_6]'
-const form = ref<ChatTtsConfig>(
-    {
-      temperature: 0.3,
-      topP: 0.7,
-      topK: 20,
-      audioSeedInput: 2,
-      textSeedInput: 42,
-      refineTextFlag: false,
-      refineTextParams: defaultParamsRefineText,
-      configName: '',
-      saveAudio: false,
-      text: '四川美食确实以辣闻名，但也有不辣的选择。比如甜水面、赖汤圆、蛋烘糕、叶儿粑等，这些小吃口味温和，甜而不腻，也很受欢迎。',
-      outputText: ''
-    } as ChatTtsConfig
-)
+  mcId: '',
+  mcName: '',
+  amType: '',
+
+  configParam: {
+    "stream": false,
+    "skip_refine_text": true,
+    "refine_text_only": false,
+    "use_decoder": true,
+    "audio_seed": 2,
+    "text_seed": 42,
+    "do_text_normalization": true,
+    "do_homophone_replacement": false,
+    "params_refine_text": {
+      "prompt": defaultTextPrompt,
+      "top_P": 0.7,
+      "top_K": 20,
+      "temperature": 0.7,
+      "repetition_penalty": 1,
+      "max_new_token": 384,
+      "min_new_token": 0,
+      "show_tqdm": true,
+      "ensure_non_empty": true,
+      "stream_batch": 24,
+    },
+    "params_infer_code": {
+      "prompt": "[speed_5]",
+      "top_P": 0.1,
+      "top_K": 20,
+      "temperature": 0.3,
+      "repetition_penalty": 1.05,
+      "max_new_token": 2048,
+      "min_new_token": 0,
+      "show_tqdm": true,
+      "ensure_non_empty": true,
+      "stream_batch": true,
+      "spk_emb": null,
+    }
+  },
+
+  mcInstructText: '',
+
+  outputText: '',
+  text: '四川美食确实以辣闻名，但也有不辣的选择。比如甜水面、赖汤圆、蛋烘糕、叶儿粑等，这些小吃口味温和，甜而不腻，也很受欢迎。',
+  saveAudio: false,
+})
 
 const getRandomInt = () => {
   const min = 1;
   const max = 100000000;
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+const promptAudios = ref<PromptAudio[]>([])
+const promptAudioDataOptions = ref<CascaderOption[]>([]);
+const configCreateVisible = ref(false);
+const modelConfigs = ref<AmModelConfig[]>([])
+
+const handleQueryPromptAudios = async () => {
+  const {data} = await queryPromptAudios();
+  promptAudios.value = data;
+  promptAudioDataOptions.value = data.reduce((acc: any, item) => {
+    const {paGroup} = item;
+    let groupItem = acc.find((g: { group: string, list: [] }) => g.group === paGroup);
+    if (!groupItem) {
+      groupItem = {group: paGroup, list: []} as any;
+      acc.push(groupItem);
+    }
+    groupItem.list.push(item);
+    return acc;
+  }, [])
+      .map((item: any) => {
+        return {
+          label: item.group,
+          value: item.group,
+          children: item.list.map((item1: any) => {
+            return {
+              label: item1.paRole,
+              value: item1.paRole,
+              children: item1.paMoods.map((item2: any) => {
+                return {
+                  label: item2.paMood,
+                  value: item2.paMood,
+                };
+              }),
+            };
+          }),
+        };
+      });
+
+}
+
+const handleQueryModelConfigs = async () => {
+  const {data} = await queryModelConfigs({modelType: CHAT_TTS})
+  modelConfigs.value = data;
+}
+
+const copyConfig = (config: AmModelConfig) => {
+  createFormRef.value?.resetFields();
+  form.value = {
+    ...form.value,
+    configParam: {
+      ...JSON.parse(config.mcParamsJson)
+    },
+  };
 }
 
 const base64DecodeUnicode = (str: string) => {
@@ -54,20 +149,26 @@ const base64DecodeUnicode = (str: string) => {
   return decoder.decode(buffer);
 }
 
-const blob = ref<Blob | null>(null)
 const generateAudio = async () => {
+  const res = await createFormRef.value?.validate();
+  if (res) {
+    return;
+  }
   if (!form.value.text) {
     return;
   }
   try {
-    form.value.outputText = ''
     if (audioElement.value) {
       audioElement.value.src = '';
     }
     setLoading(true);
 
-    const response = await playAudio({
-      ...form.value,
+    const response = await createAudio({
+      amType: CHAT_TTS,
+      mfId: form.value.mfId,
+      paId: form.value.paId,
+      mcParamsJson: JSON.stringify(form.value.configParam),
+      text: form.value.text,
     });
 
     blob.value = response.data;
@@ -80,65 +181,52 @@ const generateAudio = async () => {
     if (audioElement.value) {
       audioElement.value.src = url;
     }
+
   } finally {
     setLoading(false);
   }
-}
-
-const handleQueryChatTtsConfigs = async () => {
-  const {data} = await queryChatTtsConfigs()
-  chatTtsConfigs.value = data;
 }
 
 const handleBeforeOk = async (done: (closed: boolean) => void) => {
   const res = await formRef.value?.validate();
   if (!res) {
     const formData = new FormData();
-    if (form.value.id) {
+    if (form.value.id && form.value.id > 0) {
       formData.append('id', String(form.value.id));
     }
-    formData.append('configName', form.value.configName);
-    formData.append('temperature', String(form.value.temperature));
-    formData.append('topP', String(form.value.topP));
-    formData.append('topK', String(form.value.topK));
-    formData.append('audioSeedInput', String(form.value.audioSeedInput));
-    formData.append('textSeedInput', String(form.value.textSeedInput));
-    formData.append('refineTextFlag', String(form.value.refineTextFlag));
-    formData.append('refineTextParams', form.value.refineTextParams);
+    formData.append('amType', CHAT_TTS);
+
+    formData.append('mcName', form.value.mcName);
+    formData.append('mcParamsJson', JSON.stringify(form.value.configParam));
 
     formData.append('text', String(form.value.text));
     formData.append('saveAudio', String(form.value.saveAudio || false));
     formData.append('file', blob?.value as Blob);
-    formData.append('outputText', form.value.outputText);
+
     const {msg} = await createConfig(formData);
     Message.success(msg);
-    await handleQueryChatTtsConfigs();
+    await handleQueryModelConfigs();
     done(true);
   } else {
     done(false);
   }
 }
 
-const copyConfig = (config: ChatTtsConfig) => {
-  form.value = {
-    ...form.value,
-    ...config,
-    id: undefined,
-    configName: '',
-    text: form.value.text,
-  };
-}
-
 onMounted(async () => {
-  await handleQueryChatTtsConfigs();
+  await handleQueryPromptAudios();
+  await handleQueryModelConfigs();
   if (props.configEditId) {
-    const find = chatTtsConfigs.value.find((item) => item.id === props.configEditId);
+    const find = modelConfigs.value.find((item) => item.id === props.configEditId);
+
     if (find) {
 
       form.value = {
         ...find,
+        configParam: {
+          ...JSON.parse(find.mcParamsJson),
+        },
         text: form.value.text,
-      } as ChatTtsConfig
+      } as any
     }
   }
 })
@@ -156,7 +244,11 @@ onMounted(async () => {
                 <a-col :span="6">
                   <a-card :body-style="{padding: '20px 20px 0'}">
                     <a-form-item label="Refine text">
-                      <n-checkbox v-model:checked="form.refineTextFlag"/>
+                      <n-checkbox
+                          v-model:checked="form.configParam.skip_refine_text"
+                          :checked-value="false"
+                          :unchecked-value="true"
+                      />
                     </a-form-item>
                   </a-card>
                 </a-col>
@@ -166,12 +258,16 @@ onMounted(async () => {
                       <template #label>
                         <div style="display: flex; justify-content: space-between">
                           <span>temperature</span>
-                          <n-input-number v-model:value="form.temperature" :show-button="false" size="tiny"
-                                          style="width: 100px"/>
+                          <n-input-number
+                              v-model:value="form.configParam.params_infer_code.temperature"
+                              :show-button="false"
+                              size="tiny"
+                              style="width: 100px"
+                          />
                         </div>
                       </template>
                       <n-slider
-                          v-model:value="form.temperature"
+                          v-model:value="form.configParam.params_infer_code.temperature"
                           :min="0.00001"
                           :max="1"
                           :step="0.00001"
@@ -186,7 +282,7 @@ onMounted(async () => {
                         <div style="display: flex; justify-content: space-between">
                           <span>top_P</span>
                           <n-input-number
-                              v-model:value="form.topP"
+                              v-model:value="form.configParam.params_infer_code.top_P"
                               :show-button="false"
                               size="tiny"
                               style="width: 100px"
@@ -194,7 +290,7 @@ onMounted(async () => {
                         </div>
                       </template>
                       <n-slider
-                          v-model:value="form.topP"
+                          v-model:value="form.configParam.params_infer_code.top_P"
                           :min="0.1"
                           :max="0.9"
                           :step="0.05"
@@ -209,7 +305,7 @@ onMounted(async () => {
                         <div style="display: flex; justify-content: space-between">
                           <span>top_K</span>
                           <n-input-number
-                              v-model:value="form.topK"
+                              v-model:value="form.configParam.params_infer_code.top_K"
                               :show-button="false"
                               size="tiny"
                               style="width: 100px"
@@ -217,7 +313,7 @@ onMounted(async () => {
                         </div>
                       </template>
                       <n-slider
-                          v-model:value="form.topK"
+                          v-model:value="form.configParam.params_infer_code.top_K"
                           :min="1"
                           :max="20"
                           :step="1"
@@ -230,12 +326,12 @@ onMounted(async () => {
                 <a-col :span="6">
                   <a-card :body-style="{padding: '20px 20px 0'}">
                     <a-form-item label="Audio Seed">
-                      <n-input-number v-model:value="form.audioSeedInput"/>
+                      <n-input-number v-model:value="form.configParam.audio_seed"/>
                       <n-button
                           type="primary"
                           ghost
                           style="margin-left: 10px"
-                          @click="() => form.audioSeedInput = getRandomInt()"
+                          @click="() => form.configParam.audio_seed = getRandomInt()"
                       >
                         随机
                       </n-button>
@@ -245,12 +341,12 @@ onMounted(async () => {
                 <a-col :span="6">
                   <a-card :body-style="{padding: '20px 20px 0'}">
                     <a-form-item label="Text Seed">
-                      <n-input-number v-model:value="form.textSeedInput"/>
+                      <n-input-number v-model:value="form.configParam.text_seed"/>
                       <n-button
                           type="primary"
                           ghost
                           style="margin-left: 10px"
-                          @click="() => form.textSeedInput = getRandomInt()"
+                          @click="() => form.configParam.text_seed = getRandomInt()"
                       >
                         随机
                       </n-button>
@@ -260,12 +356,12 @@ onMounted(async () => {
                 <a-col :span="12">
                   <a-card :body-style="{padding: '20px 20px 0'}">
                     <a-form-item label="params_refine_text">
-                      <n-input v-model:value="form.refineTextParams"/>
+                      <n-input v-model:value="form.configParam.params_refine_text.prompt"/>
                       <n-button
                           type="primary"
                           ghost
                           style="margin-left: 10px"
-                          @click="() => form.refineTextParams = defaultParamsRefineText">
+                          @click="() => form.configParam.params_refine_text.prompt = defaultTextPrompt">
                         加载默认
                       </n-button>
                     </a-form-item>
@@ -292,7 +388,6 @@ onMounted(async () => {
                 <a-form-item label="输出文本">
                   <n-input
                       v-model:value="form.outputText"
-                      :loading="loading"
                       type="textarea"
                       placeholder="output"
                       readonly
@@ -327,39 +422,39 @@ onMounted(async () => {
         <div>
           <a-space size="medium" direction="vertical" style="width: 100%">
             <a-card
-                v-for="(item, index) in chatTtsConfigs"
+                v-for="(item, index) in modelConfigs"
                 :key="index"
             >
               <a-descriptions
-                  :title="item.configName"
+                  :title="item.mcName"
                   :column="2"
                   size="small"
 
                   layout="inline-vertical"
               >
                 <a-descriptions-item label="audio_seed">
-                  {{ item.audioSeedInput }}
+                  {{ JSON.parse(item.mcParamsJson).audio_seed }}
                 </a-descriptions-item>
                 <a-descriptions-item label="text_seed">
-                  {{ item.textSeedInput }}
+                  {{ JSON.parse(item.mcParamsJson).text_seed }}
                 </a-descriptions-item>
                 <a-descriptions-item label="top_P">
-                  {{ item.topP }}
+                  {{ JSON.parse(item.mcParamsJson).params_infer_code?.top_P }}
                 </a-descriptions-item>
                 <a-descriptions-item label="top_K">
-                  {{ item.topK }}
+                  {{ JSON.parse(item.mcParamsJson).params_infer_code?.top_K }}
                 </a-descriptions-item>
                 <a-descriptions-item label="temperature">
-                  {{ item.temperature }}
+                  {{ JSON.parse(item.mcParamsJson).params_infer_code?.temperature }}
                 </a-descriptions-item>
                 <a-descriptions-item label="refine_flag">
-                  {{ item.refineTextFlag }}
+                  {{ !JSON.parse(item.mcParamsJson).skip_refine_text }}
                 </a-descriptions-item>
                 <a-descriptions-item label="refine_params">
                   <div style="display: flex; justify-content: space-between">
                     <div>
                       <span>
-                        {{ item.refineTextParams }}
+                        {{ JSON.parse(item.mcParamsJson).params_refine_text?.prompt }}
                       </span>
                     </div>
                     <div>
@@ -387,8 +482,8 @@ onMounted(async () => {
           ref="formRef"
           :model="form"
       >
-        <a-form-item label="配置名称" field="configName" required>
-          <a-input v-model="form.configName"/>
+        <a-form-item label="配置名称" field="mcName" required>
+          <a-input v-model="form.mcName"/>
         </a-form-item>
         <a-form-item label="保存音频" field="saveAudio">
           <a-checkbox v-model="form.saveAudio">用于预览，不要太长。</a-checkbox>
@@ -401,5 +496,9 @@ onMounted(async () => {
 <style scoped>
 :deep(.slider-wrapper .arco-form-item-label) {
   width: 100%;
+}
+
+:deep(.arco-typography, p.arco-typography) {
+  margin: 0;
 }
 </style>
