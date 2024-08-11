@@ -258,7 +258,7 @@ watch(
                   <a-doption
                       @click="onStartCreateAudio('modified')"
                   >
-                    生成修改部分
+                    修改部分生成
                   </a-doption>
                   <a-doption
                       v-if="textContentConfig.edit"
