@@ -1,32 +1,38 @@
-import {GptSovitsConfig, GptSovitsModel} from "@/api/gpt-sovits.ts";
-import {FishSpeechConfig, FishSpeechModel} from "@/api/fish-speech.ts";
-import {ChatTtsConfig} from "@/api/chat-tts.ts";
-import {EdgeTtsConfig} from "@/api/edge-tts.ts";
-import {RefAudioEntity} from "@/api/ref-audio.ts";
-
 export interface Model {
-    id: number;
-    name: string;
-    group: string;
-    gptWeights: string;
-    sovitsWeights: string;
+  id: number;
+  name: string;
+  group: string;
+  gptWeights: string;
+  sovitsWeights: string;
 }
 
-export interface AudioModelConfig {
-    audioModelType: string;
-    audioModelId: string;
-    audioConfigId: string;
-    refAudioId: string;
+export interface AudioModelInfoKey {
+  amType: string;
+  amPaId: string;
+  amMfId: string;
+  amMcId: string;
+  amMcParamsJson: string;
+}
 
-    gptSovitsModel?: GptSovitsModel;
-    gptSovitsConfig?: GptSovitsConfig;
+export interface AudioModelInfo extends AudioModelInfoKey {
 
-    fishSpeechModel?: FishSpeechModel;
-    fishSpeechConfig?: FishSpeechConfig;
+  amPaGroup: string;
+  amPaRole: string;
+  amPaMood: string;
+  amPaAudio: string;
+  amPaAudioText: string;
+  amPaAudioLang: string;
 
-    chatTtsConfig?: ChatTtsConfig;
+  amMfGroup: string;
+  amMfRole: string;
+  amMfJson: string;
 
-    edgeTtsConfig?: EdgeTtsConfig;
+  amMcName: string;
+  amMcParamsJson: string;
+}
 
-    refAudio?: RefAudioEntity;
+export interface AudioRoleInfo extends AudioModelInfo {
+  role: string;
+  gender: string;
+  age: string;
 }

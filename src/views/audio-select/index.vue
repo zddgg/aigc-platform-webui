@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import {PropType, ref, watch} from "vue";
-import RefAudioView from "@/views/audio-select/components/ref-audio-view.vue";
-import EtVoiceView from "@/views/audio-select/components/et-voice-view.vue";
+import {AudioModelInfoKey} from "@/api/model.ts";
+import PromptAudioView from "@/views/audio-select/components/prompt-audio-view.vue";
+import EdgeTtsView from "@/views/audio-select/components/edge-tts-view.vue";
 import ChatTtsView from "@/views/audio-select/components/chat-tts-view.vue";
-import {AudioModelConfig} from "@/api/model.ts";
+import CosyVoiceView from "@/views/audio-select/components/cosy-voice-view.vue";
+import {FISH_SPEECH, GPT_SOVITS} from "@/types/model-types.ts";
 
 const props = defineProps({
   visible: {
     type: Boolean,
     default: false,
   },
-  audioModelConfig: {
-    type: Object as PropType<AudioModelConfig>
+  audioModelInfo: {
+    type: Object as PropType<AudioModelInfoKey>
   }
 })
 
@@ -25,8 +27,8 @@ const close = () => {
   activeTabKey.value = ''
 }
 
-const modelSelect = (modelConfig: AudioModelConfig) => {
-  emits('modelSelect', modelConfig);
+const modelSelect = (audioModelInfo: AudioModelInfoKey) => {
+  emits('modelSelect', audioModelInfo);
   close();
 }
 
@@ -35,14 +37,7 @@ watch(
     () => {
       showModal.value = props.visible
       if (props.visible) {
-        activeTabKey.value = props.audioModelConfig?.audioModelType === 'gpt-sovits'
-        || props.audioModelConfig?.audioModelType === 'fish-speech'
-            ? '1'
-            : props.audioModelConfig?.audioModelType === 'chat-tts'
-                ? '2'
-                : props.audioModelConfig?.audioModelType === 'edge-tts'
-                    ? '3'
-                    : '1';
+        activeTabKey.value = props.audioModelInfo?.amType ?? GPT_SOVITS;
       }
     },
     {immediate: true}
@@ -58,15 +53,15 @@ watch(
         :hide-title="true"
         :footer="false"
         :width="960"
-        :esc-to-close="false"
+        draggable
         @close="close"
         @cancel="close"
     >
       <div style="cursor: pointer">
-        <a-tabs v-model:active-key="activeTabKey">
+        <a-tabs v-model:active-key="activeTabKey" :lazy-load="true">
           <template #extra>
             <a-button
-                size="small"
+                size="mini"
                 shape="round"
                 @click="close"
             >
@@ -75,27 +70,49 @@ watch(
               </template>
             </a-button>
           </template>
-          <a-tab-pane key="1" title="gpt-sovits/fish-speech">
-            <ref-audio-view
+          <a-tab-pane key="gpt-sovits" title="gpt-sovits">
+            <prompt-audio-view
                 v-model:visible="props.visible"
+                :model-type="GPT_SOVITS"
                 :active-tab-key="activeTabKey"
-                :audio-model-config="props.audioModelConfig"
+                :audio-model-info="props.audioModelInfo"
+                :select-size="2"
                 @model-select="modelSelect"
             />
           </a-tab-pane>
-          <a-tab-pane key="2" title="chat-tts">
+          <a-tab-pane key="fish-speech" title="fish-speech">
+            <prompt-audio-view
+                v-model:visible="props.visible"
+                :model-type="FISH_SPEECH"
+                :active-tab-key="activeTabKey"
+                :audio-model-info="props.audioModelInfo"
+                :select-size="1"
+                @model-select="modelSelect"
+            />
+          </a-tab-pane>
+          <a-tab-pane key="chat-tts" title="chat-tts">
             <chat-tts-view
                 v-model:visible="props.visible"
                 :active-tab-key="activeTabKey"
-                :audio-model-config="props.audioModelConfig"
+                :audio-model-info="props.audioModelInfo"
                 @model-select="modelSelect"
             />
           </a-tab-pane>
-          <a-tab-pane key="3" title="edge-tts">
-            <et-voice-view
+          <a-tab-pane key="edge-tts" title="edge-tts">
+            <edge-tts-view
                 v-model:visible="props.visible"
                 :active-tab-key="activeTabKey"
-                :audio-model-config="props.audioModelConfig"
+                :audio-model-info="props.audioModelInfo"
+                @model-select="modelSelect"
+            />
+          </a-tab-pane>
+          <a-tab-pane key="cosy-voice" title="cosy-voice">
+            <cosy-voice-view
+                v-model:visible="props.visible"
+                :model-type="GPT_SOVITS"
+                :active-tab-key="activeTabKey"
+                :audio-model-info="props.audioModelInfo"
+                :select-size="2"
                 @model-select="modelSelect"
             />
           </a-tab-pane>

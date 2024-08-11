@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import {PropType, ref, watch} from "vue";
+import {inject, PropType, ref, watch} from "vue";
 import {useRoute} from "vue-router";
 import {Message} from "@arco-design/web-vue";
 import {chapterExpose} from "@/api/text-chapter.ts";
+import {EventBus} from "@/vite-env";
+import {AudioTaskEvent} from "@/types/global.ts";
 
 const route = useRoute();
 const props = defineProps({
@@ -10,16 +12,17 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  selectedIndexes: {
-    type: Array as PropType<string[]>,
+  chapterInfoIds: {
+    type: Array as PropType<number[]>,
     default: []
   }
 });
 const emits = defineEmits(['update:visible']);
+const eventBus = inject<EventBus>('eventBus');
 
 const showModal = ref(false)
 const combineAudio = ref(true);
-const subtitle = ref(false);
+const subtitle = ref(true);
 
 const handleBeforeOk = async (done: (closed: boolean) => void) => {
   if (!combineAudio.value && !subtitle.value) {
@@ -28,11 +31,12 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
   const {msg} = await chapterExpose({
     projectId: route.query.projectId as string,
     chapterId: route.query.chapterId as string,
-    indexes: props.selectedIndexes,
+    chapterInfoIds: props.chapterInfoIds,
     combineAudio: combineAudio.value,
     subtitle: subtitle.value,
   })
   Message.success(msg);
+  eventBus?.emit(AudioTaskEvent.audio_combine);
   done(true);
 }
 
@@ -59,55 +63,6 @@ watch(() => props.visible,
         @close="close"
         @cancel="close"
     >
-      <!--      <n-scrollbar style="height: 300px">-->
-      <!--        <div style="padding-right: 10px">-->
-      <!--          <a-table-->
-      <!--              row-key="index"-->
-      <!--              :data="chapterInfos"-->
-      <!--              :columns="columns"-->
-      <!--              :bordered="{cell:true}"-->
-      <!--              :pagination="false"-->
-      <!--              size="small"-->
-      <!--          >-->
-      <!--            <template #text="{ record }">-->
-      <!--              <a-typography-text>-->
-      <!--                {{ record.text }}-->
-      <!--              </a-typography-text>-->
-      <!--            </template>-->
-      <!--            <template #interval="{ record }">-->
-      <!--              <a-input-number-->
-      <!--                  v-model="record.interval"-->
-      <!--                  mode="button"-->
-      <!--                  size="mini"-->
-      <!--                  :step="100"-->
-      <!--                  :min="0"-->
-      <!--                  style="width: 120px"-->
-      <!--              />-->
-      <!--            </template>-->
-      <!--            <template #interval-filter>-->
-      <!--              <div class="custom-filter">-->
-      <!--                <a-space direction="vertical">-->
-      <!--                  <a-input-number-->
-      <!--                      v-model="allInterval"-->
-      <!--                      mode="button"-->
-      <!--                      size="mini"-->
-      <!--                      :step="100"-->
-      <!--                      :min="0"-->
-      <!--                      style="width: 120px"-->
-      <!--                  />-->
-      <!--                  <div class="custom-filter-footer">-->
-      <!--                    <a-button-->
-      <!--                        type="outline" size="mini"-->
-      <!--                              @click="updateAllInterval"-->
-      <!--                    >更新全部-->
-      <!--                    </a-button>-->
-      <!--                  </div>-->
-      <!--                </a-space>-->
-      <!--              </div>-->
-      <!--            </template>-->
-      <!--          </a-table>-->
-      <!--        </div>-->
-      <!--      </n-scrollbar>-->
       <a-space size="large">
         <a-checkbox v-model="combineAudio">合并音频</a-checkbox>
         <a-checkbox v-model="subtitle">生成字幕</a-checkbox>
@@ -117,16 +72,4 @@ watch(() => props.visible,
 </template>
 
 <style scoped>
-.custom-filter {
-  padding: 10px;
-  background: var(--color-bg-5);
-  border: 1px solid var(--color-neutral-3);
-  border-radius: var(--border-radius-medium);
-  box-shadow: 0 2px 5px rgb(0 0 0 / 10%);
-}
-
-.custom-filter-footer {
-  display: flex;
-  justify-content: right;
-}
 </style>

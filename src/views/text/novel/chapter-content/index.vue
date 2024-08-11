@@ -2,21 +2,26 @@
 import {inject, onMounted, onUnmounted, provide, ref, watch} from "vue";
 import {useRoute} from "vue-router";
 import useLoading from "@/hooks/loading.ts";
-import TextContent from "@/views/text/novel/chapter-content/components/TextContent.vue";
-import {TextContentConfig} from "@/views/text/novel/chapter-content/useChapterContent.ts";
-import TableContent from "@/views/text/novel/chapter-content/components/TableContent.vue";
+import TableContent from "./components/TableContent.vue";
+import CommonRole from "./components/CommonRole.vue";
+import TextRole from "./components/TextRole.vue";
 import {Message, Modal} from "@arco-design/web-vue";
-import BatchChangeModal from "@/views/text/novel/chapter-content/components/BatchChangeModal.vue";
 import TextWebsocketService from "@/services/textWebsocketService.ts";
-import {ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {ROLE_CHANGE} from "@/types/event-types.ts";
 import {EventBus} from "@/vite-env";
 import {
   checkRoleInference,
+  getTextChapter,
   loadRoleInference,
   roleInference,
   startCreateAudio,
-  stopCreateAudio
+  stopCreateAudio,
+  TextChapter,
+  TextContentConfig
 } from "@/api/text-chapter.ts";
+import {AudioTaskEvent, AudioTaskState, TextProjectType} from "@/types/global.ts";
+import AudioPreview from "@/views/text/novel/chapter-content/components/AudioPreview.vue";
+import {getTextProject, TextProject} from "@/api/text-project.ts";
 
 const route = useRoute();
 const {loading, setLoading} = useLoading();
@@ -24,32 +29,25 @@ const {loading, setLoading} = useLoading();
 const emits = defineEmits(['refresh']);
 const eventBus = inject<EventBus>('eventBus');
 
-const batchChangeModalVisible = ref(false);
-
 const selectedIndexes = ref<string[]>([])
-
-const textContentConfig = ref<TextContentConfig>({
-  textViewType: 'table'
-} as TextContentConfig)
-
-const textContentRef = ref<
-    {
-      playAllAudio: Function,
-      onCombineExport: Function,
-    } | null
->(null);
+const textContentConfig = ref<TextContentConfig>({} as TextContentConfig)
+const audioPreviewModelVisible = ref<boolean>(false);
 
 const tableContentRef = ref<
     {
       playAllAudio: Function,
       onCombineExport: Function,
+      selectAllExport: Function,
+      handleBatchRoleChange: Function,
+      handleBatchModelChange: Function,
+      handleConditionSelect: Function,
+      onAudioParamsChange: Function,
     } | null
 >(null);
 
 const refresh = () => {
   eventBus?.emit(ROLE_CHANGE);
 }
-
 
 const aiResultText = ref<string>('')
 
@@ -153,24 +151,8 @@ const onStartCreateAudio = (actionType: 'all' | 'modified') => {
   })
 }
 
-
-defineExpose({refresh})
-
-const scrollToTop = (id: string) => {
-  const targetElement = document.getElementById(id);
-  if (targetElement) {
-    targetElement.scrollIntoView({behavior: 'smooth'});
-  }
-};
-
 const playAllAudio = () => {
-  textContentRef.value?.playAllAudio()
   tableContentRef.value?.playAllAudio()
-}
-
-const onCombineExport = () => {
-  tableContentRef.value?.onCombineExport();
-  // do something
 }
 
 const stopLoading = ref<boolean>(false);
@@ -199,19 +181,43 @@ const stageHandler = (data: any) => {
   }
 }
 
+const textProject = ref<TextProject | null>(null)
+const textChapter = ref<TextChapter | null>(null)
+
+const handleQueryProject = async () => {
+  const {data} = await getTextProject({
+    projectId: route.query.projectId as string,
+  })
+  textProject.value = data
+}
+
+const handleQueryChapter = async () => {
+  const {data} = await getTextChapter({
+    projectId: route.query.projectId as string,
+    chapterId: route.query.chapterId as string,
+  })
+  textChapter.value = data
+}
+
+const handleAudioCombineEvent = () => {
+  handleQueryChapter();
+}
+
 onMounted(() => {
   connectWebSocket();
   TextWebsocketService.addStageHandler(stageHandler)
+  eventBus?.on(AudioTaskEvent.audio_combine, handleAudioCombineEvent);
 });
 
 
 watch(
-    () => route.query.chapter,
+    () => route.query.chapterId,
     () => {
-      scrollToTop('text-content');
       selectedIndexes.value = [];
-      if (route.query.chapter) {
+      if (route.query.chapterId) {
         onCheckAiResult();
+        handleQueryProject();
+        handleQueryChapter();
       }
     },
     {immediate: true}
@@ -221,13 +227,14 @@ watch(
 <template>
   <div>
     <a-affix>
-      <div class="text-space-header">
-        <div style="width: 90%; display: flex; justify-content: space-between; align-items: center">
-          <a-space size="large">
-            <div>
+      <div class="text-space-header" style="border-bottom: 1px solid rgb(229,230,235)">
+        <div style="width: 90%; display: flex">
+          <a-space size="large" align="start">
+            <div v-if="textProject?.projectType !== TextProjectType.format_text">
               <a-button
                   type="primary"
                   :loading="loading"
+                  size="small"
                   @click="onAiInference"
               >
                 角色推理
@@ -236,8 +243,9 @@ watch(
             <div>
               <a-dropdown-button
                   type="primary"
+                  size="small"
               >
-                批量生成
+                音频生成
                 <template #icon>
                   <icon-down/>
                 </template>
@@ -250,136 +258,167 @@ watch(
                   <a-doption
                       @click="onStartCreateAudio('modified')"
                   >
-                    增量修改生成
+                    修改部分生成
+                  </a-doption>
+                  <a-doption
+                      v-if="textContentConfig.edit"
+                      @click="onStartCreateAudio('modified')"
+                  >
+                    生成选中部分
                   </a-doption>
                 </template>
               </a-dropdown-button>
             </div>
             <div>
-              <a-button
-                  type="primary"
-                  @click="playAllAudio"
-              >
-                顺序播放
-              </a-button>
+              <a-button-group>
+                <a-button
+                    size="small"
+                    type="primary"
+                    :status="textContentConfig.edit ? 'warning' : 'normal'"
+                    @click="() => {
+                      if (textContentConfig.edit) {
+                        tableContentRef?.selectAllExport(false)
+                      }
+                      textContentConfig.edit = !textContentConfig.edit
+                    }"
+                >
+                  {{ textContentConfig.edit ? '关闭编辑' : '编辑模式' }}
+                </a-button>
+                <a-dropdown
+                    v-if="textContentConfig.edit"
+                    position="br"
+                >
+                  <a-button
+                      type="primary"
+                      size="small"
+                  >
+                    <template #icon>
+                      <icon-down/>
+                    </template>
+                  </a-button>
+                  <template #content>
+                    <a-doption @click="tableContentRef?.selectAllExport(true)">
+                      全选
+                    </a-doption>
+                    <a-doption @click="tableContentRef?.handleConditionSelect(true)">
+                      条件选择
+                    </a-doption>
+                    <a-doption @click="tableContentRef?.selectAllExport(false)">
+                      取消全选
+                    </a-doption>
+                  </template>
+                </a-dropdown>
+              </a-button-group>
             </div>
-            <div v-if="false">
-              <a-button
+            <div v-if="textContentConfig.edit">
+              <a-dropdown-button
                   type="primary"
-                  @click="() => (batchChangeModalVisible = true)"
+                  size="small"
               >
                 批量处理
-              </a-button>
+                <template #icon>
+                  <icon-down/>
+                </template>
+                <template #content>
+                  <a-doption @click="tableContentRef?.handleBatchRoleChange()">
+                    改角色
+                  </a-doption>
+                  <a-doption @click="tableContentRef?.handleBatchModelChange()">
+                    改模型
+                  </a-doption>
+                  <a-doption @click="tableContentRef?.onAudioParamsChange()">
+                    音频参数
+                  </a-doption>
+                  <a-doption @click="tableContentRef?.onCombineExport()">
+                    合并导出
+                  </a-doption>
+                </template>
+              </a-dropdown-button>
             </div>
             <div>
-              <a-button
+              <a-dropdown-button
                   type="primary"
-                  @click="onCombineExport"
+                  size="small"
               >
-                合并导出
-              </a-button>
+                音频播放
+                <template #icon>
+                  <icon-down/>
+                </template>
+                <template #content>
+                  <a-doption @click="playAllAudio">
+                    顺序播放
+                  </a-doption>
+                  <a-doption
+                      v-if="textChapter?.audioTaskState === AudioTaskState.combined"
+                      @click="audioPreviewModelVisible = true"
+                  >
+                    音频预览
+                  </a-doption>
+                </template>
+              </a-dropdown-button>
+            </div>
+            <div v-if="taskNum">
+              <a-space>
+                <span>任务队列: {{ taskNum }}</span>
+                <a-button
+                    size="small"
+                    status="danger"
+                    :loading="stopLoading"
+                    @click="handleStopCreateAudio"
+                >
+                  停止
+                </a-button>
+              </a-space>
             </div>
           </a-space>
-          <div v-if="taskNum">
-            <a-space>
-              <span>任务队列: {{ taskNum }}</span>
-              <a-button
-                  size="small"
-                  status="danger"
-                  :loading="stopLoading"
-                  @click="handleStopCreateAudio"
-              >
-                停止
-              </a-button>
-            </a-space>
-          </div>
-          <div>
-            <a-space size="small">
-              <a-trigger
-                  trigger="click"
-                  :unmount-on-close="false"
-              >
-                <a-button type="outline" size="mini">
-                  <icon-down/>
-                </a-button>
-                <template #content>
-                  <a-card>
-                    <a-space direction="vertical" style="width: 100%">
-                      <div v-if="textContentConfig.textViewType !== 'table'">
-                        <a-checkbox v-model="textContentConfig.showRole">角色</a-checkbox>
-                      </div>
-                      <div v-if="textContentConfig.textViewType !== 'table'">
-                        <a-checkbox v-model="textContentConfig.showModal">模型</a-checkbox>
-                      </div>
-                      <div>
-                        <a-checkbox v-model="textContentConfig.showLines">台词</a-checkbox>
-                      </div>
-                      <div v-if="textContentConfig.textViewType !== 'table'">
-                        <a-checkbox v-model="textContentConfig.showAudio">音频</a-checkbox>
-                      </div>
-                      <div>
-                        <a-checkbox v-model="textContentConfig.textEdit">文本编辑</a-checkbox>
-                      </div>
-                    </a-space>
-                  </a-card>
-                </template>
-              </a-trigger>
-              <a-dropdown>
-                <a-button type="outline" size="mini">
-                  <icon-file v-if="textContentConfig.textViewType === 'text'"/>
-                  <icon-list v-if="textContentConfig.textViewType === 'text-list'"/>
-                  <icon-apps v-if="textContentConfig.textViewType === 'table'"/>
-                </a-button>
-                <template #content>
-                  <a-doption @click="() => (textContentConfig.textViewType = 'text')">
-                    <template #icon>
-                      <icon-file/>
-                    </template>
-                    <template #default>文本模式</template>
-                  </a-doption>
-                  <a-doption @click="() => (textContentConfig.textViewType = 'text-list')">
-                    <template #icon>
-                      <icon-list/>
-                    </template>
-                    <template #default>列表模式</template>
-                  </a-doption>
-                  <a-doption @click="() => (textContentConfig.textViewType = 'table')">
-                    <template #icon>
-                      <icon-apps/>
-                    </template>
-                    <template #default>表格模式</template>
-                  </a-doption>
-                </template>
-              </a-dropdown>
-            </a-space>
-          </div>
         </div>
       </div>
     </a-affix>
-    <n-scrollbar
-        style="max-height: calc(100vh - 76px); padding-right: 10px; overflow: auto"
-    >
-      <div id="text-content">
-        <div v-if="textContentConfig.textViewType === 'table'">
-          <table-content
-              ref="tableContentRef"
-              v-model:text-content-config="textContentConfig"
-              v-model:selected-indexes="selectedIndexes"
-              v-model:creating-ids="creatingIds"
-          />
-        </div>
-        <div v-else>
-          <text-content
-              ref="textContentRef"
-              v-model:text-content-config="textContentConfig"
-              v-model:creating-ids="creatingIds"
-          />
-        </div>
+    <div style="display: flex; margin-top: 10px">
+      <div style="flex: 1" :style="route.query.projectType as string === TextProjectType.long_text && {marginLeft: '10px'}">
+        <n-scrollbar
+            style="max-height: calc(100vh - 90px); padding-right: 10px; overflow: auto"
+        >
+          <div id="text-content">
+            <table-content
+                ref="tableContentRef"
+                v-model:text-content-config="textContentConfig"
+                v-model:selected-indexes="selectedIndexes"
+                v-model:creating-ids="creatingIds"
+            />
+          </div>
+        </n-scrollbar>
       </div>
-    </n-scrollbar>
-    <batch-change-modal
-        v-model:visible="batchChangeModalVisible"
-    />
+      <a-divider direction="vertical" style="margin: 0"/>
+      <div style="width: 20%; margin-left: 10px">
+        <n-scrollbar
+            style="max-height: calc(100vh - 90px); overflow: auto"
+        >
+          <a-card :bordered="false" style="border-radius: 8px" :body-style="{ padding: '0 10px 0 0' }">
+            <n-tabs
+                default-value="1"
+                justify-content="space-evenly"
+                type="line"
+            >
+              <n-tab-pane
+                  name="1"
+                  tab="文中角色"
+                  display-directive="show:lazy"
+              >
+                <text-role/>
+              </n-tab-pane>
+              <n-tab-pane
+                  name="2"
+                  tab="预置角色"
+                  display-directive="show:lazy"
+              >
+                <common-role/>
+              </n-tab-pane>
+            </n-tabs>
+          </a-card>
+        </n-scrollbar>
+      </div>
+    </div>
     <a-modal
         v-model:visible="aiResultModalVisible"
         title="检测到推理结果缓存"
@@ -392,22 +431,16 @@ watch(
         </a-space>
       </div>
     </a-modal>
-
+    <audio-preview v-model:visible="audioPreviewModelVisible"/>
   </div>
 </template>
 
 <style scoped>
 .text-space-header {
   width: 100%;
+  height: 40px;
   display: flex;
   justify-content: center;
-  align-items: center;
-  border-radius: 8px;
-  margin-bottom: 10px;
 }
 
-.buttons-right {
-  display: flex;
-  justify-content: center;
-}
 </style>

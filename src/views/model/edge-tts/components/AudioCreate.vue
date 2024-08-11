@@ -1,24 +1,30 @@
 <script setup lang="ts">
-import {onMounted, ref} from "vue";
+import {computed, onMounted, ref} from "vue";
 import useLoading from "@/hooks/loading.ts";
 import {FormInstance} from "@arco-design/web-vue";
-import {configs as queryConfigs, EdgeTtsConfig, playAudio, settings as querySettings} from "@/api/edge-tts.ts";
+import {AmModelConfig, getByModelType as queryModelConfigs, createAudio} from "@/api/am-model-config.ts";
+import {EDGE_TTS} from "@/types/model-types.ts";
+import {LangDict, queryLangDicts} from "@/api/dict.ts";
 import {SelectOptionData} from "@arco-design/web-vue/es/select/interface";
 
 const {loading, setLoading} = useLoading();
 const audioElement = ref<HTMLAudioElement | null>(null);
 const formRef = ref<FormInstance>()
 
-const configCreateVisible = ref(false);
-const edgeTtsConfigs = ref<EdgeTtsConfig[]>([])
-const settingOptions = ref<SelectOptionData[]>([])
+const modelConfigs = ref<AmModelConfig[]>([])
+
+const selectGender = ref<string>('')
+const genderOptions = ref<SelectOptionData[]>([])
 const selectLanguage = ref<string>('')
 
-const form = ref<EdgeTtsConfig>(
+const form = ref(
     {
-      shortName: '',
+      configParam: {
+        shortName: '',
+      },
+
       text: '四川美食确实以辣闻名，但也有不辣的选择。比如甜水面、赖汤圆、蛋烘糕、叶儿粑等，这些小吃口味温和，甜而不腻，也很受欢迎。',
-    } as EdgeTtsConfig
+    }
 )
 
 const blob = ref<Blob | null>(null)
@@ -31,8 +37,10 @@ const generateAudio = async () => {
       }
       setLoading(true);
 
-      const response = await playAudio({
-        ...form.value,
+      const response = await createAudio({
+        amType: EDGE_TTS,
+        mcParamsJson: JSON.stringify(form.value.configParam),
+        text: form.value.text,
       });
 
       blob.value = response.data;
@@ -47,26 +55,41 @@ const generateAudio = async () => {
   }
 }
 
-const handleQueryConfigs = async () => {
-  const {data} = await queryConfigs()
-  edgeTtsConfigs.value = data;
+const handleQueryModelConfigs = async () => {
+  const {data} = await queryModelConfigs({modelType: EDGE_TTS})
+  modelConfigs.value = data;
 }
 
-const handleQuerySettings = async () => {
-  const {data} = await querySettings()
-  settingOptions.value = data
-      .sort((a, b) => (b.showFlag ? 1 : 0) - (a.showFlag ? 1 : 0))
-      .map(item => {
-        return {
-          label: item.zhName || item.enName,
-          value: item.enName,
-        }
-      });
+const computedVoices = computed(() => {
+  let tmp = modelConfigs.value;
+  if (selectGender.value) {
+    tmp = tmp.filter(item => JSON.parse(item.mcParamsJson).gender === selectGender.value)
+  }
+  if (selectLanguage.value) {
+    tmp = tmp.filter(item => JSON.parse(item.mcParamsJson).locale.startsWith(selectLanguage.value))
+  }
+  return tmp;
+})
+
+const langDicts = ref<LangDict[]>([])
+
+const handleLangDicts = async () => {
+  const {data} = await queryLangDicts()
+  langDicts.value = data;
 }
 
-onMounted(() => {
-  handleQueryConfigs();
-  handleQuerySettings();
+const computedGender = () => {
+  genderOptions.value = Array.from(new Set(modelConfigs.value.map(item => JSON.parse(item.mcParamsJson).gender)))
+      .map(gender => ({
+        label: gender === 'Male' ? '男' : gender === 'Female' ? '女' : gender,
+        value: gender
+      }));
+}
+
+onMounted(async () => {
+  await handleQueryModelConfigs();
+  await handleLangDicts();
+  computedGender();
 })
 
 </script>
@@ -79,30 +102,43 @@ onMounted(() => {
           <a-form ref="formRef" :model="form" layout="vertical">
             <a-space size="medium" direction="vertical" style="width: 100%">
               <a-card :body-style="{padding: '20px 20px 0'}">
-                <a-form-item label="Language">
+                <a-row :gutter="20">
+                  <a-col :span="12">
+                    <a-form-item label="Gender">
+                      <a-select
+                          v-model="selectGender"
+                          :options="genderOptions"
+                          allow-clear
+                          allow-search
+                      />
+                    </a-form-item>
+                  </a-col>
+                  <a-col :span="12">
+                    <a-form-item label="Language">
+                      <a-select
+                          v-model="selectLanguage"
+                          :options="langDicts"
+                          :field-names="{value: 'enName', label: 'zhName'}"
+                          allow-clear
+                          allow-search
+                      />
+                    </a-form-item>
+                  </a-col>
+                </a-row>
+                <a-form-item
+                    label="shortName" field="configParam.shortName"
+                    :rules="[{required: true, message: 'shortName是必填项'}]"
+                >
                   <a-select
-                      v-model="selectLanguage"
-                      :options="settingOptions"
-                      allow-clear
-                      allow-search
-                  />
-                </a-form-item>
-                <a-form-item label="shortName" field="shortName" required>
-                  <a-select
-                      v-model="form.shortName"
+                      v-model="form.configParam.shortName"
                       allow-search
                       allow-clear
                   >
                     <a-option
-                        v-for="(item, index) in edgeTtsConfigs.filter(item => {
-                          if (!selectLanguage) {
-                            return true;
-                          }
-                          return item.shortName.substring(0, item.shortName.indexOf('-')) === selectLanguage;
-                        })"
+                        v-for="(item, index) in computedVoices"
                         :key="index"
                     >
-                      {{ item.shortName }}
+                      {{ JSON.parse(item.mcParamsJson).shortName }}
                     </a-option>
                   </a-select>
                 </a-form-item>
@@ -131,14 +167,6 @@ onMounted(() => {
                   <audio ref="audioElement" controls style="width: 100%"></audio>
                 </a-form-item>
               </a-card>
-              <a-button
-                  shape="round"
-                  type="outline"
-                  style="width: 100%"
-                  @click="() => (configCreateVisible = true)"
-              >
-                保存配置
-              </a-button>
             </a-space>
           </a-form>
         </div>

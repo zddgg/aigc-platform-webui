@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import {ref} from "vue";
-import Chat from "@/views/model/chat/index.vue";
-import AudioServer from "@/views/model/audio-server/index.vue";
-import RefAudio from "@/views/model/ref-audio/index.vue";
+import TextModelServer from "@/views/model/text-model-server/index.vue";
+import AudioModelServer from "@/views/model/audio-model-server/index.vue";
+import RefAudio from "@/views/model/prompt-audio/index.vue";
 import GptSovits from "@/views/model/gpt-sovits/index.vue";
 import FishSpeech from "@/views/model/fish-speech/index.vue";
 import EdgeTts from "@/views/model/edge-tts/index.vue";
 import ChatTts from "@/views/model/chat-tts/index.vue";
+import CosyVoice from "@/views/model/cosy-voice/index.vue";
 
 const modelTypes = [
-  '文本大模型', '音频生成服务', '参考音频', 'gpt-sovits', 'fish-speech', 'chat-tts', 'edge-tts'
+  '文本大模型', '音频生成服务', '参考音频', 'gpt-sovits', 'fish-speech', 'edge-tts', 'chat-tts', 'cosy-voice'
 ]
 const activeModelType = ref('文本大模型')
 
@@ -44,10 +45,10 @@ const changeModelType = (item: string) => {
       <n-scrollbar style="max-height: calc(100vh - 42px)">
         <div style="padding-right: 10px">
           <div v-if="activeModelType === '文本大模型'">
-            <chat/>
+            <text-model-server/>
           </div>
           <div v-if="activeModelType === '音频生成服务'">
-            <audio-server/>
+            <audio-model-server/>
           </div>
           <div v-if="activeModelType === '参考音频'">
             <ref-audio/>
@@ -58,11 +59,14 @@ const changeModelType = (item: string) => {
           <div v-if="activeModelType === 'fish-speech'">
             <fish-speech/>
           </div>
+          <div v-if="activeModelType === 'edge-tts'">
+            <edge-tts/>
+          </div>
           <div v-if="activeModelType === 'chat-tts'">
             <chat-tts/>
           </div>
-          <div v-if="activeModelType === 'edge-tts'">
-            <edge-tts/>
+          <div v-if="activeModelType === 'cosy-voice'">
+            <cosy-voice/>
           </div>
         </div>
       </n-scrollbar>

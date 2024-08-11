@@ -1,28 +1,3 @@
-export interface AnyObject {
-  [key: string]: unknown;
-}
-
-export interface Options {
-  value: unknown;
-  label: string;
-}
-
-export interface NodeOptions extends Options {
-  children?: NodeOptions[];
-}
-
-export interface GetParams {
-  body: null;
-  type: string;
-  url: string;
-}
-
-export interface PostData {
-  body: string;
-  type: string;
-  url: string;
-}
-
 export interface Pagination {
   current: number;
   pageSize: number;
@@ -44,9 +19,20 @@ export interface HttpResponse<T = unknown> {
   data: T;
 }
 
-export type TimeRanger = [string, string];
+export enum AudioTaskState {
+  init,
+  process,
+  created,
+  modified,
+  combined
+}
 
-export interface GeneralChart {
-  xAxis: string[];
-  data: Array<{ name: string; value: number[] }>;
+export enum AudioTaskEvent {
+  audio_combine = 'audio_combine'
+}
+
+export enum TextProjectType {
+  long_text = 'long_text',
+  short_text = 'short_text',
+  format_text = 'format_text',
 }

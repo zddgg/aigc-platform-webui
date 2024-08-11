@@ -32,14 +32,12 @@ class TextWebsocketService implements IWebSocketService {
 
             this.socket.onmessage = (event: MessageEvent) => {
                 const data = JSON.parse(event.data);
-                if (data.type === 'result') {
+                if (data.type === 'audio_create_task_result') {
+                    this.stageHandler(data)
                     const handler = this.resultHandlers.get(`${data.projectId}-${data.chapterId}`);
-                    if (handler) {
+                    if (handler && data.chapterInfo) {
                         handler(data.chapterInfo);
                     }
-                }
-                if (data.type === 'stage') {
-                    this.stageHandler(data)
                 }
             };
 

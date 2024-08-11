@@ -2,12 +2,12 @@
 import {inject, onBeforeUnmount, onMounted, reactive, ref} from "vue";
 import {useRoute, useRouter} from "vue-router";
 import ChapterSplitModal from "@/views/text/novel/chapter-title/components/ChapterSplitModal.vue";
-import {ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {ROLE_CHANGE} from "@/types/event-types.ts";
 import {EventBus} from "@/vite-env";
 import {deleteChapter, pageChapters, TextChapter, TextChapterPage} from "@/api/text-chapter.ts";
 import ChapterEditModal from "@/views/text/novel/chapter-title/components/ChapterEditModal.vue";
 import {Message, Modal} from "@arco-design/web-vue";
-import {Pagination} from "@/types/global.ts";
+import {AudioTaskState, Pagination} from "@/types/global.ts";
 import ChapterAddModal from "@/views/text/novel/chapter-title/components/ChapterAddModal.vue";
 
 const route = useRoute();
@@ -59,8 +59,8 @@ const chapterSelect = (textChapter: TextChapter, index: number) => {
     name: route.name as string,
     query: {
       ...route.query,
-      chapter: textChapter.chapterName,
       chapterId: textChapter.chapterId,
+      chapterName: textChapter.chapterName,
     }
   })
 }
@@ -114,8 +114,6 @@ const onNextPage = () => {
     pagination.current = Math.min(pagination.current, (pagination.pages ?? 0));
   }
 
-  console.log(pagination)
-
   fetchData(pagination)
 }
 
@@ -134,11 +132,16 @@ onBeforeUnmount(() => {
 onMounted(async () => {
   await fetchData(pagination);
   if (textChapters.value && textChapters.value.length > 0) {
+
+    const chapterId = route.query.chapterId as string
+    const chapterName = route.query.chapterName as string
+
     await router.push({
       name: route.name as string,
       query: {
         ...route.query,
-        chapterId: textChapters.value[0].chapterId,
+        chapterId: chapterId ?? textChapters.value[0].chapterId,
+        chapterName: chapterName ?? textChapters.value[0].chapterName,
       }
     })
   }
@@ -147,131 +150,133 @@ onMounted(async () => {
 
 <template>
   <div>
-    <a-affix>
-      <div class="text-space-header">
+    <div class="text-space-header" style="border-bottom: 1px solid rgb(229,230,235)">
+      <a-button
+          v-if="!collapsed"
+          type="outline"
+          size="small"
+          @click="() => (chapterSplitModalVisible = true)"
+      >
+        章节设置
+      </a-button>
+      <a-space size="medium" align="start">
         <a-button
-            v-if="!collapsed"
+            v-if="!collapsed && textChapters && textChapters.length !== 0"
             type="outline"
-            @click="() => (chapterSplitModalVisible = true)"
+            size="mini"
+            @click="() => (chapterAddModalVisible = true)"
         >
-          章节设置
+          <icon-plus/>
         </a-button>
-        <a-space size="medium">
-          <a-button
-              v-if="!collapsed && textChapters && textChapters.length !== 0"
-              type="outline"
-              size="mini"
-              @click="() => (chapterAddModalVisible = true)"
-          >
-            <icon-plus/>
-          </a-button>
-          <a-button
-              v-if="textChapters && textChapters.length !== 0"
-              type="outline"
-              size="mini"
-              @click="toggleCollapse"
-          >
-            <icon-menu-unfold v-if="collapsed"/>
-            <icon-menu-fold v-else/>
-          </a-button>
-        </a-space>
-      </div>
-    </a-affix>
-    <n-scrollbar style="height: calc(100vh - 60px - 40px); padding-right: 10px">
-      <a-space direction="vertical" style="width: 100%">
-        <a-card
-            :id="`chapter-title-${item.chapterId}`"
-            v-for="(item, index) in textChapters"
-            :key="index"
-            style="border: 1px #ccc solid; border-radius: 8px"
-            hoverable
-            :style="route.query.chapterId === item.chapterId && {backgroundColor: '#c3f6f6'}"
-            @click="chapterSelect(item, index)"
+        <a-button
+            v-if="textChapters && textChapters.length !== 0"
+            type="outline"
+            size="mini"
+            @click="toggleCollapse"
         >
-          <div
-              v-if="collapsed"
-              style="text-align: center"
+          <icon-menu-unfold v-if="collapsed"/>
+          <icon-menu-fold v-else/>
+        </a-button>
+      </a-space>
+    </div>
+    <div style="margin-top: 10px">
+      <n-scrollbar style="height: calc(100vh - 130px); padding-right: 10px">
+        <a-space direction="vertical" style="width: 100%">
+          <a-card
+              :id="`chapter-title-${item.chapterId}`"
+              v-for="(item, index) in textChapters"
+              :key="index"
+              style="border: 1px #ccc solid; border-radius: 8px"
+              hoverable
+              :style="route.query.chapterId === item.chapterId && {backgroundColor: '#c3f6f6'}"
+              @click="chapterSelect(item, index)"
           >
-            {{ (item.sortOrder ?? 0) + 1 }}
-          </div>
-          <div v-else>
-            <a-descriptions :column="1" size="small">
-              <template #title>
+            <div
+                v-if="collapsed"
+                style="text-align: center"
+            >
+              {{ (item.sortOrder ?? 0) + 1 }}
+            </div>
+            <div v-else>
+              <a-descriptions :column="1" size="small">
+                <template #title>
               <span style="font-size: 18px; font-weight: 500">
                 {{ item.chapterName }}
               </span>
-              </template>
-              <a-descriptions-item>
-                <template #label>
+                </template>
+                <a-descriptions-item>
+                  <template #label>
                 <span style="color: #000">
                   文本数量
                 </span>
-                </template>
-                {{ item.textNum ?? 0 }}
-              </a-descriptions-item>
-              <a-descriptions-item>
-                <template #label>
+                  </template>
+                  {{ item.textNum ?? 0 }}
+                </a-descriptions-item>
+                <a-descriptions-item>
+                  <template #label>
                   <span style="color: #000">
                     角色数量
                   </span>
-                </template>
-                {{ item.roleNum ?? 0 }}
-              </a-descriptions-item>
-            </a-descriptions>
-            <div
-                style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; white-space: nowrap">
-              <div>
-                <div v-if="item.stage" style="cursor: pointer">
-                  <a-tag
-                      v-if="item.stage === '合并完成'"
-                      color="green"
-                      size="small"
-                  >
-                    <template #icon>
-                      <icon-check-circle-fill/>
-                    </template>
-                    <span>
-                    {{ item.stage }}
-                </span>
-                  </a-tag>
-                  <a-tag
-                      v-else
-                      color="blue"
-                      size="small"
-                  >
-                    <template #icon>
-                      <icon-clock-circle/>
-                    </template>
-                    <span>
-                    {{ item.stage }}
-                  </span>
-                  </a-tag>
+                  </template>
+                  {{ item.roleNum ?? 0 }}
+                </a-descriptions-item>
+              </a-descriptions>
+              <div
+                  style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; white-space: nowrap">
+                <div>
+                  <div v-if="item.audioTaskState" style="cursor: pointer">
+                    <a-tag
+                        v-if="item.audioTaskState === AudioTaskState.combined"
+                        color="green"
+                        size="small"
+                    >
+                      <template #icon>
+                        <icon-check-circle-fill/>
+                      </template>
+                      <span>
+                        {{ '合并完成' }}
+                      </span>
+                    </a-tag>
+                    <a-tag
+                        v-else
+                        color="blue"
+                        size="small"
+                    >
+                      <template #icon>
+                        <icon-clock-circle/>
+                      </template>
+                      <span>
+                        {{ '处理中' }}
+                      </span>
+                    </a-tag>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <a-tag
-                    size="small"
-                    style="cursor: pointer; margin-left: 5px"
-                    @click="() => {
+                <div>
+                  <a-tag
+                      size="small"
+                      style="cursor: pointer; margin-left: 5px"
+                      @click="() => {
                         currentChapter = item;
                         chapterEditModalVisible = true;
                       }"
-                >
-                  <icon-edit/>
-                </a-tag>
-                <a-tag
-                    size="small"
-                    style="cursor: pointer; margin-left: 5px"
-                    @click="handleDeleteChapter(item)"
-                >
-                  <icon-delete/>
-                </a-tag>
+                  >
+                    <icon-edit/>
+                  </a-tag>
+                  <a-tag
+                      size="small"
+                      style="cursor: pointer; margin-left: 5px"
+                      @click="handleDeleteChapter(item)"
+                  >
+                    <icon-delete/>
+                  </a-tag>
+                </div>
               </div>
             </div>
-          </div>
-        </a-card>
-      </a-space>
-    </n-scrollbar>
+          </a-card>
+        </a-space>
+      </n-scrollbar>
+    </div>
+
     <div style="height: 40px; width: 100%; display: flex; justify-content: center; align-items: center">
       <a-pagination
           v-if="!collapsed"
@@ -317,10 +322,9 @@ onMounted(async () => {
 <style scoped>
 .text-space-header {
   width: 100%;
+  height: 40px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  border-radius: 8px;
-  margin-bottom: 10px;
+  padding-right: 10px;
 }
 </style>

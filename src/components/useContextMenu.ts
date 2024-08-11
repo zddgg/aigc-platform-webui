@@ -22,6 +22,7 @@ export default function (containerRef: any) {
         window.addEventListener("click", closeMenu, true);
         window.addEventListener("contextmenu", closeMenu, true);
     });
+
     onUnmounted(() => {
         const div = containerRef.value;
         if (div) {

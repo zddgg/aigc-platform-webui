@@ -6,7 +6,7 @@ import useLoading from "@/hooks/loading.ts";
 import {FormInstance, Message} from "@arco-design/web-vue";
 import {chapterEdit, ChapterInfo, getTextChapter, TextChapter, tmpDialogueParse,} from "@/api/text-chapter.ts";
 import {EventBus} from "@/vite-env";
-import {ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {ROLE_CHANGE} from "@/types/event-types.ts";
 
 const route = useRoute();
 const props = defineProps({

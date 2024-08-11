@@ -9,7 +9,7 @@ import {FormInstance, Message, Modal} from "@arco-design/web-vue";
 import {chapters4Sort as queryTextChapterList, chapterSort, TextChapter} from "@/api/text-chapter.ts";
 import {EventBus} from "@/vite-env";
 import {VueDraggable} from "vue-draggable-plus";
-import {ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {ROLE_CHANGE} from "@/types/event-types.ts";
 
 const route = useRoute();
 const props = defineProps({
@@ -209,7 +209,7 @@ watch(
         <a-tab-pane key="2" title="章节排序" :destroy-on-hide="true">
           <n-scrollbar style="height: 500px; padding-right: 10px">
             <div v-if="textChapters && textChapters.length > 0">
-              <vue-draggable v-model="textChapters" target="tbody" :on-change="() => (sortChanged = true)">
+              <vue-draggable v-model="textChapters" target="tbody" :animation="150" :on-update="() => (sortChanged = true)">
                 <a-table
                     row-key="chapterId"
                     :data="textChapters"

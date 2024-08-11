@@ -1,17 +1,25 @@
 <template>
   <div ref="containerRef" style="display: inline">
-    <span :class="showMenu && 'highlight'">
+    <span>
       <slot></slot>
     </span>
     <Teleport to="body">
-      <div v-if="showMenu" class="context-menu" :style="{ left: x + 'px', top: y + 'px' }"
+      <div v-if="showMenu && props.menu && props.menu.length"
+           class="context-menu"
+           :style="{ left: x + 'px', top: y + 'px' }"
            @click.right="(e) => e.preventDefault()"
       >
         <div class="menu-list">
-          <!-- 添加菜单的点击事件 -->
-          <div @click="handleClick(item.value)" class="menu-item" v-for="(item, i) in props.menu" :key="i">
-            {{ item.label }}
-          </div>
+          <a-space>
+            <div
+                v-for="(item, index) in props.menu"
+                :key="index"
+                class="menu-item"
+                @click="handleClick(item.value)"
+            >
+              {{ item.label }}
+            </div>
+          </a-space>
         </div>
       </div>
     </Teleport>
@@ -23,7 +31,7 @@ import useContextMenu from './useContextMenu.ts';
 
 const props = defineProps({
   menu: {
-    type: Array as PropType<{ label: string; value: string }[]>,
+    type: Array as PropType<{ label: string; value: string, disabled: boolean }[]>,
     default: () => [],
   },
 });
@@ -52,30 +60,17 @@ function handleClick(item: string) {
   background-color: var(--color-bg-popup);
   border-radius: 4px;
   box-shadow: 0 2px 8px #00000026;
+  display: flex;
 }
 
 .menu-item {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 0 12px;
-  color: var(--color-text-1);
-  font-size: 14px;
-  line-height: 36px;
-  text-align: left;
-  background-color: transparent;
+  border: 1px solid var(--color-bg-popup);
+  border-radius: 4px;
+  padding: 5px 10px;
   cursor: pointer;
 }
 
 .menu-item:hover {
   background-color: #F2F3F5;
-}
-
-.highlight {
-  background-color: yellow;
-  color: #000000;
 }
 </style>

@@ -28,7 +28,7 @@ const handleTabClick = (key: any) => {
         size="small"
         animated
     >
-      <n-tab-pane name="1" tab="模型列表">
+      <n-tab-pane name="1" tab="模型文件列表">
         <model-list/>
       </n-tab-pane>
       <n-tab-pane name="2" tab="配置参数列表">

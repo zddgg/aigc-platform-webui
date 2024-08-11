@@ -13,7 +13,7 @@ import {
 } from "@/api/text-chapter.ts";
 import {VueDraggable} from 'vue-draggable-plus'
 import {EventBus} from "@/vite-env";
-import {ROLE_CHANGE} from "@/services/eventTypes.ts";
+import {ROLE_CHANGE} from "@/types/event-types.ts";
 
 const route = useRoute();
 const props = defineProps({
@@ -275,7 +275,7 @@ watch(
               </div>
               <div v-if="showSortTable">
                 <n-scrollbar style="height: 600px; padding-right: 10px">
-                  <vue-draggable v-model="textChapters" target="tbody" :on-change="() => (sortChanged = true)">
+                  <vue-draggable v-model="textChapters" target="tbody" :animation="150" :on-update="() => (sortChanged = true)">
                     <a-table
                         :data="textChapters"
                         :loading="chapterSortLoading.loading.value"

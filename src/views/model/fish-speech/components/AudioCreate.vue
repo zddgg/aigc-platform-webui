@@ -1,18 +1,19 @@
 <script setup lang="ts">
+
 import {computed, nextTick, onMounted, ref} from "vue";
-import useLoading from "@/hooks/loading.ts";
-import {FormInstance, Message} from "@arco-design/web-vue";
-import {
-  configs as queryConfigs,
-  createConfig,
-  FishSpeechConfig,
-  FishSpeechModel,
-  models as queryModels,
-  playAudio
-} from "@/api/fish-speech.ts";
-import {Model} from "@/api/model.ts";
+import {AmModelFile, getByModelType as queryModelFiles} from "@/api/am-model-file.ts";
+import {PromptAudio, queryPromptAudios} from "@/api/prompt-audio.ts";
 import {CascaderOption} from "naive-ui";
-import {queryRefAudios, RefAudio} from "@/api/ref-audio.ts";
+import useLoading from "@/hooks/loading.ts";
+import {AmModelConfig, createConfig, getByModelType as queryModelConfigs, createAudio} from "@/api/am-model-config.ts";
+import {FormInstance, Message} from "@arco-design/web-vue";
+import {FISH_SPEECH} from "@/types/model-types.ts";
+
+const {loading, setLoading} = useLoading();
+const createFormRef = ref<FormInstance>()
+const formRef = ref<FormInstance>()
+const blob = ref<Blob | null>(null)
+const audioElement = ref<HTMLAudioElement | null>(null);
 
 const props = defineProps({
   configEditId: {
@@ -20,34 +21,135 @@ const props = defineProps({
   }
 })
 
-const {loading, setLoading} = useLoading();
-const audioElement = ref<HTMLAudioElement | null>(null);
-const createFormRef = ref<FormInstance>()
-const formRef = ref<FormInstance>()
+const form = ref({
+  id: -1,
+  mfId: '',
+  paCascaderPath: [],
+  paId: '',
 
+  mcId: '',
+  mcName: '',
+  amType: '',
+  configParam: {
+    top_p: 0.7,
+    temperature: 0.7,
+    repetition_penalty: 1.2,
+  },
+
+  mcInstructText: '',
+
+  text: '四川美食确实以辣闻名，但也有不辣的选择。比如甜水面、赖汤圆、蛋烘糕、叶儿粑等，这些小吃口味温和，甜而不腻，也很受欢迎。',
+  saveAudio: false,
+})
+
+const promptAudios = ref<PromptAudio[]>([])
+const modelFileOptions = ref<CascaderOption[]>([]);
+const promptAudioDataOptions = ref<CascaderOption[]>([]);
 const configCreateVisible = ref(false);
-const configs = ref<FishSpeechConfig[]>([])
-const modelDataOptions = ref<CascaderOption[]>([]);
-const refAudioDataOptions = ref<CascaderOption[]>([]);
-const refAudios = ref<RefAudio[]>([])
+const modelConfigs = ref<AmModelConfig[]>([])
 
-const form = ref<FishSpeechConfig>(
-    {
-      modelId: '',
-      moodAudioId: '',
-      refAudioCascaderPath: [],
+const handleQueryModelFiles = async () => {
+  const {data} = await queryModelFiles({modelType: FISH_SPEECH})
+  modelFileOptions.value = data.reduce((acc: any, item) => {
+    const {mfGroup} = item;
+    let groupItem = acc.find((g: { group: string, list: [] }) => g.group === mfGroup);
+    if (!groupItem) {
+      groupItem = {group: mfGroup, list: []} as any;
+      acc.push(groupItem);
+    }
+    groupItem.list.push(item);
+    return acc;
+  }, [])
+      .map((item: any) => {
+        return {
+          label: item.group,
+          value: item.group,
+          children: item.list.map((item1: AmModelFile) => {
+            return {
+              label: item1.mfRole,
+              value: item1.mfId
+            };
+          }),
+        };
+      })
+}
 
-      topP: 0.7,
-      temperature: 0.7,
-      repetitionPenalty: 1.5,
 
-      configName: '',
-      text: '四川美食确实以辣闻名，但也有不辣的选择。比如甜水面、赖汤圆、蛋烘糕、叶儿粑等，这些小吃口味温和，甜而不腻，也很受欢迎。',
-      saveAudio: false,
-    } as FishSpeechConfig
-)
+const handleQueryPromptAudios = async () => {
+  const {data} = await queryPromptAudios();
+  promptAudios.value = data;
+  promptAudioDataOptions.value = data.reduce((acc: any, item) => {
+    const {paGroup} = item;
+    let groupItem = acc.find((g: { group: string, list: [] }) => g.group === paGroup);
+    if (!groupItem) {
+      groupItem = {group: paGroup, list: []} as any;
+      acc.push(groupItem);
+    }
+    groupItem.list.push(item);
+    return acc;
+  }, [])
+      .map((item: any) => {
+        return {
+          label: item.group,
+          value: item.group,
+          children: item.list.map((item1: any) => {
+            return {
+              label: item1.paRole,
+              value: item1.paRole,
+              children: item1.paMoods.map((item2: any) => {
+                return {
+                  label: item2.paMood,
+                  value: item2.paMood,
+                };
+              }),
+            };
+          }),
+        };
+      });
 
-const blob = ref<Blob | null>(null)
+}
+
+const handleQueryModelConfigs = async () => {
+  const {data} = await queryModelConfigs({modelType: FISH_SPEECH})
+  modelConfigs.value = data;
+}
+
+const computedRefAudioSelectOptions = computed(() => {
+  if (!form.value.paCascaderPath) {
+    return [];
+  }
+  return promptAudios.value
+      .find(item => item.paGroup === form.value.paCascaderPath[0]
+          && item.paRole === form.value.paCascaderPath[1])
+      ?.paMoods
+      .find(item => item.paMood === form.value.paCascaderPath[2])
+      ?.paAudios
+      .map(item => {
+        return {
+          label: item.paAudioText,
+          value: item.paId,
+        }
+      }) ?? []
+})
+
+const refAudioCascaderChange = () => {
+  nextTick(() => {
+    form.value.paId = computedRefAudioSelectOptions
+        .value[0]
+        .value
+  })
+}
+
+const copyConfig = (config: AmModelConfig) => {
+  createFormRef.value?.resetFields();
+  form.value = {
+    ...form.value,
+    configParam: {
+      ...JSON.parse(config.mcParamsJson)
+    },
+  };
+}
+
 const generateAudio = async () => {
   const res = await createFormRef.value?.validate();
   if (res) {
@@ -62,8 +164,12 @@ const generateAudio = async () => {
     }
     setLoading(true);
 
-    const response = await playAudio({
-      ...form.value,
+    const response = await createAudio({
+      amType: FISH_SPEECH,
+      mfId: form.value.mfId,
+      paId: form.value.paId,
+      mcParamsJson: JSON.stringify(form.value.configParam),
+      text: form.value.text,
     });
 
     blob.value = response.data;
@@ -78,26 +184,19 @@ const generateAudio = async () => {
   }
 }
 
-const handleQueryConfigs = async () => {
-  const {data} = await queryConfigs()
-  configs.value = data;
-}
-
 const handleBeforeOk = async (done: (closed: boolean) => void) => {
   const res = await formRef.value?.validate();
   if (!res) {
     const formData = new FormData();
-    if (form.value.id) {
+    if (form.value.id && form.value.id > 0) {
       formData.append('id', String(form.value.id));
     }
-    formData.append('configName', form.value.configName);
 
-    formData.append('temperature', String(form.value.temperature));
-    formData.append('topP', String(form.value.topP));
-    formData.append('repetitionPenalty', String(form.value.repetitionPenalty));
+    formData.append('amType', FISH_SPEECH);
+    formData.append('paId', form.value.paId);
 
-    formData.append('modelId', String(form.value.modelId));
-    formData.append('moodAudioId', String(form.value.moodAudioId));
+    formData.append('mcName', form.value.mcName);
+    formData.append('mcParamsJson', JSON.stringify(form.value.configParam));
 
     formData.append('text', String(form.value.text));
     formData.append('saveAudio', String(form.value.saveAudio || false));
@@ -105,143 +204,46 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
 
     const {msg} = await createConfig(formData);
     Message.success(msg);
-    await handleQueryConfigs();
+    await handleQueryModelConfigs();
     done(true);
   } else {
     done(false);
   }
 }
 
-const copyConfig = (config: FishSpeechConfig) => {
-  createFormRef.value?.resetFields();
-  refAudios.value
-      .forEach(item => {
-        item.moods.forEach(item1 => {
-          item1.moodAudios.forEach(item2 => {
-            if (item2.id === config.moodAudioId) {
-              form.value.refAudioCascaderPath = [item.group, item.name, item1.name]
-            }
-          })
-        })
-      });
-  form.value = {
-    ...form.value,
-    ...config,
-    id: undefined,
-    configName: '',
-    text: form.value.text,
-  };
-}
-
-const handleQueryModels = async () => {
-  const {data} = await queryModels();
-  modelDataOptions.value = data.reduce((acc: any, item) => {
-    const {modelGroup} = item;
-    let groupItem = acc.find((g: FishSpeechModel) => g.modelGroup === modelGroup);
-    if (!groupItem) {
-      groupItem = {modelGroup, list: []} as any;
-      acc.push(groupItem);
-    }
-    groupItem.list.push(item);
-    return acc;
-  }, [])
-      .map((item: any) => {
-        return {
-          value: item.modelGroup,
-          children: item.list.map((item1: any) => {
-            return {
-              label: item1.modelName,
-              value: item1.modelId
-            };
-          }),
-        };
-      });
-}
-
-const handleQueryRefAudios = async () => {
-  const {data} = await queryRefAudios();
-  refAudios.value = data;
-  refAudioDataOptions.value = data.reduce((acc: any, item) => {
-    const {group} = item;
-    let groupItem = acc.find((g: Model) => g.group === group);
-    if (!groupItem) {
-      groupItem = {group, list: []} as any;
-      acc.push(groupItem);
-    }
-    groupItem.list.push(item);
-    return acc;
-  }, [])
-      .map((item: any) => {
-        return {
-          label: item.group,
-          value: item.group,
-          children: item.list.map((item1: any) => {
-            return {
-              label: item1.name,
-              value: item1.name,
-              children: item1.moods.map((item2: any) => {
-                return {
-                  label: item2.name,
-                  value: item2.name,
-                };
-              }),
-            };
-          }),
-        };
-      });
-}
-
-const computedRefAudioSelectOptions = computed(() => {
-  if (!form.value.refAudioCascaderPath) {
-    return [];
+const handleSaveConfig = async () => {
+  const res = await createFormRef.value?.validate();
+  if (!res) {
+    configCreateVisible.value = true;
   }
-  return refAudios.value
-      .find(item => item.group === form.value.refAudioCascaderPath[0]
-          && item.name === form.value.refAudioCascaderPath[1])
-      ?.moods
-      .find(item => item.name === form.value.refAudioCascaderPath[2])
-      ?.moodAudios
-      .map(item => {
-        return {
-          label: item.text,
-          value: item.id,
-        }
-      }) ?? []
-})
-
-const refAudioCascaderChange = () => {
-  nextTick(() => {
-    form.value.moodAudioId = computedRefAudioSelectOptions
-        .value[0]
-        .value
-  })
 }
 
 onMounted(async () => {
-  await handleQueryModels();
-  await handleQueryRefAudios();
-  await handleQueryConfigs();
+  await handleQueryModelFiles();
+  await handleQueryPromptAudios();
+  await handleQueryModelConfigs();
   if (props.configEditId) {
-    const find = configs.value.find((item) => item.id === props.configEditId);
+    const find = modelConfigs.value.find((item) => item.id === props.configEditId);
+
     if (find) {
-
-      let refAudioCascaderPath: string[] = []
-
-      refAudios.value.forEach(item => {
-        item.moods.forEach(item1 => {
-          item1.moodAudios.forEach(item2 => {
-            if (item2.id === find.moodAudioId) {
-              refAudioCascaderPath = [item.group, item.name, item1.name]
+      let paCascaderPath: any = []
+      promptAudios.value.forEach((item) => {
+        item.paMoods.forEach((item1) => {
+          item1.paAudios.forEach((item2) => {
+            if (item2.paId === find.paId) {
+              paCascaderPath = [item.paGroup, item.paRole, item1.paMood]
             }
           })
         })
       });
-
       form.value = {
         ...find,
-        refAudioCascaderPath: refAudioCascaderPath,
+        paCascaderPath: paCascaderPath,
+        configParam: {
+          ...JSON.parse(find.mcParamsJson),
+        },
         text: form.value.text,
-      } as FishSpeechConfig
+      } as any
     }
   }
 })
@@ -257,34 +259,21 @@ onMounted(async () => {
             <a-space size="medium" direction="vertical" style="width: 100%">
               <a-row :gutter="20">
                 <a-col :span="12">
-                  <a-card :body-style="{padding: '20px 20px 0'}">
-                    <a-form-item
-                        label="模型"
-                        field="modelId"
-                        :rules="[{required: true, message: '请选择一个模型'}]"
-                    >
-                      <a-cascader
-                          v-model="form.modelId"
-                          :options="modelDataOptions"/>
-                    </a-form-item>
-                  </a-card>
-                </a-col>
-                <a-col :span="12">
                   <a-card :body-style="{padding: '20px'}">
                     <a-form-item
                         label="参考音频"
-                        field="refAudioCascaderPath"
+                        field="paCascaderPath"
                         :rules="[{required: true, message: '请选择一个参考音频'}]"
                     >
                       <a-cascader
-                          v-model="form.refAudioCascaderPath"
+                          v-model="form.paCascaderPath"
                           path-mode
-                          :options="refAudioDataOptions"
+                          :options="promptAudioDataOptions"
                           @change="refAudioCascaderChange"
                       />
                     </a-form-item>
                     <a-select
-                        v-model="form.moodAudioId"
+                        v-model="form.paId"
                         :options="computedRefAudioSelectOptions"
                     >
                       <template #label="{data}">
@@ -302,9 +291,9 @@ onMounted(async () => {
                     <a-form-item class="slider-wrapper">
                       <template #label>
                         <div style="display: flex; justify-content: space-between">
-                          <span>top_P</span>
+                          <span>top_p</span>
                           <n-input-number
-                              v-model:value="form.topP"
+                              v-model:value="form.configParam.top_p"
                               :show-button="false"
                               size="tiny"
                               style="width: 100px"
@@ -312,7 +301,7 @@ onMounted(async () => {
                         </div>
                       </template>
                       <n-slider
-                          v-model:value="form.topP"
+                          v-model:value="form.configParam.top_p"
                           :min="0"
                           :max="1"
                           :step="0.05"
@@ -327,7 +316,7 @@ onMounted(async () => {
                         <div style="display: flex; justify-content: space-between">
                           <span>temperature</span>
                           <n-input-number
-                              v-model:value="form.temperature"
+                              v-model:value="form.configParam.temperature"
                               :show-button="false"
                               size="tiny"
                               style="width: 100px"
@@ -335,7 +324,7 @@ onMounted(async () => {
                         </div>
                       </template>
                       <n-slider
-                          v-model:value="form.temperature"
+                          v-model:value="form.configParam.temperature"
                           :min="0.05"
                           :max="1"
                           :step="0.05"
@@ -350,7 +339,7 @@ onMounted(async () => {
                         <div style="display: flex; justify-content: space-between">
                           <span>repetition_penalty</span>
                           <n-input-number
-                              v-model:value="form.repetitionPenalty"
+                              v-model:value="form.configParam.repetition_penalty"
                               :show-button="false"
                               size="tiny"
                               style="width: 100px"
@@ -358,7 +347,7 @@ onMounted(async () => {
                         </div>
                       </template>
                       <n-slider
-                          v-model:value="form.repetitionPenalty"
+                          v-model:value="form.configParam.repetition_penalty"
                           :min="0"
                           :max="2"
                           :step="0.05"
@@ -398,7 +387,7 @@ onMounted(async () => {
                   shape="round"
                   type="outline"
                   style="width: 100%"
-                  @click="() => (configCreateVisible = true)"
+                  @click="handleSaveConfig"
               >
                 保存配置
               </a-button>
@@ -412,23 +401,23 @@ onMounted(async () => {
         <div>
           <a-space size="medium" direction="vertical" style="width: 100%">
             <a-card
-                v-for="(item, index) in configs"
+                v-for="(item, index) in modelConfigs"
                 :key="index"
             >
               <a-descriptions
-                  :title="item.configName"
+                  :title="item.mcName"
                   :column="2"
                   size="small"
                   layout="inline-vertical"
               >
-                <a-descriptions-item label="top_P">
-                  {{ item.topP }}
+                <a-descriptions-item label="top_p">
+                  {{ JSON.parse(item.mcParamsJson).top_p }}
                 </a-descriptions-item>
                 <a-descriptions-item label="temperature">
-                  {{ item.temperature }}
+                  {{ JSON.parse(item.mcParamsJson).temperature }}
                 </a-descriptions-item>
-                <a-descriptions-item label="repetitionPenalty">
-                  {{ item.repetitionPenalty }}
+                <a-descriptions-item label="repetition_penalty">
+                  {{ JSON.parse(item.mcParamsJson).repetition_penalty }}
                 </a-descriptions-item>
                 <div style="text-align: right">
                   <a-button
@@ -448,13 +437,15 @@ onMounted(async () => {
         v-model:visible="configCreateVisible"
         title="保存配置"
         @before-ok="handleBeforeOk"
+        @cancel="configCreateVisible = false"
+        @close="configCreateVisible = false"
     >
       <a-form
           ref="formRef"
           :model="form"
       >
-        <a-form-item label="配置名称" field="configName" required>
-          <a-input v-model="form.configName"/>
+        <a-form-item label="配置名称" field="mcName" :rules="[{required: true, message: '配置名称是必填项'}]">
+          <a-input v-model="form.mcName"/>
         </a-form-item>
         <a-form-item label="保存音频" field="saveAudio">
           <a-checkbox v-model="form.saveAudio">用于预览，不要太长。</a-checkbox>
