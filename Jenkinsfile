@@ -12,19 +12,19 @@ pipeline {
     }
 
     stages {
-        stage('Install Dependencies') {
-            steps {
-                script {
-                    sh 'npm install -g pnpm'
-                    sh 'pnpm install'
-                }
-            }
-        }
+//         stage('Install Dependencies') {
+//             steps {
+//                 script {
+//                     sh 'npm install -g pnpm'
+//                     sh 'pnpm install'
+//                 }
+//             }
+//         }
 
         stage('Build Docs') {
             steps {
                 script {
-                    sh 'pnpm run build'
+                    sh 'npm run build'
                 }
             }
         }
