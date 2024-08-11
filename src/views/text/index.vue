@@ -59,7 +59,7 @@ onMounted(() => {
 
 <template>
   <div style="padding: 20px">
-    <a-tabs type="rounded" size="large" @change="(value) => (projectType = value as string)">
+    <a-tabs type="rounded" size="large" @change="(value: any) => (projectType = value as string)">
       <a-tab-pane key="long_text">
         <template #title>
           <div>
