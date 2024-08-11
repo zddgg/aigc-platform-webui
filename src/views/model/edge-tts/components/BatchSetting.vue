@@ -99,7 +99,7 @@ watch(
               checked-text="是"
               unchecked-text="否"
               type="round"
-              @change="(value) => {dataChange[record.lang] = value as boolean}"
+              @change="(value: any) => {dataChange[record.lang] = value as boolean}"
           />
         </template>
       </a-table>

@@ -233,7 +233,7 @@ watch(
                 <div style="margin-bottom: 15px">
                   <a-checkbox
                       v-model="showDialogue"
-                      @change="(value) => {
+                      @change="(value: any) => {
                         if (!value) {
                           showAside = true
                         }
@@ -243,7 +243,7 @@ watch(
                   </a-checkbox>
                   <a-checkbox
                       v-model="showAside"
-                      @change="(value) => {
+                      @change="(value: any) => {
                         if (!value) {
                           showDialogue = true
                         }
@@ -311,7 +311,7 @@ watch(
                                 placeholder="序号"
                                 size="mini"
                                 style="width: 80px"
-                                @change="(value) => sortInputChange(value, rowIndex)"
+                                @change="(value: any) => sortInputChange(value, rowIndex)"
                             />
                           </div>
                         </div>

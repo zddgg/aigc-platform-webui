@@ -172,7 +172,7 @@ watch(
       </a-button>
       <a-collapse
           :active-key="ruleActiveKey"
-          @change="(value) => (ruleActiveKey = value)"
+          @change="(value: any) => (ruleActiveKey = value)"
       >
         <a-collapse-item v-for="(item, index) in commonRoles" :key="index">
           <template #header>
