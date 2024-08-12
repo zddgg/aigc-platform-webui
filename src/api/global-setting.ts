@@ -2,6 +2,7 @@ import axios from "@/axios/default-axios.ts";
 
 export interface GlobalSetting {
   subtitleOptimize: boolean;
+  subAudioInterval: number;
 }
 
 export function getGlobalSetting() {

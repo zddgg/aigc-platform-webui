@@ -370,12 +370,25 @@ watch(
                 </a-button>
               </a-space>
             </div>
+            <div>
+              <a-dropdown>
+                <a-button size="mini">
+                  <icon-down/>
+                </a-button>
+                <template #content>
+                  <a-doption>
+                    <a-checkbox v-model="textContentConfig.showDialogue">标记对话</a-checkbox>
+                  </a-doption>
+                </template>
+              </a-dropdown>
+            </div>
           </a-space>
         </div>
       </div>
     </a-affix>
     <div style="display: flex; margin-top: 10px">
-      <div style="flex: 1" :style="route.query.projectType as string === TextProjectType.long_text && {marginLeft: '10px'}">
+      <div style="flex: 1"
+           :style="route.query.projectType as string === TextProjectType.long_text && {marginLeft: '10px'}">
         <n-scrollbar
             style="max-height: calc(100vh - 90px); padding-right: 10px; overflow: auto"
         >

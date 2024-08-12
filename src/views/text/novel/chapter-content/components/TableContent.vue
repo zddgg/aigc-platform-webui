@@ -471,8 +471,12 @@ watch(
                 <icon-drag-arrow/>
               </div>
             </div>
-            <a-card style="flex: 1" :body-style="{padding: '10px 20px'}">
-              <div v-if="item.newItem" style="display: flex; align-items: center;">
+            <a-card
+                style="flex: 1"
+                :style="textContentConfig.showDialogue && item.dialogueFlag && {backgroundColor: '#E8F3FF'}"
+                :body-style="{padding: '10px 20px'}"
+            >
+              <div v-if="item.newItem" style="display: flex; align-items: center">
                 <a-textarea v-model="item.text" :auto-size="{minRows: 1, maxRows: 5}" style="flex: 1"/>
                 <a-button
                     size="small" type="outline" style="margin-left: 10px"
