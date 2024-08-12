@@ -6,6 +6,7 @@ import customAxios from "@/axios/custom-axios.ts";
 
 export interface TextContentConfig {
   edit: boolean;
+  showDialogue: boolean;
 }
 
 export interface TextChapter {

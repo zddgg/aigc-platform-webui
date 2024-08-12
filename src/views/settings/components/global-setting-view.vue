@@ -30,6 +30,12 @@ onMounted(() => {
           <a-switch v-model="globalSetting.subtitleOptimize" @change="handleUpdateGlobalSetting"/>
         </a-space>
       </a-card>
+      <a-card v-if="globalSetting.subtitleOptimize">
+        <a-space size="large">
+          <span>字幕优化后分段音频间隔</span>
+          <a-input-number v-model="globalSetting.subAudioInterval" @change="handleUpdateGlobalSetting"/>
+        </a-space>
+      </a-card>
     </a-space>
   </div>
 </template>
