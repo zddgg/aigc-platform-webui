@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {PropType, ref, watch} from "vue";
+import {computed, PropType, ref, watch} from "vue";
 import {FormInstance, Message} from "@arco-design/web-vue";
 import {TmServer, templateList as queryTemplateList, updateModelChatConfig} from "@/api/tm-server.ts";
 
@@ -60,6 +60,15 @@ const chatTemplateChange = (value: any) => {
   }
 }
 
+const interfaceTypeOptions = computed(() => {
+  const result = Array.from(new Set(chatTemplates.value.map(item => item.interfaceType)
+      .filter(item => !!item)))
+  if (result && result.length > 0) {
+    return result
+  }
+  return ['OpenAi', 'Spark', 'Qwen']
+})
+
 watch(
     () => props.visible,
     () => {
@@ -106,7 +115,7 @@ watch(
             >
               <a-select
                   v-model="form.interfaceType"
-                  :options="Array.from(new Set(chatTemplates.map(item => item.interfaceType).filter(item => !!item)))"
+                  :options="interfaceTypeOptions"
               >
               </a-select>
             </a-form-item>
