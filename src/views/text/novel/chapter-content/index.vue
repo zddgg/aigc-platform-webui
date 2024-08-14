@@ -22,6 +22,7 @@ import {
 import {AudioTaskEvent, AudioTaskState, TextProjectType} from "@/types/global.ts";
 import AudioPreview from "@/views/text/novel/chapter-content/components/AudioPreview.vue";
 import {getTextProject, TextProject} from "@/api/text-project.ts";
+import ChapterEditModal from "@/views/text/novel/chapter-title/components/ChapterEditModal.vue";
 
 const route = useRoute();
 const {loading, setLoading} = useLoading();
@@ -32,6 +33,7 @@ const eventBus = inject<EventBus>('eventBus');
 const selectedIndexes = ref<string[]>([])
 const textContentConfig = ref<TextContentConfig>({} as TextContentConfig)
 const audioPreviewModelVisible = ref<boolean>(false);
+const chapterEditModalVisible = ref<boolean>(false);
 
 const tableContentRef = ref<
     {
@@ -230,6 +232,15 @@ watch(
       <div class="text-space-header" style="border-bottom: 1px solid rgb(229,230,235)">
         <div style="width: 90%; display: flex">
           <a-space size="large" align="start">
+            <div v-if="route.query.projectType === TextProjectType.short_text">
+              <a-button
+                  type="primary"
+                  size="small"
+                  @click="chapterEditModalVisible = true"
+              >
+                章节编辑
+              </a-button>
+            </div>
             <div v-if="textProject?.projectType !== TextProjectType.format_text">
               <a-button
                   type="primary"
@@ -445,6 +456,10 @@ watch(
       </div>
     </a-modal>
     <audio-preview v-model:visible="audioPreviewModelVisible"/>
+    <chapter-edit-modal
+        v-model:visible="chapterEditModalVisible"
+        :chapter-id="route.query.chapterId as string"
+    />
   </div>
 </template>
 

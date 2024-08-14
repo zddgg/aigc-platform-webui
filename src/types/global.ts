@@ -22,8 +22,8 @@ export interface HttpResponse<T = unknown> {
 export enum AudioTaskState {
   init,
   process,
-  created,
   modified,
+  created,
   combined
 }
 

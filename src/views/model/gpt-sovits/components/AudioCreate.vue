@@ -34,6 +34,7 @@ const form = ref({
     top_k: 15,
     top_p: 1,
     temperature: 1,
+    cut_punc: 'cut0'
   },
 
   mcInstructText: '',
@@ -367,6 +368,20 @@ onMounted(async () => {
                           :max="1"
                           :step="0.05"
                       />
+                    </a-form-item>
+                  </a-card>
+                </a-col>
+                <a-col :span="6">
+                  <a-card :body-style="{padding: '20px 20px 0'}">
+                    <a-form-item label="怎么切" class="slider-wrapper">
+                      <a-select v-model="form.configParam.cut_punc">
+                        <a-option value="cut0">不切</a-option>
+                        <a-option value="cut1">凑四句一切</a-option>
+                        <a-option value="cut2">凑50字一切</a-option>
+                        <a-option value="cut3">按中文句号。切</a-option>
+                        <a-option value="cut4">按英文句号.切</a-option>
+                        <a-option value="cut5">按标点符号切</a-option>
+                      </a-select>
                     </a-form-item>
                   </a-card>
                 </a-col>
