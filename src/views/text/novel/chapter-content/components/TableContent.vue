@@ -30,6 +30,7 @@ import ConditionSelect from "@/views/text/novel/chapter-content/components/Condi
 import {debounce} from 'lodash';
 import {COSY_VOICE} from "@/types/model-types.ts";
 import AudioParamsChange from "@/views/text/novel/chapter-content/components/AudioParamsChange.vue";
+import {AudioTaskState} from "@/types/global.ts";
 
 const route = useRoute();
 const props = defineProps({
@@ -132,15 +133,17 @@ const startPlayAudio = (chapterInfo: ChapterInfo, url: string) => {
 const activeAudioKey = ref<string>('');
 const handlePlayAudio = async (chapterInfo: ChapterInfo) => {
 
-  const response = await playAudio(chapterInfo);
-  const url = URL.createObjectURL(response.data);
+  if (chapterInfo.audioFiles) {
+    const response = await playAudio(chapterInfo);
+    const url = URL.createObjectURL(response.data);
 
-  activeAudioKey.value = chapterInfo.index;
+    activeAudioKey.value = chapterInfo.index;
 
-  startPlayAudio(chapterInfo, url);
+    startPlayAudio(chapterInfo, url);
 
-  playAll.value = false;
-  activeAudioIndex.value = -1;
+    playAll.value = false;
+    activeAudioIndex.value = -1;
+  }
 };
 
 const playAll = ref(false);
@@ -191,7 +194,7 @@ const TextWebsocketService = inject<IWebSocketService>('TextWebsocketService') a
 const playNext = () => {
   activeAudioIndex.value += 1;
   const chapterInfo = chapterInfos.value[activeAudioIndex.value];
-  if (chapterInfo) {
+  if (chapterInfo && chapterInfo.audioFiles) {
     setTimeout(async () => {
       const response = await playAudio(chapterInfo);
       const url = URL.createObjectURL(response.data);
@@ -492,8 +495,18 @@ watch(
                 </a-button>
               </div>
               <div v-else style="position: relative; width: 100%; display: flex; place-items: center">
-                <div style="position: absolute; top: 0; left: 0; font-size: 10px">
-                  {{ item.index }}
+                <div style="position: absolute; top: 0; left: 0; font-size: 12px">
+                  <span>
+                    {{ item.index }}
+                  </span>
+                  <icon-check-circle-fill
+                      v-if="item.audioTaskState >= AudioTaskState.created"
+                      style="color: #00B42A; margin-left: 4px"
+                  />
+                  <icon-info-circle
+                      v-else-if="item.audioTaskState >= AudioTaskState.modified"
+                      style="color: #FF7D00; margin-left: 4px"
+                  />
                 </div>
                 <div style="width: 100px">
                   <a-dropdown>
