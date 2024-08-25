@@ -8,14 +8,13 @@ pipeline {
     }
 
     tools {
-        nodejs "nodejs-20.15.0"
+        nodejs "node22"
     }
 
     stages {
         stage('Install Dependencies') {
             steps {
                 script {
-//                     sh 'npm install -g pnpm'
                     sh 'npm install'
                 }
             }
