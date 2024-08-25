@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {useRoute} from "vue-router";
-import {inject, onBeforeUnmount, onMounted, ref, watch} from "vue";
+import {onBeforeUnmount, onMounted, ref, watch} from "vue";
 import {FormInstance, Message, Modal} from "@arco-design/web-vue";
 import AudioSelect from '@/views/audio-select/index.vue'
 import {AudioModelInfo} from "@/api/model.ts";
@@ -12,12 +12,11 @@ import {
   updateCommonRole,
 } from "@/api/text-chapter.ts";
 import {COMMON_ROLE_CHANGE} from "@/types/event-types.ts";
-import {EventBus} from "@/vite-env";
 import {voiceNameFormat} from "@/utils/model-util.ts";
 import RoleEdit from "@/views/text/novel/chapter-content/components/RoleEdit.vue";
+import emitter from "@/mitt";
 
 const route = useRoute();
-const eventBus = inject<EventBus>('eventBus');
 
 const modelSelectVisible = ref<boolean>(false);
 
@@ -139,11 +138,11 @@ const onDeleteRole = (role: TextRole) => {
 }
 
 onMounted(() => {
-  eventBus?.on(COMMON_ROLE_CHANGE, handleQueryCommonRoles);
+  emitter?.on(COMMON_ROLE_CHANGE, handleQueryCommonRoles);
 });
 
 onBeforeUnmount(() => {
-  eventBus?.off(COMMON_ROLE_CHANGE, handleQueryCommonRoles);
+  emitter?.off(COMMON_ROLE_CHANGE, handleQueryCommonRoles);
 });
 
 watch(

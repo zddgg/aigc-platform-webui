@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import {inject, PropType, ref, watch} from "vue";
+import {PropType, ref, watch} from "vue";
 import {FormInstance, Message} from "@arco-design/web-vue";
 import {useRoute} from "vue-router";
 import {COMMON_ROLE_CHANGE, ROLE_CHANGE} from "@/types/event-types.ts";
-import {EventBus} from "@/vite-env";
 import {
   commonRoles as queryCommonRoles,
   roles as queryRoles,
@@ -11,6 +10,7 @@ import {
   updateCommonRole,
   updateRole
 } from "@/api/text-chapter.ts";
+import emitter from "@/mitt";
 
 const route = useRoute();
 const props = defineProps({
@@ -27,7 +27,6 @@ const props = defineProps({
 })
 
 const emits = defineEmits(['update:visible']);
-const eventBus = inject<EventBus>('eventBus');
 
 const showModal = ref<boolean>(false);
 
@@ -63,7 +62,7 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
       } as TextRole)
       Message.success(msg);
       done(true);
-      eventBus?.emit(ROLE_CHANGE);
+      emitter?.emit(ROLE_CHANGE);
     }
     if (props.roleType === 'commonRole') {
       const {msg} = await updateCommonRole({
@@ -75,7 +74,7 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
       } as TextRole)
       Message.success(msg);
       done(true);
-      eventBus?.emit(COMMON_ROLE_CHANGE);
+      emitter?.emit(COMMON_ROLE_CHANGE);
     }
   }
   done(false)

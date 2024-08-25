@@ -3,12 +3,15 @@
     <div v-if="!textEdit" style="display: inline">
       <context-menu :menu="contextMenuItems" @select="handleContextMenuSelect">
         <span
-            v-for="(item, index) in data"
+            v-for="(item, index) in subTextInfos"
             :key="index"
             class="ruby-item"
             @contextmenu="handleContextMenu"
         >
-          <span>
+          <span v-if="!item.hasMarkup" :data-index="index">
+            {{ item.text }}
+          </span>
+          <span v-else>
             <ruby :data-index="index">
               {{ item.text }}
               <rt class="ruby-rt">
@@ -19,13 +22,13 @@
                 >
                   <div>
                     <a-tag
-                        v-if="item.pinyin"
+                        v-if="item.markup"
                         color="blue"
                         bordered
                         size="small"
-                        style="padding: 0 5px; cursor: pointer"
+                        style="padding: 0 5px; cursor: pointer; letter-spacing: 0"
                     >
-                    {{ item.pinyin }}
+                    {{ item.markup }}
                   </a-tag>
                   </div>
                   <template #content>
@@ -40,7 +43,7 @@
                           {{ item1 }}
                         </a-button>
                       </a-space>
-                      <div v-if="item.pinyin">
+                      <div v-if="item.markup">
                         <a-divider direction="vertical"/>
                         <a-button size="small" @click="removePinyin(index)">
                           移除
@@ -89,6 +92,7 @@ import {usePinyinStore} from "@/store"
 import {
   addPolyphonicInfo,
   ChapterInfo,
+  PolyphonicInfo,
   removePolyphonicInfo,
   TextContentConfig,
   updateChapterText
@@ -118,40 +122,117 @@ const data = ref<{
 const contextMenuItems = ref<{ label: string; value: string; disabled: boolean }[]>([
   {label: '多音字', value: 'duoyinzi', disabled: false},
 ]);
-const currentIndex = ref(-1);
+
+const partIndex = ref(-1);
+
 const textEdit = ref<boolean>(false)
 const backupText = ref<string>('')
 
-const removePinyin = async (i: number) => {
-  data.value = data.value?.map((item, index) => {
-    if (index === i) {
-      return {
-        text: item.text,
-        showPinyins: false,
-      } as any;
-    }
-    return item;
-  });
-  if (props?.chapterInfo?.id) {
-    await removePolyphonicInfo({
-      chapterInfoId: props.chapterInfo.id,
-      index: i,
-    } as any)
+
+interface SubTextInfo {
+  text: string;
+  startIndex: number;
+  endIndex: number;
+  hasMarkup: boolean;
+  markup?: string,
+  pinyins?: string[],
+  showPinyins?: boolean,
+}
+
+function splitTextByIndexes(polyphonicInfos: PolyphonicInfo[], text: string) {
+  const result: SubTextInfo[] = [];
+  let previousIndex = 0;
+
+  polyphonicInfos.sort((a, b) => a.index - b.index)
+      .forEach((item) => {
+        // 添加前一段子字符串
+        if (previousIndex !== item.index) {
+          result.push(
+              {
+                text: text.slice(previousIndex, item.index),
+                startIndex: previousIndex,
+                endIndex: item.index - 1,
+                hasMarkup: false,
+              }
+          );
+        }
+        // 添加当前索引位置的字符
+        result.push({
+          text: text[item.index],
+          startIndex: item.index,
+          endIndex: item.index,
+          hasMarkup: true,
+          markup: item.markup,
+          pinyins: pinyinStore.getPinyinList(text[item.index])
+        });
+        previousIndex = item.index + 1; // 更新 previousIndex
+      });
+
+  // 添加剩余的子字符串
+  if (previousIndex < text.length) {
+    result.push({
+      text: text.slice(previousIndex),
+      startIndex: previousIndex,
+      endIndex: text.length - 1,
+      hasMarkup: false
+    });
   }
-};
+
+  return result;
+}
 
 const handleContextMenu = (event: MouseEvent) => {
   event.preventDefault();
   const selection = window.getSelection();
-  const selectedText = selection ? selection.toString() : '';
-  const numSelectedChars = selectedText.length;
 
-  if (numSelectedChars === 1 && pinyinStore.getPinyinList(selectedText)) {
+  if (!selection || selection.rangeCount === 0) {
+    contextMenuItems.value = [];
+    return;
+  }
+
+  const range = selection.getRangeAt(0);
+  const selectedText = selection ? selection.toString() : '';
+
+  const spanElement = range.startContainer.parentNode;
+
+  if (!spanElement) {
+    contextMenuItems.value = [];
+    return;
+  }
+
+  const startIndex = range.startOffset;
+
+  if (selectedText.length === 1 && pinyinStore.getPinyinList(selectedText)) {
     contextMenuItems.value = [
       {label: '多音字', value: 'duoyinzi', disabled: false},
     ];
     const target = event.target as HTMLElement;
-    currentIndex.value = Number(target.getAttribute('data-index'));
+
+    const tmpPartIndex = Number(target.getAttribute('data-index'));
+
+    let preAllIndex = 0;
+    if (tmpPartIndex > 0) {
+      preAllIndex = (subTextInfos.value[tmpPartIndex - 1].endIndex || 0) + 1;
+    }
+
+    const result = splitTextByIndexes(
+        [{index: startIndex, markup: ''}],
+        subTextInfos.value[tmpPartIndex].text
+    ).map(item => {
+      return {
+        ...item,
+        startIndex: item.startIndex + preAllIndex,
+        endIndex: item.endIndex + preAllIndex,
+      }
+    })
+
+
+    subTextInfos.value.splice(tmpPartIndex, 1, ...result)
+    partIndex.value = tmpPartIndex + (startIndex === 0 ? 0 : 1);
+
+    contextMenuItems.value = [
+      {label: '多音字', value: 'duoyinzi', disabled: false},
+    ];
   } else {
     contextMenuItems.value = [];
   }
@@ -159,39 +240,71 @@ const handleContextMenu = (event: MouseEvent) => {
 
 const handleContextMenuSelect = (menu: string) => {
   if (menu === 'duoyinzi') {
-    data.value = data.value?.map((item, index) => {
-      if (index === currentIndex.value) {
-        return {
-          text: item.text,
-          pinyin: item.pinyin,
-          pinyins: pinyinStore.getPinyinList(item.text),
-          showPinyins: true,
-        } as any
-      }
-      return item
-    })
+    subTextInfos.value = subTextInfos.value
+        ?.map((item, index) => {
+          if (index === partIndex.value) {
+            return {
+              ...item,
+              pinyins: pinyinStore.getPinyinList(item.text[0]),
+              showPinyins: true,
+            } as any
+          }
+          return {
+            ...item,
+            pinyins: [],
+            showPinyins: false,
+          }
+        })
   }
 }
 
 const selectPinyin = async (i: number, pinyin: string) => {
-  data.value = data.value?.map((item, index) => {
-    if (index === i) {
-      return {
-        ...item,
-        pinyin: pinyin,
-        showPinyins: false,
-      } as any
-    }
-    return item
-  })
+  let inTextIndex = 0
+  subTextInfos.value = subTextInfos.value
+      ?.map((item, index) => {
+        if (index === i) {
+          inTextIndex = subTextInfos.value[index].startIndex
+
+          return {
+            ...item,
+            hasMarkup: true,
+            markup: pinyin,
+            showPinyins: false,
+          }
+        }
+        return item
+      })
   if (props.chapterInfo?.id) {
     await addPolyphonicInfo({
       chapterInfoId: props.chapterInfo.id,
-      index: i,
+      index: inTextIndex,
       markup: pinyin
     })
   }
 }
+
+const removePinyin = async (i: number) => {
+  let inTextIndex = 0
+  subTextInfos.value = subTextInfos.value
+      ?.map((item, index) => {
+        if (index === i) {
+          inTextIndex = subTextInfos.value[index].startIndex
+          return {
+            ...item,
+            hasMarkup: false,
+            markup: '',
+            showPinyins: false,
+          }
+        }
+        return item
+      })
+  if (props?.chapterInfo?.id) {
+    await removePolyphonicInfo({
+      chapterInfoId: props.chapterInfo.id,
+      index: inTextIndex,
+    } as any)
+  }
+};
 
 const onTextChange = async () => {
   await updateChapterText({
@@ -213,10 +326,16 @@ watch(
     {immediate: true}
 )
 
+
+const subTextInfos = ref<SubTextInfo[]>([]);
+
 watch(
     () => props.chapterInfo?.text,
     () => {
       if (props.chapterInfo?.text) {
+
+        subTextInfos.value = splitTextByIndexes(props.chapterInfo?.textMarkupInfo.polyphonicInfos, props.chapterInfo?.text)
+
         data.value = props.chapterInfo?.text.split('')
             .map((item, index) => {
               const find = props.chapterInfo?.textMarkupInfo.polyphonicInfos
@@ -236,8 +355,8 @@ watch(
 
 <style scoped>
 .ruby-item {
-  display: inline-block;
   font-size: 16px;
+  letter-spacing: 4px;
 }
 
 .ruby-rt {

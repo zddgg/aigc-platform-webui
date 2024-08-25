@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import {inject, ref, watch} from "vue";
+import {ref, watch} from "vue";
 import {linesPatternOptions} from "@/data/data.ts";
 import {useRoute} from "vue-router";
 import useLoading from "@/hooks/loading.ts";
 import {FormInstance, Message} from "@arco-design/web-vue";
 import {chapterEdit, ChapterInfo, getTextChapter, TextChapter, tmpDialogueParse,} from "@/api/text-chapter.ts";
-import {EventBus} from "@/vite-env";
 import {ROLE_CHANGE} from "@/types/event-types.ts";
+import emitter from "@/mitt";
 
 const route = useRoute();
 const props = defineProps({
@@ -20,7 +20,6 @@ const props = defineProps({
 });
 
 const emits = defineEmits(['update:visible'])
-const eventBus = inject<EventBus>('eventBus');
 
 const dialogueParseLoading = useLoading();
 
@@ -66,7 +65,7 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
     const {msg} = await chapterEdit(form.value);
     Message.success(msg);
     done(true);
-    eventBus?.emit(ROLE_CHANGE)
+    emitter?.emit(ROLE_CHANGE)
   } else {
     done(false);
   }
@@ -135,13 +134,15 @@ watch(
                   解析
                 </a-button>
               </a-form-item>
-              <a-form-item label="对话解析" field="content" required>
-                <n-scrollbar style="max-height: 500px">
-                  <a-textarea
-                      v-model="form.content"
-                      placeholder="章节内容"
-                      :auto-size="{ minRows: 3 }"/>
-                </n-scrollbar>
+              <a-form-item label="章节内容" field="content" required>
+                <n-input
+                    v-model:value="form.content"
+                    type="textarea"
+                    placeholder="章节内容"
+                    :auto-size="{ minRows: 10 }"
+                    show-count
+                    style="height: 500px"
+                />
               </a-form-item>
             </a-form>
           </a-col>

@@ -1,15 +1,15 @@
 <script setup lang="ts">
 
-import {inject, ref, watch} from "vue";
+import {ref, watch} from "vue";
 import {linesPatternOptions} from "@/data/data.ts";
 import {chapterSplit, tmpChapterSplit} from "@/api/text-project.ts";
 import {useRoute} from "vue-router";
 import useLoading from "@/hooks/loading.ts";
 import {FormInstance, Message, Modal} from "@arco-design/web-vue";
 import {chapters4Sort as queryTextChapterList, chapterSort, TextChapter} from "@/api/text-chapter.ts";
-import {EventBus} from "@/vite-env";
 import {VueDraggable} from "vue-draggable-plus";
 import {ROLE_CHANGE} from "@/types/event-types.ts";
+import emitter from "@/mitt";
 
 const route = useRoute();
 const props = defineProps({
@@ -21,8 +21,6 @@ const props = defineProps({
 
 const emits = defineEmits(['update:visible', 'refresh'])
 const {loading, setLoading} = useLoading();
-
-const eventBus = inject<EventBus>('eventBus');
 
 const chapterPatternOptions = [
   {
@@ -111,7 +109,7 @@ const handleChapterSort = async () => {
     const {msg} = await chapterSort(sortChapters)
     Message.success(msg);
     close();
-    eventBus?.emit(ROLE_CHANGE)
+    emitter?.emit(ROLE_CHANGE)
   }
 }
 
@@ -127,7 +125,7 @@ watch(
       showModal.value = props.visible
       if (props.visible) {
         queryChapters()
-        activeTab.value= '1'
+        activeTab.value = '1'
       }
     },
     {immediate: true}
@@ -209,7 +207,8 @@ watch(
         <a-tab-pane key="2" title="章节排序" :destroy-on-hide="true">
           <n-scrollbar style="height: 500px; padding-right: 10px">
             <div v-if="textChapters && textChapters.length > 0">
-              <vue-draggable v-model="textChapters" target="tbody" :animation="150" :on-update="() => (sortChanged = true)">
+              <vue-draggable v-model="textChapters" target="tbody" :animation="150"
+                             :on-update="() => (sortChanged = true)">
                 <a-table
                     row-key="chapterId"
                     :data="textChapters"

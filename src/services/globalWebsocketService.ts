@@ -1,17 +1,21 @@
 import {Notification} from "@arco-design/web-vue";
 
-export interface IWebSocketService {
+export interface IGlobalWebsocketService {
     connect(project: string): void;
+
+    addEventHandler(key: string, handler: () => void): void;
 
     disconnect(): void;
 }
 
-class GlobalWebsocketService implements IWebSocketService {
+class GlobalWebsocketService implements IGlobalWebsocketService {
     private socket: WebSocket | null;
+    private eventHandlers: Map<string, () => void>;
     private reconnectInterval: number;
 
     constructor() {
         this.socket = null;
+        this.eventHandlers = new Map();
         this.reconnectInterval = 5000; // 5秒重连间隔
     }
 
@@ -25,19 +29,27 @@ class GlobalWebsocketService implements IWebSocketService {
 
             this.socket.onmessage = (event: MessageEvent) => {
                 const data = JSON.parse(event.data);
-                if (data.type === 'error') {
-                    Notification.error({
-                        title: `系统异常`,
-                        content: data.message,
-                        position: 'topRight',
-                    })
+                if (data.type === 'message') {
+                    if (data.state === 'error') {
+                        Notification.error({
+                            title: data.title ?? `系统异常`,
+                            content: data.message,
+                            position: 'topRight',
+                        })
+                    }
+                    if (data.state === 'success') {
+                        Notification.success({
+                            title: data.title,
+                            content: data.message,
+                            position: 'topRight',
+                        })
+                    }
                 }
-                if (data.type === 'success') {
-                    Notification.success({
-                        title: data.title,
-                        content: data.message,
-                        position: 'topRight',
-                    })
+                if (data.type === 'event') {
+                    const handler = this.eventHandlers.get(data.event);
+                    if (handler) {
+                        handler();
+                    }
                 }
             };
 
@@ -53,6 +65,12 @@ class GlobalWebsocketService implements IWebSocketService {
             this.socket.onerror = (error: Event) => {
                 console.error('GlobalWebsocket error:', error);
             };
+        }
+    }
+
+    addEventHandler(key: string, handler: () => void) {
+        if (key) {
+            this.eventHandlers.set(key, handler);
         }
     }
 

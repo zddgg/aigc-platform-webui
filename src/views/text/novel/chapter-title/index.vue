@@ -1,20 +1,19 @@
 <script setup lang="ts">
-import {inject, onBeforeUnmount, onMounted, reactive, ref} from "vue";
+import {onBeforeUnmount, onMounted, reactive, ref, watch} from "vue";
 import {useRoute, useRouter} from "vue-router";
 import ChapterSplitModal from "@/views/text/novel/chapter-title/components/ChapterSplitModal.vue";
 import {ROLE_CHANGE} from "@/types/event-types.ts";
-import {EventBus} from "@/vite-env";
 import {deleteChapter, pageChapters, TextChapter, TextChapterPage} from "@/api/text-chapter.ts";
 import ChapterEditModal from "@/views/text/novel/chapter-title/components/ChapterEditModal.vue";
 import {Message, Modal} from "@arco-design/web-vue";
-import {AudioTaskState, Pagination} from "@/types/global.ts";
+import {AudioTaskEvent, AudioTaskState, Pagination, WsEventType} from "@/types/global.ts";
 import ChapterAddModal from "@/views/text/novel/chapter-title/components/ChapterAddModal.vue";
+import emitter from "@/mitt";
 
 const route = useRoute();
 const router = useRouter();
 
 const emits = defineEmits(['toggleCollapse', 'refresh'])
-const eventBus = inject<EventBus>('eventBus');
 
 const collapsed = ref(false);
 const chapterSplitModalVisible = ref(false);
@@ -90,7 +89,7 @@ const handleDeleteChapter = (textChapter: TextChapter) => {
       try {
         const {msg} = await deleteChapter(textChapter);
         Message.success(msg);
-        eventBus?.emit(ROLE_CHANGE)
+        emitter?.emit(ROLE_CHANGE)
       } finally {
       }
     },
@@ -121,12 +120,20 @@ const roleChangeEvent = () => {
   fetchData(pagination);
 }
 
+const wsDataHandler = (data: any) => {
+  if (data?.type === WsEventType.chapter_reload) {
+    fetchData(pagination);
+  }
+};
+
 onMounted(() => {
-  eventBus?.on(ROLE_CHANGE, roleChangeEvent);
+  emitter?.on(ROLE_CHANGE, roleChangeEvent);
+  emitter?.on(AudioTaskEvent.chapter_reload, wsDataHandler);
 });
 
 onBeforeUnmount(() => {
-  eventBus?.off(ROLE_CHANGE, roleChangeEvent);
+  emitter?.off(ROLE_CHANGE, roleChangeEvent);
+  emitter?.off(AudioTaskEvent.chapter_reload, wsDataHandler);
 });
 
 onMounted(async () => {
@@ -146,6 +153,15 @@ onMounted(async () => {
     })
   }
 })
+
+watch(
+    () => route.query.chapterId,
+    async () => {
+      if (route.query.chapterId) {
+      }
+    },
+    {immediate: true}
+);
 </script>
 
 <template>
@@ -180,7 +196,7 @@ onMounted(async () => {
       </a-space>
     </div>
     <div style="margin-top: 10px">
-      <n-scrollbar style="height: calc(100vh - 130px); padding-right: 10px">
+      <a-scrollbar style="height: calc(100vh - 130px); padding-right: 10px; overflow: auto">
         <a-space direction="vertical" style="width: 100%">
           <a-card
               :id="`chapter-title-${item.chapterId}`"
@@ -198,31 +214,40 @@ onMounted(async () => {
               {{ (item.sortOrder ?? 0) + 1 }}
             </div>
             <div v-else>
-              <a-descriptions :column="1" size="small">
-                <template #title>
-              <span style="font-size: 18px; font-weight: 500">
-                {{ item.chapterName }}
-              </span>
-                </template>
-                <a-descriptions-item>
-                  <template #label>
-                <span style="color: #000">
-                  文本数量
-                </span>
-                  </template>
-                  {{ item.textNum ?? 0 }}
-                </a-descriptions-item>
-                <a-descriptions-item>
-                  <template #label>
-                  <span style="color: #000">
-                    角色数量
+              <div>
+                <span class="text-lg font-medium text-black">
+                    {{ item.chapterName }}
                   </span>
-                  </template>
-                  {{ item.roleNum ?? 0 }}
-                </a-descriptions-item>
-              </a-descriptions>
-              <div
-                  style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; white-space: nowrap">
+              </div>
+              <a-row :gutter="10" class="mt-1.5 text-black">
+                <a-col :span="12">
+                  <span>字数</span>
+                  <span class="ml-2.5">
+                    {{ item.wordNum ?? 0 }}
+                  </span>
+                </a-col>
+                <a-col :span="12">
+                  <span>文本</span>
+                  <span class="ml-2.5">
+                    {{ item.textNum ?? 0 }}
+                  </span>
+                </a-col>
+              </a-row>
+              <a-row :gutter="10" class="mt-1.5 text-black">
+                <a-col :span="12">
+                  <span>对话</span>
+                  <span class="ml-2.5">
+                    {{ item.dialogueNum ?? 0 }}
+                  </span>
+                </a-col>
+                <a-col :span="12">
+                  <span>角色</span>
+                  <span class="ml-2.5">
+                    {{ item.roleNum ?? 0 }}
+                  </span>
+                </a-col>
+              </a-row>
+              <div class="flex justify-between items-center mt-2 whitespace-nowrap">
                 <div>
                   <div v-if="item.audioTaskState" style="cursor: pointer">
                     <a-tag
@@ -274,7 +299,7 @@ onMounted(async () => {
             </div>
           </a-card>
         </a-space>
-      </n-scrollbar>
+      </a-scrollbar>
     </div>
 
     <div style="height: 40px; width: 100%; display: flex; justify-content: center; align-items: center">
@@ -325,6 +350,14 @@ onMounted(async () => {
   height: 40px;
   display: flex;
   justify-content: space-between;
+  padding-right: 10px;
+}
+
+:deep(.arco-descriptions-size-small .arco-descriptions-item-label-block) {
+  padding-right: 10px;
+}
+
+:deep(.arco-descriptions-size-small .arco-descriptions-item-value-block) {
   padding-right: 10px;
 }
 </style>
