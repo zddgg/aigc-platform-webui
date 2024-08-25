@@ -1,78 +1,101 @@
-export interface IWebSocketService {
-    connect(project: string): void;
+import {AudioTaskEvent} from "@/types/global.ts";
+import emitter from "@/mitt";
 
-    addResultHandler(key: string, handler: (data: any) => void): void;
+export interface ITextWebSocketService {
+  connect(project: string): void;
 
-    addStageHandler(handler: (data: any) => void): void;
+  addProjectHandler(key: string, handler: (data: any) => void): void;
 
-    disconnect(): void;
+  addChapterHandler(key: string, handler: (data: any) => void): void;
+
+  disconnect(): void;
 }
 
-class TextWebsocketService implements IWebSocketService {
-    private socket: WebSocket | null;
-    private resultHandlers: Map<string, (data: any) => void>;
-    private stageHandler: (data: any) => void;
-    private reconnectInterval: number;
+class TextWebsocketService implements ITextWebSocketService {
+  private socket: WebSocket | null;
+  private projectHandlers: Map<string, (data: any) => void>;
+  private chapterHandlers: Map<string, (data: any) => void>;
+  private reconnectInterval: number;
 
-    constructor() {
-        this.socket = null;
-        this.resultHandlers = new Map();
-        this.stageHandler = () => {
-        };
-        this.reconnectInterval = 5000; // 5秒重连间隔
-    }
+  constructor() {
+    this.socket = null;
+    this.projectHandlers = new Map();
+    this.chapterHandlers = new Map();
+    this.reconnectInterval = 5000; // 5秒重连间隔
+  }
 
-    connect(projectId: string) {
-        if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-            this.socket = new WebSocket(`${import.meta.env.VITE_WS_BASE_URL}/ws/text?projectId=${projectId}`);
+  connect(projectId: string) {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      this.socket = new WebSocket(`${import.meta.env.VITE_WS_BASE_URL}/ws/text?projectId=${projectId}`);
 
-            this.socket.onopen = () => {
-                console.log('WebSocket connection opened.');
-            };
+      this.socket.onopen = () => {
+        console.log('WebSocket connection opened.');
+      };
 
-            this.socket.onmessage = (event: MessageEvent) => {
-                const data = JSON.parse(event.data);
-                if (data.type === 'audio_create_task_result') {
-                    this.stageHandler(data)
-                    const handler = this.resultHandlers.get(`${data.projectId}-${data.chapterId}`);
-                    if (handler && data.chapterInfo) {
-                        handler(data.chapterInfo);
-                    }
-                }
-            };
-
-            this.socket.onclose = () => {
-                console.log('WebSocket connection closed.');
-                // 断线重连
-                setTimeout(() => {
-                    console.log('Reconnecting WebSocket...');
-                    this.connect(projectId);
-                }, this.reconnectInterval);
-            };
-
-            this.socket.onerror = (error: Event) => {
-                console.error('WebSocket error:', error);
-            };
+      this.socket.onmessage = (event: MessageEvent) => {
+        const data = JSON.parse(event.data)
+        console.log('onmessage', data)
+        if (data.type === AudioTaskEvent.audio_generate_result) {
+          emitter?.emit(AudioTaskEvent.audio_generate_result, data);
         }
-    }
-
-    addResultHandler(key: string, handler: (data: any) => void) {
-        if (key) {
-            this.resultHandlers.set(key, handler);
+        if (data.type === AudioTaskEvent.audio_generate_summary) {
+          emitter?.emit(AudioTaskEvent.audio_generate_summary, data);
         }
-    }
-
-    addStageHandler(handler: (data: any) => void) {
-        this.stageHandler = handler
-    }
-
-    disconnect() {
-        if (this.socket) {
-            this.socket.close();
-            this.socket = null;
+        if (data.type === AudioTaskEvent.chapter_reload) {
+          emitter?.emit(AudioTaskEvent.chapter_reload, data);
         }
-        this.resultHandlers.clear();
+
+        if (data?.projectId) {
+          const handler = this.projectHandlers.get(data.projectId);
+          if (handler) {
+            handler(data);
+          }
+        }
+        if (data?.chapterId) {
+          const handler = this.chapterHandlers.get(data.chapterId);
+          if (handler) {
+            handler(data);
+          }
+        }
+      };
+
+      this.socket.onclose = () => {
+        console.log('WebSocket connection closed.');
+        // 断线重连
+        setTimeout(() => {
+          console.log('Reconnecting WebSocket...');
+          this.connect(projectId);
+        }, this.reconnectInterval);
+      };
+
+      this.socket.onerror = (error: Event) => {
+        console.error('WebSocket error:', error);
+      };
     }
+  }
+
+  addProjectHandler(key: string, handler: (data: any) => void) {
+    if (key) {
+      this.projectHandlers.set(key, handler);
+    }
+  }
+
+  addChapterHandler(key: string, handler: (data: any) => void) {
+    if (key) {
+      this.chapterHandlers.set(key, handler);
+    }
+  }
+
+  disconnect() {
+    if (this.socket) {
+      this.socket.close();
+      this.socket = null;
+    }
+    this.projectHandlers.clear();
+    this.chapterHandlers.clear();
+  }
 }
 
-export default new TextWebsocketService();
+export function createTextWebsocketService() {
+  return new TextWebsocketService();
+}

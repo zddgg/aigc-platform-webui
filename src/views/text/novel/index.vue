@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import {ref} from "vue";
+import {onMounted, onUnmounted, ref} from "vue";
 import ChapterTitle from "@/views/text/novel/chapter-title/index.vue";
 import ChapterContent from "@/views/text/novel/chapter-content/index.vue";
 import {useRoute} from "vue-router";
 import {TextProjectType} from "@/types/global.ts";
+import {createTextWebsocketService} from "@/services/textWebsocketService.ts";
 
 const route = useRoute();
 
@@ -11,6 +12,18 @@ const collapsed = ref<boolean>(false);
 const toggleCollapse = (value: boolean) => {
   collapsed.value = value;
 }
+
+const textWebsocketService = createTextWebsocketService();
+
+onMounted(() => {
+  if (route.query.projectId) {
+    textWebsocketService.connect(route.query.projectId as string);
+  }
+})
+
+onUnmounted(() => {
+  textWebsocketService.disconnect();
+});
 
 </script>
 

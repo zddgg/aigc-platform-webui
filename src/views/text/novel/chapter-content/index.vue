@@ -1,14 +1,12 @@
 <script setup lang="ts">
-import {inject, onMounted, onUnmounted, provide, ref, watch} from "vue";
+import {onMounted, onUnmounted, provide, ref, watch} from "vue";
 import {useRoute} from "vue-router";
 import useLoading from "@/hooks/loading.ts";
 import TableContent from "./components/TableContent.vue";
 import CommonRole from "./components/CommonRole.vue";
 import TextRole from "./components/TextRole.vue";
 import {Message, Modal} from "@arco-design/web-vue";
-import TextWebsocketService from "@/services/textWebsocketService.ts";
 import {ROLE_CHANGE} from "@/types/event-types.ts";
-import {EventBus} from "@/vite-env";
 import {
   checkRoleInference,
   getTextChapter,
@@ -19,16 +17,17 @@ import {
   TextChapter,
   TextContentConfig
 } from "@/api/text-chapter.ts";
-import {AudioTaskEvent, AudioTaskState, TextProjectType} from "@/types/global.ts";
+import {AudioTaskEvent, AudioTaskState, TextProjectType, WsEventType} from "@/types/global.ts";
 import AudioPreview from "@/views/text/novel/chapter-content/components/AudioPreview.vue";
 import {getTextProject, TextProject} from "@/api/text-project.ts";
 import ChapterEditModal from "@/views/text/novel/chapter-title/components/ChapterEditModal.vue";
+import GlobalWebsocketService from "@/services/globalWebsocketService.ts";
+import emitter from "@/mitt";
 
 const route = useRoute();
 const {loading, setLoading} = useLoading();
 
 const emits = defineEmits(['refresh']);
-const eventBus = inject<EventBus>('eventBus');
 
 const selectedIndexes = ref<string[]>([])
 const textContentConfig = ref<TextContentConfig>({} as TextContentConfig)
@@ -48,7 +47,7 @@ const tableContentRef = ref<
 >(null);
 
 const refresh = () => {
-  eventBus?.emit(ROLE_CHANGE);
+  emitter?.emit(ROLE_CHANGE);
 }
 
 const aiResultText = ref<string>('')
@@ -134,13 +133,11 @@ const onAiInference = () => {
 }
 
 const handleStartCreateAudio = async (actionType: 'all' | 'modified') => {
-  const {data, msg} = await startCreateAudio({
+  await startCreateAudio({
     projectId: route.query.projectId as string,
     chapterId: route.query.chapterId as string,
     actionType: actionType,
   });
-  Message.success(msg);
-  creatingIds.value = data;
 }
 
 const onStartCreateAudio = (actionType: 'all' | 'modified') => {
@@ -163,23 +160,18 @@ const handleStopCreateAudio = async () => {
   stopLoading.value = true;
 }
 
-onUnmounted(() => {
-  TextWebsocketService.disconnect();
-});
-
-function connectWebSocket() {
-  TextWebsocketService.connect(route.query.projectId as string);
-}
-
-provide('TextWebsocketService', TextWebsocketService);
+provide('GlobalWebsocketService', GlobalWebsocketService);
 
 const taskNum = ref(0);
 const creatingIds = ref<string[]>([])
-const stageHandler = (data: any) => {
-  taskNum.value = data.taskNum;
-  creatingIds.value = data.creatingIds;
-  if (data.taskNum === 0) {
-    stopLoading.value = false;
+const wsDataHandler = (data: any) => {
+  console.log("wsDataHandler", data);
+  if (data?.type === WsEventType.audio_generate_summary) {
+    taskNum.value = data?.taskNum ?? 0;
+    creatingIds.value = data?.creatingIds ?? [];
+    if (data?.taskNum ?? 0 === 0) {
+      stopLoading.value = false;
+    }
   }
 }
 
@@ -206,11 +198,14 @@ const handleAudioCombineEvent = () => {
 }
 
 onMounted(() => {
-  connectWebSocket();
-  TextWebsocketService.addStageHandler(stageHandler)
-  eventBus?.on(AudioTaskEvent.audio_combine, handleAudioCombineEvent);
+  emitter?.on(AudioTaskEvent.audio_combine, handleAudioCombineEvent);
+  emitter?.on(AudioTaskEvent.audio_generate_summary, wsDataHandler);
 });
 
+onUnmounted(() => {
+  emitter?.off(AudioTaskEvent.audio_combine, handleAudioCombineEvent);
+  emitter?.off(AudioTaskEvent.audio_generate_summary, wsDataHandler);
+});
 
 watch(
     () => route.query.chapterId,
@@ -400,22 +395,20 @@ watch(
     <div style="display: flex; margin-top: 10px">
       <div style="flex: 1"
            :style="route.query.projectType as string === TextProjectType.long_text && {marginLeft: '10px'}">
-        <n-scrollbar
+        <a-scrollbar
             style="max-height: calc(100vh - 90px); padding-right: 10px; overflow: auto"
         >
-          <div id="text-content">
-            <table-content
-                ref="tableContentRef"
-                v-model:text-content-config="textContentConfig"
-                v-model:selected-indexes="selectedIndexes"
-                v-model:creating-ids="creatingIds"
-            />
-          </div>
-        </n-scrollbar>
+          <table-content
+              ref="tableContentRef"
+              v-model:text-content-config="textContentConfig"
+              v-model:selected-indexes="selectedIndexes"
+              v-model:creating-ids="creatingIds"
+          />
+        </a-scrollbar>
       </div>
       <a-divider direction="vertical" style="margin: 0"/>
       <div style="width: 20%; margin-left: 10px">
-        <n-scrollbar
+        <a-scrollbar
             style="max-height: calc(100vh - 90px); overflow: auto"
         >
           <a-card :bordered="false" style="border-radius: 8px" :body-style="{ padding: '0 10px 0 0' }">
@@ -440,7 +433,7 @@ watch(
               </n-tab-pane>
             </n-tabs>
           </a-card>
-        </n-scrollbar>
+        </a-scrollbar>
       </div>
     </div>
     <a-modal

@@ -18,7 +18,9 @@ export interface TextChapter {
   content: string;
   dialoguePattern: string;
   sortOrder: number;
+  wordNum: number;
   textNum: number;
+  dialogueNum: number;
   roleNum: number;
   audioTaskState: number;
 }

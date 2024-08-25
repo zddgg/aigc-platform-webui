@@ -28,11 +28,20 @@ export enum AudioTaskState {
 }
 
 export enum AudioTaskEvent {
-  audio_combine = 'audio_combine'
+  audio_combine = 'audio_combine',
+  audio_generate_result = 'audio_generate_result',
+  audio_generate_summary = 'audio_generate_summary',
+  chapter_reload = 'chapter_reload',
 }
 
 export enum TextProjectType {
   long_text = 'long_text',
   short_text = 'short_text',
   format_text = 'format_text',
+}
+
+export enum WsEventType {
+  audio_generate_result = 'audio_generate_result',
+  audio_generate_summary = 'audio_generate_summary',
+  chapter_reload = 'chapter_reload',
 }

@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import {inject, onBeforeUnmount, onMounted, PropType, ref, watch} from "vue";
+import {onBeforeUnmount, onMounted, PropType, ref, watch} from "vue";
 import {useRoute} from "vue-router";
 import {Message, Modal, Notification} from "@arco-design/web-vue";
 import {voiceNameFormat} from "@/utils/model-util.ts";
 import RoleChangeModel from "@/views/text/novel/chapter-content/components/RoleChangeModel.vue";
 import CombineExport from "@/views/text/novel/chapter-content/components/CombineExport.vue";
 import AudioSelect from '@/views/audio-select/index.vue'
-import {IWebSocketService} from '@/services/textWebsocketService.ts';
-import {EventBus} from "@/vite-env";
 import {ROLE_CHANGE} from "@/types/event-types.ts";
 import {AudioModelInfoKey, AudioRoleInfo} from "@/api/model.ts";
 import {
@@ -30,7 +28,8 @@ import ConditionSelect from "@/views/text/novel/chapter-content/components/Condi
 import {debounce} from 'lodash';
 import {COSY_VOICE} from "@/types/model-types.ts";
 import AudioParamsChange from "@/views/text/novel/chapter-content/components/AudioParamsChange.vue";
-import {AudioTaskState} from "@/types/global.ts";
+import {AudioTaskEvent, AudioTaskState, WsEventType} from "@/types/global.ts";
+import emitter from "@/mitt";
 
 const route = useRoute();
 const props = defineProps({
@@ -48,7 +47,6 @@ const props = defineProps({
   }
 });
 
-const eventBus = inject<EventBus>('eventBus');
 const emits = defineEmits(['update:creatingIds'])
 
 const editMode = ref<'default' | 'batch'>('default')
@@ -89,7 +87,7 @@ const handleQueryChapterInfo = async () => {
 }
 
 const onRoleChange = () => {
-  eventBus?.emit(ROLE_CHANGE);
+  emitter?.emit(ROLE_CHANGE);
 }
 
 const modelSelect = async (modelConfig: AudioModelInfoKey) => {
@@ -161,35 +159,37 @@ const stopAudio = () => {
 
 const createAudioKey = ref<string>('');
 
-const handleChapterInfoUpdate = (data: ChapterInfo) => {
-  chapterInfos.value = chapterInfos.value.map((item) => {
-    if (item.index === data.index) {
-      return {
-        ...item,
-        ...data,
-      }
+const wsDataHandler = (data: any) => {
+  console.log('wsDataHandler', data)
+  if (data?.type === WsEventType.audio_generate_result) {
+    if (data?.state === "success" && data?.chapterInfo) {
+      chapterInfos.value = chapterInfos.value.map((item) => {
+        if (item.index === data?.chapterInfo?.index) {
+          return {
+            ...item,
+            ...data?.chapterInfo,
+          }
+        }
+        return item;
+      });
+      Notification.success({
+        title: `${data?.chapterInfo?.index} 音频生成成功`,
+        content: '',
+        position: 'topRight',
+        duration: 2000
+      })
     }
-    return item;
-  });
-  Notification.success({
-    title: `${data.index}生成成功`,
-    content: '',
-    position: 'bottomRight',
-    duration: 2000
-  })
+  }
 };
+
 const handleCreateAudio = async (record: ChapterInfo) => {
   try {
     createAudioKey.value = record.index;
-    const {data, msg} = await createAudio(record)
-    Message.success(msg);
-    emits('update:creatingIds', data)
+    await createAudio(record)
   } finally {
     createAudioKey.value = ''
   }
 }
-
-const TextWebsocketService = inject<IWebSocketService>('TextWebsocketService') as IWebSocketService;
 
 const playNext = () => {
   activeAudioIndex.value += 1;
@@ -264,7 +264,7 @@ const handleDeleteChapterInfo = async (chapterInfo: ChapterInfo) => {
   const {msg} = await deleteChapterInfo({
     id: chapterInfo.id
   } as ChapterInfo)
-  eventBus?.emit(ROLE_CHANGE)
+  emitter?.emit(ROLE_CHANGE)
   Message.success(msg);
 }
 
@@ -285,7 +285,7 @@ const handleAddChapterInfo = async (index: number, text: string) => {
       textSort: index,
     } as ChapterInfo)
     Message.success(msg);
-    eventBus?.emit(ROLE_CHANGE)
+    emitter?.emit(ROLE_CHANGE)
   }
 }
 
@@ -416,11 +416,13 @@ defineExpose({
 })
 
 onMounted(() => {
-  eventBus?.on(ROLE_CHANGE, roleChangeEvent);
+  emitter?.on(ROLE_CHANGE, roleChangeEvent);
+  emitter?.on(AudioTaskEvent.audio_generate_result, wsDataHandler);
 });
 
 onBeforeUnmount(() => {
-  eventBus?.off(ROLE_CHANGE, roleChangeEvent);
+  emitter?.off(ROLE_CHANGE, roleChangeEvent);
+  emitter?.off(AudioTaskEvent.audio_generate_result, wsDataHandler);
 });
 
 watch(
@@ -428,10 +430,6 @@ watch(
     async () => {
       if (route.query.chapterId) {
         await handleQueryChapterInfo()
-        eventBus?.emit(ROLE_CHANGE)
-        TextWebsocketService.addResultHandler(
-            `${route.query.projectId as string}-${route.query.chapterId as string}`, handleChapterInfoUpdate
-        );
       }
       selectedIds.value = [];
       stopAudio();
@@ -443,379 +441,345 @@ watch(
 
 <template>
   <div class="container">
-    <a-space direction="vertical" style="width: 100%">
-      <vue-draggable
-          v-model="chapterInfos"
-          :animation="150"
-          handle=".handle"
-          class="flex flex-col gap-3"
-          :on-update="onDraggableEnd"
+    <vue-draggable
+        v-model="chapterInfos"
+        :animation="150"
+        handle=".handle"
+        class="flex flex-col gap-3"
+        :on-update="onDraggableEnd"
+    >
+      <div
+          v-for="(item, index) in chapterInfos"
+          :key="item.id"
+          class="flex bg-gray-500/5 rounded"
       >
-        <div
-            v-for="(item, index) in chapterInfos"
-            :key="item.id"
-            class="flex bg-gray-500/5 rounded"
-        >
-          <div style="width: 100%; display: flex; align-items: center">
+        <div style="width: 100%; display: flex; align-items: center">
+          <div
+              v-if="props.textContentConfig.edit"
+              style="width: 24px; height: 100%;" class="text-card-left-option"
+          >
             <div
-                v-if="props.textContentConfig.edit"
-                style="width: 24px; height: 100%;" class="text-card-left-option"
+                style="height: 50%; display: flex; place-items: center; justify-content: center"
+                :style="{height: props.textContentConfig.edit ? '50%' : '100%'}"
             >
-              <div
-                  style="height: 50%; display: flex; place-items: center; justify-content: center"
-                  :style="{height: props.textContentConfig.edit ? '50%' : '100%'}"
-              >
-                <a-checkbox v-model="item.selected"/>
-              </div>
-              <div
-                  style="height: 50%; display: flex; place-items: center; justify-content: center"
-                  class="handle cursor-move"
-              >
-                <icon-drag-arrow/>
-              </div>
+              <a-checkbox v-model="item.selected"/>
             </div>
-            <a-card
-                style="flex: 1"
-                :style="textContentConfig.showDialogue && item.dialogueFlag && {backgroundColor: '#E8F3FF'}"
-                :body-style="{padding: '10px 20px'}"
+            <div
+                style="height: 50%; display: flex; place-items: center; justify-content: center"
+                class="handle cursor-move"
             >
-              <div v-if="item.newItem" style="display: flex; align-items: center">
-                <a-textarea v-model="item.text" :auto-size="{minRows: 1, maxRows: 5}" style="flex: 1"/>
-                <a-button
-                    size="small" type="outline" style="margin-left: 10px"
-                    @click="handleAddChapterInfo(index, item.text)"
-                >
-                  <icon-check/>
-                </a-button>
-                <a-button
-                    size="small" type="outline" status="danger" style="margin-left: 10px"
-                    @click="addTextItem(index, 1)"
-                >
-                  <icon-close/>
-                </a-button>
-              </div>
-              <div v-else style="position: relative; width: 100%; display: flex; place-items: center">
-                <div style="position: absolute; top: 0; left: 0; font-size: 12px">
+              <icon-drag-arrow/>
+            </div>
+          </div>
+          <div
+              class="flex-1 px-5 py-2.5 bg-white border rounded-sm"
+              :style="textContentConfig.showDialogue && item.dialogueFlag && {backgroundColor: '#E8F3FF'}"
+          >
+            <div v-if="item.newItem" class="flex items-center">
+              <a-textarea v-model="item.text" :auto-size="{minRows: 1, maxRows: 5}" style="flex: 1"/>
+              <a-button
+                  size="small" type="outline" class="ml-2.5"
+                  @click="handleAddChapterInfo(index, item.text)"
+              >
+                <icon-check/>
+              </a-button>
+              <a-button
+                  size="small" type="outline" status="danger" style="margin-left: 10px"
+                  @click="addTextItem(index, 1)"
+              >
+                <icon-close/>
+              </a-button>
+            </div>
+            <div v-else style="position: relative; width: 100%; display: flex; place-items: center">
+              <div style="position: absolute; top: 0; left: 0; font-size: 12px">
                   <span>
                     {{ item.index }}
                   </span>
-                  <icon-check-circle-fill
-                      v-if="item.audioTaskState >= AudioTaskState.created"
-                      style="color: #00B42A; margin-left: 4px"
-                  />
-                  <icon-info-circle
-                      v-else-if="item.audioTaskState >= AudioTaskState.modified"
-                      style="color: #FF7D00; margin-left: 4px"
-                  />
-                </div>
-                <div style="width: 100px">
-                  <a-dropdown>
-                    <a-button
-                        :status="item.role === '旁白'
+                <icon-check-circle-fill
+                    v-if="item.audioTaskState >= AudioTaskState.created"
+                    style="color: #00B42A; margin-left: 4px"
+                />
+                <icon-info-circle
+                    v-else-if="item.audioTaskState >= AudioTaskState.modified"
+                    style="color: #FF7D00; margin-left: 4px"
+                />
+              </div>
+              <div style="width: 100px">
+                <a-dropdown>
+                  <a-button
+                      :status="item.role === '旁白'
                         ? 'normal'
                         : item.gender === '男'
                          ? 'success'
                          : item.gender === '女'
                          ? 'danger'
                          : 'warning'"
-                        style="width: 100%; display: flex; text-align: left"
-                    >
-                      <div style="width: 100%">
-                        <a-typography-text style="display: block; white-space: nowrap" ellipsis>
-                          {{ item.role }}
-                        </a-typography-text>
-                      </div>
-                    </a-button>
-                    <template #content>
-                      <a-doption @click="() => {
+                      style="width: 100%; display: flex; text-align: left"
+                  >
+                    <div style="width: 100%">
+                      <a-typography-text style="display: block; white-space: nowrap" ellipsis>
+                        {{ item.role }}
+                      </a-typography-text>
+                    </div>
+                  </a-button>
+                  <template #content>
+                    <a-doption @click="() => {
                         editMode = 'default';
                         currentChapterInfo = item;
                         roleChangeModelVisible = true;
                       }"
+                    >
+                      改角色
+                    </a-doption>
+                  </template>
+                </a-dropdown>
+              </div>
+              <a-divider direction="vertical"/>
+              <div style="width: 160px">
+                <a-dropdown>
+                  <a-button
+                      v-if="item.amType"
+                      class="w-full h-full flex flex-col text-left"
+                  >
+                    <div style="width: 100%">
+                      <a-typography-text style="display: block; white-space: nowrap" ellipsis>
+                        {{ item.amType }}
+                      </a-typography-text>
+                    </div>
+                    <div v-if="['gpt-sovits'].includes(item.amType)" style="width: 100%">
+                      <a-typography-text style="display: block; white-space: nowrap" ellipsis>
+                        {{ `${item.amMfGroup}/${item.amMfRole}` }}
+                      </a-typography-text>
+                      <a-typography-text v-if="item.amMcId !== '-1'"
+                                         style="display: block; white-space: nowrap">
+                        {{ item.amMcName }}
+                      </a-typography-text>
+                      <a-typography-text style="display: block; white-space: nowrap" ellipsis>
+                        {{
+                          `${item.amPaGroup}/${item.amPaRole}/${item.amPaMood}`
+                        }}
+                      </a-typography-text>
+                    </div>
+                    <div v-if="['fish-speech'].includes(item.amType)" style="width: 100%">
+                      <a-typography-text v-if="item.amMcId !== '-1'"
+                                         style="display: block; white-space: nowrap">
+                        {{ item.amMcName }}
+                      </a-typography-text>
+                      <a-typography-text style="display: block; white-space: nowrap">
+                        {{
+                          `${item.amPaGroup}/${item.amPaRole}/${item.amPaMood}`
+                        }}
+                      </a-typography-text>
+                    </div>
+                    <div v-if="['chat-tts'].includes(item.amType)" style="width: 100%">
+                      <a-typography-text style="display: block; white-space: nowrap">
+                        {{ item.amMcName }}
+                      </a-typography-text>
+                    </div>
+                    <div v-if="['edge-tts'].includes(item.amType)" style="width: 100%">
+                      <a-typography-text style="display: block; white-space: nowrap">
+                        {{ voiceNameFormat(item.amMcName) }}
+                      </a-typography-text>
+                    </div>
+                    <div v-if="[COSY_VOICE].includes(item.amType)" style="width: 100%">
+                      <a-typography-text style="display: block; white-space: nowrap">
+                        {{ JSON.parse(item.amMcParamsJson)?.role }}
+                      </a-typography-text>
+                      <a-typography-text
+                          v-if="JSON.parse(item.amMcParamsJson)?.mode === 'custom'"
+                          style="display: block; white-space: nowrap"
+                          ellipsis
                       >
-                        改角色
-                      </a-doption>
-                    </template>
-                  </a-dropdown>
-                </div>
-                <a-divider direction="vertical"/>
-                <div style="width: 160px">
-                  <a-dropdown>
-                    <a-button v-if="item.amType"
-                              style="width: 100%; height: 100%; display: flex; flex-direction: column; text-align: left">
-                      <div style="width: 100%">
-                        <a-typography-text style="display: block; white-space: nowrap" ellipsis>
-                          {{ item.amType }}
-                        </a-typography-text>
-                      </div>
-                      <div v-if="['gpt-sovits'].includes(item.amType)" style="width: 100%">
-                        <a-typography-text style="display: block; white-space: nowrap" ellipsis>
-                          {{ `${item.amMfGroup}/${item.amMfRole}` }}
-                        </a-typography-text>
-                        <a-typography-text v-if="item.amMcId !== '-1'"
-                                           style="display: block; white-space: nowrap">
-                          {{ item.amMcName }}
-                        </a-typography-text>
-                        <a-typography-text style="display: block; white-space: nowrap" ellipsis>
-                          {{
-                            `${item.amPaGroup}/${item.amPaRole}/${item.amPaMood}`
-                          }}
-                        </a-typography-text>
-                      </div>
-                      <div v-if="['fish-speech'].includes(item.amType)" style="width: 100%">
-                        <a-typography-text v-if="item.amMcId !== '-1'"
-                                           style="display: block; white-space: nowrap">
-                          {{ item.amMcName }}
-                        </a-typography-text>
-                        <a-typography-text style="display: block; white-space: nowrap">
-                          {{
-                            `${item.amPaGroup}/${item.amPaRole}/${item.amPaMood}`
-                          }}
-                        </a-typography-text>
-                      </div>
-                      <div v-if="['chat-tts'].includes(item.amType)" style="width: 100%">
-                        <a-typography-text style="display: block; white-space: nowrap">
-                          {{ item.amMcName }}
-                        </a-typography-text>
-                      </div>
-                      <div v-if="['edge-tts'].includes(item.amType)" style="width: 100%">
-                        <a-typography-text style="display: block; white-space: nowrap">
-                          {{ voiceNameFormat(item.amMcName) }}
-                        </a-typography-text>
-                      </div>
-                      <div v-if="[COSY_VOICE].includes(item.amType)" style="width: 100%">
-                        <a-typography-text style="display: block; white-space: nowrap">
-                          {{ JSON.parse(item.amMcParamsJson)?.role }}
-                        </a-typography-text>
-                        <a-typography-text
-                            v-if="JSON.parse(item.amMcParamsJson)?.mode === 'custom'"
-                            style="display: block; white-space: nowrap"
-                            ellipsis
-                        >
-                          {{
-                            `${item.amPaGroup}/${item.amPaRole}/${item.amPaMood}`
-                          }}
-                        </a-typography-text>
-                        <a-typography-text
-                            v-if="JSON.parse(item.amMcParamsJson)?.mode === 'advanced'"
-                            style="display: block; white-space: nowrap"
-                        >
-                          {{ item.amMcName }}
-                        </a-typography-text>
-                      </div>
-                    </a-button>
-                    <a-button style="" v-else type="outline" status="danger">
-                      未设置
-                    </a-button>
-                    <template #content>
-                      <a-doption @click="() => {
+                        {{
+                          `${item.amPaGroup}/${item.amPaRole}/${item.amPaMood}`
+                        }}
+                      </a-typography-text>
+                      <a-typography-text
+                          v-if="JSON.parse(item.amMcParamsJson)?.mode === 'advanced'"
+                          style="display: block; white-space: nowrap"
+                      >
+                        {{ item.amMcName }}
+                      </a-typography-text>
+                    </div>
+                  </a-button>
+                  <a-button style="" v-else type="outline" status="danger">
+                    未设置
+                  </a-button>
+                  <template #content>
+                    <a-doption @click="() => {
                         editMode = 'default';
                         currentChapterInfo = item;
                         modelSelectVisible = true;
                       }"
-                      >
-                        改模型
-                      </a-doption>
-                    </template>
-                  </a-dropdown>
-                </div>
-                <a-divider direction="vertical"/>
-                <div style="flex: 1">
-                  <div>
-                    <text-editor
-                        :chapter-info="item"
-                        :text-content-config="textContentConfig"
-                        @change="handleQueryChapterInfo"
-                    />
-                  </div>
-                  <div v-if="false" style="margin-top: 10px">
-                    <n-select
-                        :options="[
-                          {
-                            label: 'Everybody\'s Got Something to Hide Except Me and My Monkey',
-                            value: 'song0',
-                          },
-                          {
-                            label: 'Drive My Car',
-                            value: 'song1'
-                          }]"
-                        size="tiny"
-                        filterable
-                        tag
-                        placeholder="instruct"
                     >
-
-                    </n-select>
-                  </div>
-                  <div>
-                    <a-divider style="margin: 10px 0"/>
-                    <div style="height: 24px; display: flex; justify-content: space-between; align-items: center">
-                      <div style="height: 100%; display: flex; place-items: center; align-items: center;">
-                        <div style="height: 100%; display: flex; place-items: center; font-size: 12px">
-                          <span style="white-space: nowrap; margin-right: 5px">音量</span>
-                          <n-slider
-                              v-if="textContentConfig.edit"
-                              v-model:value="item.audioVolume"
-                              style="width: 80px"
-                              :step="0.1"
-                              :max="2"
-                              :min="0"
-                              :format-tooltip="(value: number) => `${value}x`"
-                              @dragend="onVolumeChangeEnd(item)"
-                          >
-                          </n-slider>
-                          <span v-else>
-                              {{ `${item.audioVolume}` }}
-                            </span>
-                        </div>
-                        <a-divider direction="vertical"/>
-                        <div style="height: 100%; display: flex; place-items: center; font-size: 12px">
-                          <span style="white-space: nowrap; margin-right: 5px">倍速</span>
-                          <n-slider
-                              v-if="textContentConfig.edit"
-                              v-model:value="item.audioSpeed"
-                              style="width: 80px"
-                              :step="0.1"
-                              :max="2"
-                              :min="0.1"
-                              :format-tooltip="(value: number) => `${value}x`"
-                              @dragend="onSpeedChange(item)"
-                          >
-                          </n-slider>
-                          <span v-else>
-                              {{ `${item.audioSpeed}x` }}
-                            </span>
-                        </div>
-                        <a-divider direction="vertical"/>
-                        <div style="height: 100%; display: flex; place-items: center; font-size: 12px">
-                          <span style="white-space: nowrap; margin-right: 5px">间隔</span>
-                          <n-slider
-                              v-if="textContentConfig.edit"
-                              v-model:value="item.audioInterval"
-                              style="width: 80px"
-                              :step="100"
-                              :max="3000"
-                              :min="0"
-                              :format-tooltip="(value: number) => `${value}ms`"
-                              @dragend="onIntervalChange(item)"
-                          >
-                          </n-slider>
-                          <span v-else>
-                              {{ `${item.audioInterval}ms` }}
-                            </span>
-                        </div>
+                      改模型
+                    </a-doption>
+                  </template>
+                </a-dropdown>
+              </div>
+              <a-divider direction="vertical"/>
+              <div style="flex: 1">
+                <div>
+                  <text-editor
+                      :chapter-info="item"
+                      :text-content-config="textContentConfig"
+                      @change="handleQueryChapterInfo"
+                  />
+                </div>
+                <div>
+                  <a-divider style="margin: 10px 0"/>
+                  <div style="height: 24px; display: flex; justify-content: space-between; align-items: center">
+                    <div style="height: 100%; display: flex; place-items: center; align-items: center;">
+                      <div style="height: 100%; display: flex; place-items: center; font-size: 12px">
+                        <span style="white-space: nowrap; margin-right: 5px">音量</span>
+                        <n-slider
+                            v-if="textContentConfig.edit"
+                            v-model:value="item.audioVolume"
+                            style="width: 80px"
+                            :step="0.1"
+                            :max="2"
+                            :min="0"
+                            :format-tooltip="(value: number) => `${value}x`"
+                            @dragend="onVolumeChangeEnd(item)"
+                        >
+                        </n-slider>
+                        <span v-else>
+                            {{ `${item.audioVolume}` }}
+                          </span>
                       </div>
-                      <div>
-                        <a-space>
+                      <a-divider direction="vertical"/>
+                      <div style="height: 100%; display: flex; place-items: center; font-size: 12px">
+                        <span style="white-space: nowrap; margin-right: 5px">倍速</span>
+                        <n-slider
+                            v-if="textContentConfig.edit"
+                            v-model:value="item.audioSpeed"
+                            style="width: 80px"
+                            :step="0.1"
+                            :max="2"
+                            :min="0.1"
+                            :format-tooltip="(value: number) => `${value}x`"
+                            @dragend="onSpeedChange(item)"
+                        >
+                        </n-slider>
+                        <span v-else>
+                            {{ `${item.audioSpeed}x` }}
+                          </span>
+                      </div>
+                      <a-divider direction="vertical"/>
+                      <div style="height: 100%; display: flex; place-items: center; font-size: 12px">
+                        <span style="white-space: nowrap; margin-right: 5px">间隔</span>
+                        <n-slider
+                            v-if="textContentConfig.edit"
+                            v-model:value="item.audioInterval"
+                            style="width: 80px"
+                            :step="100"
+                            :max="3000"
+                            :min="0"
+                            :format-tooltip="(value: number) => `${value}ms`"
+                            @dragend="onIntervalChange(item)"
+                        >
+                        </n-slider>
+                        <span v-else>
+                            {{ `${item.audioInterval}ms` }}
+                          </span>
+                      </div>
+                    </div>
+                    <div>
+                      <a-space>
+                        <a-button
+                            :disabled="!item.audioFiles"
+                            size="mini"
+                            @click="handleAudioBackward(item)"
+                        >
+                          <icon-backward/>
+                        </a-button>
+                        <div>
                           <a-button
-                              :disabled="!item.audioFiles"
+                              v-if="activeAudioKey === item.index"
+                              type="primary"
                               size="mini"
-                              @click="handleAudioBackward(item)"
+                              @click="stopAudio"
                           >
-                            <icon-backward/>
+                            <icon-pause/>
                           </a-button>
-                          <div>
-                            <a-button
-                                v-if="activeAudioKey === item.index"
-                                type="primary"
-                                size="mini"
-                                @click="stopAudio"
-                            >
-                              <icon-pause/>
-                            </a-button>
-                            <a-button
-                                v-else
-                                size="mini"
-                                :disabled="!item.audioFiles"
-                                @click="handlePlayAudio(item)"
-                            >
-                              <icon-play-arrow/>
-                            </a-button>
-                          </div>
                           <a-button
-                              :disabled="!item.audioFiles"
+                              v-else
                               size="mini"
-                              @click="handleAudioForward(item)"
+                              :disabled="!item.audioFiles"
+                              @click="handlePlayAudio(item)"
                           >
-                            <icon-forward/>
+                            <icon-play-arrow/>
                           </a-button>
-                        </a-space>
-                      </div>
-                      <div>
-                        <a-space>
-                          <!--                          <a-button-->
-                          <!--                              v-if="!item.showAudioCard"-->
-                          <!--                              size="mini"-->
-                          <!--                              @click="() => (item.showAudioCard = true)"-->
-                          <!--                          >-->
-                          <!--                            <icon-down/>-->
-                          <!--                          </a-button>-->
-                          <!--                          <a-button-->
-                          <!--                              v-else-->
-                          <!--                              size="mini"-->
-                          <!--                              @click="() => (item.showAudioCard = false)"-->
-                          <!--                          >-->
-                          <!--                            <icon-up/>-->
-                          <!--                          </a-button>-->
-                          <a-popconfirm
-                              type="warning"
-                              content="确认生成?"
-                              @ok="handleCreateAudio(item)"
+                        </div>
+                        <a-button
+                            :disabled="!item.audioFiles"
+                            size="mini"
+                            @click="handleAudioForward(item)"
+                        >
+                          <icon-forward/>
+                        </a-button>
+                      </a-space>
+                    </div>
+                    <div>
+                      <a-space>
+                        <a-popconfirm
+                            type="warning"
+                            content="确认生成?"
+                            @ok="handleCreateAudio(item)"
+                        >
+                          <a-button
+                              size="mini"
+                              :status="props.creatingIds?.includes(item.index) ? 'danger' : 'normal'"
+                              :disabled="!item.amType || props.creatingIds?.includes(item.index)"
                           >
-                            <a-button
-                                size="mini"
-                                :status="props.creatingIds?.includes(item.index) ? 'danger' : 'normal'"
-                                :disabled="!item.amType || props.creatingIds?.includes(item.index)"
-                            >
-                              <icon-refresh
-                                  :spin="props.creatingIds?.includes(item.index)"
-                              />
-                            </a-button>
-                          </a-popconfirm>
-                          <a-popconfirm
-                              v-if="textContentConfig.edit"
-                              type="error"
-                              content="确认删除?"
-                              @ok="handleDeleteChapterInfo(item)"
-                          >
-                            <a-button size="mini">
-                              <icon-delete/>
-                            </a-button>
-                          </a-popconfirm>
-                        </a-space>
-                      </div>
+                            <icon-refresh
+                                :spin="props.creatingIds?.includes(item.index)"
+                            />
+                          </a-button>
+                        </a-popconfirm>
+                        <a-popconfirm
+                            v-if="textContentConfig.edit"
+                            type="error"
+                            content="确认删除?"
+                            @ok="handleDeleteChapterInfo(item)"
+                        >
+                          <a-button size="mini">
+                            <icon-delete/>
+                          </a-button>
+                        </a-popconfirm>
+                      </a-space>
                     </div>
                   </div>
                 </div>
               </div>
-            </a-card>
-          </div>
-          <div
-              v-if="props.textContentConfig.edit"
-              style="width: 14px; margin-right: 10px"
-              @mouseover="() => (item.showAddOtherItem = true)"
-              @mouseleave="() => (item.showAddOtherItem = false)"
-          >
-            <div
-                v-if="item.showAddOtherItem"
-                style="height: 50%; display: flex; place-items: center; justify-content: center"
-                class="add-other-item"
-                @click="addTextItem(index, 0)"
-            >
-              <icon-plus :size="10"/>
-            </div>
-            <div
-                v-if="item.showAddOtherItem"
-                style="height: 50%; display: flex; place-items: center; justify-content: center"
-                class="add-other-item"
-                @click="addTextItem(index + 1, 0)"
-            >
-              <icon-plus :size="12"/>
             </div>
           </div>
         </div>
-      </vue-draggable>
-    </a-space>
+        <div
+            v-if="props.textContentConfig.edit"
+            style="width: 14px; margin-right: 10px"
+            @mouseover="() => (item.showAddOtherItem = true)"
+            @mouseleave="() => (item.showAddOtherItem = false)"
+        >
+          <div
+              v-if="item.showAddOtherItem"
+              style="height: 50%; display: flex; place-items: center; justify-content: center"
+              class="add-other-item"
+              @click="addTextItem(index, 0)"
+          >
+            <icon-plus :size="10"/>
+          </div>
+          <div
+              v-if="item.showAddOtherItem"
+              style="height: 50%; display: flex; place-items: center; justify-content: center"
+              class="add-other-item"
+              @click="addTextItem(index + 1, 0)"
+          >
+            <icon-plus :size="12"/>
+          </div>
+        </div>
+      </div>
+    </vue-draggable>
     <audio-select
         v-model:visible="modelSelectVisible"
         :audio-model-info="currentChapterInfo"

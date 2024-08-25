@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {inject, ref, watch} from "vue";
+import {ref, watch} from "vue";
 import {linesPatternOptions} from "@/data/data.ts";
 import {useRoute} from "vue-router";
 import useLoading from "@/hooks/loading.ts";
@@ -12,8 +12,8 @@ import {
   tmpDialogueParse,
 } from "@/api/text-chapter.ts";
 import {VueDraggable} from 'vue-draggable-plus'
-import {EventBus} from "@/vite-env";
 import {ROLE_CHANGE} from "@/types/event-types.ts";
+import emitter from "@/mitt";
 
 const route = useRoute();
 const props = defineProps({
@@ -24,7 +24,6 @@ const props = defineProps({
 });
 
 const emits = defineEmits(['update:visible'])
-const eventBus = inject<EventBus>('eventBus');
 
 const dialogueParseLoading = useLoading();
 const chapterSortLoading = useLoading();
@@ -93,7 +92,7 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
     });
     Message.success(msg);
     done(true);
-    eventBus?.emit(ROLE_CHANGE)
+    emitter?.emit(ROLE_CHANGE)
   } else {
     done(false);
   }
@@ -218,12 +217,14 @@ watch(
                 </a-button>
               </a-form-item>
               <a-form-item label="章节内容" field="content" required>
-                <n-scrollbar style="max-height: 500px">
-                  <a-textarea
-                      v-model="form.content"
-                      placeholder="章节内容"
-                      :auto-size="{ minRows: 3 }"/>
-                </n-scrollbar>
+                <n-input
+                    v-model:value="form.content"
+                    type="textarea"
+                    placeholder="章节内容"
+                    :auto-size="{ minRows: 10 }"
+                    show-count
+                    style="height: 500px"
+                />
               </a-form-item>
             </a-form>
           </a-col>
@@ -275,7 +276,8 @@ watch(
               </div>
               <div v-if="showSortTable">
                 <n-scrollbar style="height: 600px; padding-right: 10px">
-                  <vue-draggable v-model="textChapters" target="tbody" :animation="150" :on-update="() => (sortChanged = true)">
+                  <vue-draggable v-model="textChapters" target="tbody" :animation="150"
+                                 :on-update="() => (sortChanged = true)">
                     <a-table
                         :data="textChapters"
                         :loading="chapterSortLoading.loading.value"

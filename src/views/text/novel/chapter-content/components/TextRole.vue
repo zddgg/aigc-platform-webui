@@ -1,20 +1,19 @@
 <script setup lang="ts">
 import {useRoute} from "vue-router";
-import {inject, onBeforeUnmount, onMounted, ref, watch} from "vue";
+import {onBeforeUnmount, onMounted, ref, watch} from "vue";
 import {roles as queryRoles, saveToCommonRole, TextRole, updateRoleModel,} from "@/api/text-chapter.ts";
 import {Message, Modal} from "@arco-design/web-vue";
 import AudioSelect from '@/views/audio-select/index.vue'
 import RoleDelete from "./RoleDelete.vue";
-import {EventBus} from "@/vite-env";
 import {COMMON_ROLE_CHANGE, ROLE_CHANGE} from "@/types/event-types.ts";
 import {AudioModelInfo} from "@/api/model.ts";
 import {voiceNameFormat} from "@/utils/model-util.ts";
 import RoleEdit from "@/views/text/novel/chapter-content/components/RoleEdit.vue";
 import {COSY_VOICE} from "@/types/model-types.ts";
+import {AudioTaskEvent, WsEventType} from "@/types/global.ts";
+import emitter from "@/mitt";
 
 const route = useRoute();
-
-const eventBus = inject<EventBus>('eventBus');
 
 const modelSelectVisible = ref<boolean>(false);
 const roleRenameModalVisible = ref<boolean>(false);
@@ -51,7 +50,7 @@ const modelSelect = async (modelConfig: AudioModelInfo) => {
     ids: [currentRole.value.id]
   })
   Message.success(msg);
-  eventBus?.emit(ROLE_CHANGE);
+  emitter?.emit(ROLE_CHANGE);
 }
 
 const onRoleRename = (role: TextRole) => {
@@ -78,12 +77,12 @@ const onSaveToCommonRole = async (role: TextRole) => {
           coverCommonRole: true
         });
         Message.success(msg);
-        eventBus?.emit(COMMON_ROLE_CHANGE);
+        emitter?.emit(COMMON_ROLE_CHANGE);
       }
     });
   } else {
     Message.success(msg);
-    eventBus?.emit(COMMON_ROLE_CHANGE);
+    emitter?.emit(COMMON_ROLE_CHANGE);
   }
 }
 
@@ -97,12 +96,20 @@ const roleChangeEvent = () => {
   handleQueryRoles();
 }
 
+const wsDataHandler = (data: any) => {
+  if (data?.type === WsEventType.chapter_reload) {
+    handleQueryRoles();
+  }
+};
+
 onMounted(() => {
-  eventBus?.on(ROLE_CHANGE, roleChangeEvent);
+  emitter?.on(ROLE_CHANGE, roleChangeEvent);
+  emitter?.on(AudioTaskEvent.chapter_reload, wsDataHandler);
 });
 
 onBeforeUnmount(() => {
-  eventBus?.off(ROLE_CHANGE, roleChangeEvent);
+  emitter?.off(ROLE_CHANGE, roleChangeEvent);
+  emitter?.off(AudioTaskEvent.chapter_reload, wsDataHandler);
 });
 
 watch(

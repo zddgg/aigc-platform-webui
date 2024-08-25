@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import {inject, PropType, ref, watch} from "vue";
+import {PropType, ref, watch} from "vue";
 import {useRoute} from "vue-router";
 import {Message} from "@arco-design/web-vue";
 import {chapterExpose} from "@/api/text-chapter.ts";
-import {EventBus} from "@/vite-env";
 import {AudioTaskEvent} from "@/types/global.ts";
+import emitter from "@/mitt";
 
 const route = useRoute();
 const props = defineProps({
@@ -18,7 +18,6 @@ const props = defineProps({
   }
 });
 const emits = defineEmits(['update:visible']);
-const eventBus = inject<EventBus>('eventBus');
 
 const showModal = ref(false)
 const combineAudio = ref(true);
@@ -36,7 +35,7 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
     subtitle: subtitle.value,
   })
   Message.success(msg);
-  eventBus?.emit(AudioTaskEvent.audio_combine);
+  emitter?.emit(AudioTaskEvent.audio_combine);
   done(true);
 }
 
