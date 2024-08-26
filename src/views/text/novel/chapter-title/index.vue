@@ -6,7 +6,7 @@ import {ROLE_CHANGE} from "@/types/event-types.ts";
 import {deleteChapter, pageChapters, TextChapter, TextChapterPage} from "@/api/text-chapter.ts";
 import ChapterEditModal from "@/views/text/novel/chapter-title/components/ChapterEditModal.vue";
 import {Message, Modal} from "@arco-design/web-vue";
-import {AudioTaskEvent, AudioTaskState, Pagination, WsEventType} from "@/types/global.ts";
+import {AudioTaskState, EventTypes, Pagination} from "@/types/global.ts";
 import ChapterAddModal from "@/views/text/novel/chapter-title/components/ChapterAddModal.vue";
 import emitter from "@/mitt";
 
@@ -84,7 +84,7 @@ const handleDeleteChapter = (textChapter: TextChapter) => {
   Modal.error({
     title: '删除章节',
     content:
-        '会删除章节相关数据，包括章节文本、角色台词、模型配置、语音配置、生成的音频等',
+        '会删除章节相关数据，包括章节文本、角色对话、模型配置、语音配置、生成的音频等',
     async onOk() {
       try {
         const {msg} = await deleteChapter(textChapter);
@@ -120,20 +120,18 @@ const roleChangeEvent = () => {
   fetchData(pagination);
 }
 
-const wsDataHandler = (data: any) => {
-  if (data?.type === WsEventType.chapter_reload) {
-    fetchData(pagination);
-  }
+const wsDataHandler = () => {
+  fetchData(pagination);
 };
 
 onMounted(() => {
   emitter?.on(ROLE_CHANGE, roleChangeEvent);
-  emitter?.on(AudioTaskEvent.chapter_reload, wsDataHandler);
+  emitter?.on(EventTypes.chapter_title_refresh, wsDataHandler);
 });
 
 onBeforeUnmount(() => {
   emitter?.off(ROLE_CHANGE, roleChangeEvent);
-  emitter?.off(AudioTaskEvent.chapter_reload, wsDataHandler);
+  emitter?.off(EventTypes.chapter_title_refresh, wsDataHandler);
 });
 
 onMounted(async () => {

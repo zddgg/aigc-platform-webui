@@ -10,7 +10,7 @@ import {AudioModelInfo} from "@/api/model.ts";
 import {voiceNameFormat} from "@/utils/model-util.ts";
 import RoleEdit from "@/views/text/novel/chapter-content/components/RoleEdit.vue";
 import {COSY_VOICE} from "@/types/model-types.ts";
-import {AudioTaskEvent, WsEventType} from "@/types/global.ts";
+import {EventTypes} from "@/types/global.ts";
 import emitter from "@/mitt";
 
 const route = useRoute();
@@ -96,20 +96,18 @@ const roleChangeEvent = () => {
   handleQueryRoles();
 }
 
-const wsDataHandler = (data: any) => {
-  if (data?.type === WsEventType.chapter_reload) {
-    handleQueryRoles();
-  }
+const wsDataHandler = () => {
+  handleQueryRoles();
 };
 
 onMounted(() => {
   emitter?.on(ROLE_CHANGE, roleChangeEvent);
-  emitter?.on(AudioTaskEvent.chapter_reload, wsDataHandler);
+  emitter?.on(EventTypes.chapter_role_refresh, wsDataHandler);
 });
 
 onBeforeUnmount(() => {
   emitter?.off(ROLE_CHANGE, roleChangeEvent);
-  emitter?.off(AudioTaskEvent.chapter_reload, wsDataHandler);
+  emitter?.off(EventTypes.chapter_role_refresh, wsDataHandler);
 });
 
 watch(

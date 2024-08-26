@@ -11,6 +11,7 @@ import {AudioModelInfoKey, AudioRoleInfo} from "@/api/model.ts";
 import {
   addChapterInfo,
   audioModelChange,
+  batchOperator,
   ChapterInfo,
   chapterInfos as queryChapterInfoList,
   chapterInfoSort,
@@ -28,7 +29,7 @@ import ConditionSelect from "@/views/text/novel/chapter-content/components/Condi
 import {debounce} from 'lodash';
 import {COSY_VOICE} from "@/types/model-types.ts";
 import AudioParamsChange from "@/views/text/novel/chapter-content/components/AudioParamsChange.vue";
-import {AudioTaskEvent, AudioTaskState, WsEventType} from "@/types/global.ts";
+import {AudioTaskState, EventTypes} from "@/types/global.ts";
 import emitter from "@/mitt";
 
 const route = useRoute();
@@ -160,25 +161,22 @@ const stopAudio = () => {
 const createAudioKey = ref<string>('');
 
 const wsDataHandler = (data: any) => {
-  console.log('wsDataHandler', data)
-  if (data?.type === WsEventType.audio_generate_result) {
-    if (data?.state === "success" && data?.chapterInfo) {
-      chapterInfos.value = chapterInfos.value.map((item) => {
-        if (item.index === data?.chapterInfo?.index) {
-          return {
-            ...item,
-            ...data?.chapterInfo,
-          }
+  if (data?.state === "success" && data?.chapterInfo) {
+    chapterInfos.value = chapterInfos.value.map((item) => {
+      if (item.index === data?.chapterInfo?.index) {
+        return {
+          ...item,
+          ...data?.chapterInfo,
         }
-        return item;
-      });
-      Notification.success({
-        title: `${data?.chapterInfo?.index} 音频生成成功`,
-        content: '',
-        position: 'topRight',
-        duration: 2000
-      })
-    }
+      }
+      return item;
+    });
+    Notification.success({
+      title: `${data?.chapterInfo?.index} 音频生成成功`,
+      content: '',
+      position: 'topRight',
+      duration: 2000
+    })
   }
 };
 
@@ -301,25 +299,7 @@ const onDraggableEnd = async () => {
   await chapterInfoSort(params)
 }
 
-const roleChangeEvent = () => {
-  handleQueryChapterInfo();
-}
-
-const onCombineExport = () => {
-  selectedIds.value = chapterInfos.value
-      .filter((item) => item.selected)
-      .map((item) => item.id)
-  if (!selectedIds.value.length) {
-    Modal.warning({
-      title: '没有选择操作内容',
-      content: '请选择操作内容'
-    })
-  } else {
-    combineExportModalVisible.value = true;
-  }
-}
-
-const selectAllExport = (value: boolean) => {
+const handleSelectAllValue = (value: boolean) => {
   chapterInfos.value = chapterInfos.value
       .map((item) => {
         return {
@@ -329,34 +309,89 @@ const selectAllExport = (value: boolean) => {
       })
 }
 
-const handleBatchRoleChange = () => {
+const handleBatchOperator = (onSuccess: () => void) => {
   selectedIds.value = chapterInfos.value
       .filter((item) => item.selected)
-      .map((item) => item.id)
+      .map((item) => item.id);
+
   if (!selectedIds.value.length) {
     Modal.warning({
       title: '没有选择操作内容',
       content: '请选择操作内容'
-    })
+    });
   } else {
+    onSuccess();
+  }
+};
+
+const handleBatchRoleChange = () => {
+  handleBatchOperator(() => {
     editMode.value = 'batch'
     roleChangeModelVisible.value = true;
-  }
+  });
 }
 
 const handleBatchModelChange = () => {
-  selectedIds.value = chapterInfos.value
-      .filter((item) => item.selected)
-      .map((item) => item.id)
-  if (!selectedIds.value.length) {
-    Modal.warning({
-      title: '没有选择操作内容',
-      content: '请选择操作内容'
-    })
-  } else {
+  handleBatchOperator(() => {
     editMode.value = 'batch'
     modelSelectVisible.value = true;
-  }
+  });
+}
+
+const handleAudioParamsChange = () => {
+  handleBatchOperator(() => {
+    editMode.value = 'batch'
+    audioParamsChangeModelVisible.value = true;
+  });
+}
+
+const handleCombineExport = () => {
+  handleBatchOperator(() => {
+    combineExportModalVisible.value = true;
+  });
+}
+
+const handleMarkupDialogue = (dialogueFlag: boolean) => {
+  handleBatchOperator(() => {
+    Modal.warning({
+      title: dialogueFlag ? `给这(${selectedIds.value.length})个文本添加对话标记？` : `取消这(${selectedIds.value.length})个文本的对话标记？`,
+      content: '',
+      onOk: async () => {
+        const {msg} = await batchOperator({
+          projectId: route.query.projectId as string,
+          chapterId: route.query.chapterId as string,
+          chapterInfoIds: selectedIds.value,
+          operatorType: 'dialogue_markup',
+          booleanValue: dialogueFlag
+        })
+        Message.success(msg);
+        emitter.emit(EventTypes.chapter_title_refresh)
+        emitter.emit(EventTypes.chapter_info_refresh)
+        emitter.emit(EventTypes.chapter_role_refresh)
+      }
+    });
+  });
+}
+
+const handleBatchDelete = () => {
+  handleBatchOperator(() => {
+    Modal.error({
+      title: `批量删除这(${selectedIds.value.length})个文本？`,
+      content: '',
+      onOk: async () => {
+        const {msg} = await batchOperator({
+          projectId: route.query.projectId as string,
+          chapterId: route.query.chapterId as string,
+          chapterInfoIds: selectedIds.value,
+          operatorType: 'delete',
+        });
+        Message.success(msg);
+        emitter.emit(EventTypes.chapter_title_refresh)
+        emitter.emit(EventTypes.chapter_info_refresh)
+        emitter.emit(EventTypes.chapter_role_refresh)
+      }
+    });
+  });
 }
 
 const handleConditionSelect = (value: boolean) => {
@@ -390,39 +425,29 @@ const onConditionSelect = (audioRoleInfo: AudioRoleInfo) => {
       })
 }
 
-const onAudioParamsChange = () => {
-  selectedIds.value = chapterInfos.value
-      .filter((item) => item.selected)
-      .map((item) => item.id)
-  if (!selectedIds.value.length) {
-    Modal.warning({
-      title: '没有选择操作内容',
-      content: '请选择操作内容'
-    })
-  } else {
-    editMode.value = 'batch'
-    audioParamsChangeModelVisible.value = true;
-  }
-}
-
 defineExpose({
   playAllAudio,
-  onCombineExport,
-  selectAllExport,
+  handleSelectAllValue,
+  handleConditionSelect,
+
   handleBatchRoleChange,
   handleBatchModelChange,
-  handleConditionSelect,
-  onAudioParamsChange
+  handleAudioParamsChange,
+  handleCombineExport,
+  handleMarkupDialogue,
+  handleBatchDelete
 })
 
 onMounted(() => {
-  emitter?.on(ROLE_CHANGE, roleChangeEvent);
-  emitter?.on(AudioTaskEvent.audio_generate_result, wsDataHandler);
+  emitter?.on(ROLE_CHANGE, handleQueryChapterInfo);
+  emitter?.on(EventTypes.chapter_info_refresh, handleQueryChapterInfo);
+  emitter?.on(EventTypes.audio_generate_result, wsDataHandler);
 });
 
 onBeforeUnmount(() => {
-  emitter?.off(ROLE_CHANGE, roleChangeEvent);
-  emitter?.off(AudioTaskEvent.audio_generate_result, wsDataHandler);
+  emitter?.off(ROLE_CHANGE, handleQueryChapterInfo);
+  emitter?.off(EventTypes.chapter_info_refresh, handleQueryChapterInfo);
+  emitter?.off(EventTypes.audio_generate_result, wsDataHandler);
 });
 
 watch(

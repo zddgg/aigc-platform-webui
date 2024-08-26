@@ -273,22 +273,20 @@ watch(() => props.visible,
 
 <style scoped>
 .subtitle-text {
+  margin-bottom: 10px;
   text-align: left;
-  height: 40px;
-  font-size: 1rem;
+  font-size: 1.25rem;
   cursor: pointer;
   transition: all 0.2s ease-out;
 }
 
 .subtitle-text:hover {
   font-weight: bold;
-  font-size: 1.25rem;
   color: #165DFF;
 }
 
 .subtitle-text-active {
   font-weight: bold;
-  font-size: 1.25rem;
   color: #165DFF;
 }
 </style>

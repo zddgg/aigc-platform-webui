@@ -3,7 +3,7 @@ import {PropType, ref, watch} from "vue";
 import {useRoute} from "vue-router";
 import {Message} from "@arco-design/web-vue";
 import {chapterExpose} from "@/api/text-chapter.ts";
-import {AudioTaskEvent} from "@/types/global.ts";
+import {EventTypes} from "@/types/global.ts";
 import emitter from "@/mitt";
 
 const route = useRoute();
@@ -35,7 +35,7 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
     subtitle: subtitle.value,
   })
   Message.success(msg);
-  emitter?.emit(AudioTaskEvent.audio_combine);
+  emitter?.emit(EventTypes.chapter_refresh);
   done(true);
 }
 
