@@ -17,7 +17,7 @@ import {
   TextChapter,
   TextContentConfig
 } from "@/api/text-chapter.ts";
-import {AudioTaskEvent, AudioTaskState, TextProjectType, WsEventType} from "@/types/global.ts";
+import {AudioTaskState, EventTypes, TextProjectType} from "@/types/global.ts";
 import AudioPreview from "@/views/text/novel/chapter-content/components/AudioPreview.vue";
 import {getTextProject, TextProject} from "@/api/text-project.ts";
 import ChapterEditModal from "@/views/text/novel/chapter-title/components/ChapterEditModal.vue";
@@ -37,12 +37,15 @@ const chapterEditModalVisible = ref<boolean>(false);
 const tableContentRef = ref<
     {
       playAllAudio: Function,
-      onCombineExport: Function,
-      selectAllExport: Function,
+      handleSelectAllValue: Function,
+      handleConditionSelect: Function,
+
       handleBatchRoleChange: Function,
       handleBatchModelChange: Function,
-      handleConditionSelect: Function,
-      onAudioParamsChange: Function,
+      handleAudioParamsChange: Function,
+      handleCombineExport: Function,
+      handleMarkupDialogue: Function,
+      handleBatchDelete: Function,
     } | null
 >(null);
 
@@ -165,13 +168,10 @@ provide('GlobalWebsocketService', GlobalWebsocketService);
 const taskNum = ref(0);
 const creatingIds = ref<string[]>([])
 const wsDataHandler = (data: any) => {
-  console.log("wsDataHandler", data);
-  if (data?.type === WsEventType.audio_generate_summary) {
-    taskNum.value = data?.taskNum ?? 0;
-    creatingIds.value = data?.creatingIds ?? [];
-    if (data?.taskNum ?? 0 === 0) {
-      stopLoading.value = false;
-    }
+  taskNum.value = data?.taskNum ?? 0;
+  creatingIds.value = data?.creatingIds ?? [];
+  if (data?.taskNum ?? 0 === 0) {
+    stopLoading.value = false;
   }
 }
 
@@ -198,13 +198,13 @@ const handleAudioCombineEvent = () => {
 }
 
 onMounted(() => {
-  emitter?.on(AudioTaskEvent.audio_combine, handleAudioCombineEvent);
-  emitter?.on(AudioTaskEvent.audio_generate_summary, wsDataHandler);
+  emitter?.on(EventTypes.chapter_refresh, handleAudioCombineEvent);
+  emitter?.on(EventTypes.audio_generate_summary, wsDataHandler);
 });
 
 onUnmounted(() => {
-  emitter?.off(AudioTaskEvent.audio_combine, handleAudioCombineEvent);
-  emitter?.off(AudioTaskEvent.audio_generate_summary, wsDataHandler);
+  emitter?.off(EventTypes.chapter_refresh, handleAudioCombineEvent);
+  emitter?.off(EventTypes.audio_generate_summary, wsDataHandler);
 });
 
 watch(
@@ -283,7 +283,7 @@ watch(
                     :status="textContentConfig.edit ? 'warning' : 'normal'"
                     @click="() => {
                       if (textContentConfig.edit) {
-                        tableContentRef?.selectAllExport(false)
+                        tableContentRef?.handleSelectAllValue(false)
                       }
                       textContentConfig.edit = !textContentConfig.edit
                     }"
@@ -303,13 +303,13 @@ watch(
                     </template>
                   </a-button>
                   <template #content>
-                    <a-doption @click="tableContentRef?.selectAllExport(true)">
+                    <a-doption @click="tableContentRef?.handleSelectAllValue(true)">
                       全选
                     </a-doption>
                     <a-doption @click="tableContentRef?.handleConditionSelect(true)">
                       条件选择
                     </a-doption>
-                    <a-doption @click="tableContentRef?.selectAllExport(false)">
+                    <a-doption @click="tableContentRef?.handleSelectAllValue(false)">
                       取消全选
                     </a-doption>
                   </template>
@@ -326,17 +326,29 @@ watch(
                   <icon-down/>
                 </template>
                 <template #content>
-                  <a-doption @click="tableContentRef?.handleBatchRoleChange()">
-                    改角色
+                  <a-doption
+                      style="margin-right: 5px"
+                      @click="tableContentRef?.handleBatchRoleChange()"
+                  >
+                    角色修改
                   </a-doption>
                   <a-doption @click="tableContentRef?.handleBatchModelChange()">
-                    改模型
+                    模型修改
                   </a-doption>
-                  <a-doption @click="tableContentRef?.onAudioParamsChange()">
+                  <a-doption @click="tableContentRef?.handleAudioParamsChange()">
                     音频参数
                   </a-doption>
-                  <a-doption @click="tableContentRef?.onCombineExport()">
+                  <a-doption @click="tableContentRef?.handleCombineExport()">
                     合并导出
+                  </a-doption>
+                  <a-doption @click="tableContentRef?.handleMarkupDialogue(true)">
+                    标记对话
+                  </a-doption>
+                  <a-doption @click="tableContentRef?.handleMarkupDialogue(false)">
+                    取消标记
+                  </a-doption>
+                  <a-doption @click="tableContentRef?.handleBatchDelete()">
+                    批量删除
                   </a-doption>
                 </template>
               </a-dropdown-button>

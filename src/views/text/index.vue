@@ -26,7 +26,7 @@ const handleDeleteProject = (project: TextProject) => {
   Modal.error({
     title: '删除项目',
     content:
-        '会删除整个项目相关的数据，包括项目的文本解析、角色台词、模型配置、语音配置、生成的音频等',
+        '会删除整个项目相关的数据，包括项目的文本解析、角色对话、模型配置、语音配置、生成的音频等',
     async onOk() {
       try {
         setLoading(true);

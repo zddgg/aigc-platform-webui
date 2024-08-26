@@ -81,7 +81,7 @@ watch(
           :model="form"
           size="small"
       >
-        <a-form-item label="台词合并至" field="role" required>
+        <a-form-item label="对话合并至" field="role" required>
           <a-select v-model="form.role">
             <a-option
                 v-for="(item, index) in roles.filter(r => r.role !== props.role?.role)"

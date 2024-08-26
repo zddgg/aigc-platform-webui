@@ -1,4 +1,4 @@
-import {AudioTaskEvent} from "@/types/global.ts";
+import {EventTypes} from "@/types/global.ts";
 import emitter from "@/mitt";
 
 export interface ITextWebSocketService {
@@ -34,27 +34,23 @@ class TextWebsocketService implements ITextWebSocketService {
 
       this.socket.onmessage = (event: MessageEvent) => {
         const data = JSON.parse(event.data)
-        console.log('onmessage', data)
-        if (data.type === AudioTaskEvent.audio_generate_result) {
-          emitter?.emit(AudioTaskEvent.audio_generate_result, data);
-        }
-        if (data.type === AudioTaskEvent.audio_generate_summary) {
-          emitter?.emit(AudioTaskEvent.audio_generate_summary, data);
-        }
-        if (data.type === AudioTaskEvent.chapter_reload) {
-          emitter?.emit(AudioTaskEvent.chapter_reload, data);
-        }
 
-        if (data?.projectId) {
-          const handler = this.projectHandlers.get(data.projectId);
-          if (handler) {
-            handler(data);
+        if (!!data) {
+          const types = (data.type as string).split(',').map((item) => item.trim());
+          if (types.includes(EventTypes.audio_generate_result)) {
+            emitter?.emit(EventTypes.audio_generate_result, data);
           }
-        }
-        if (data?.chapterId) {
-          const handler = this.chapterHandlers.get(data.chapterId);
-          if (handler) {
-            handler(data);
+          if (types.includes(EventTypes.audio_generate_summary)) {
+            emitter?.emit(EventTypes.audio_generate_summary, data);
+          }
+          if (types.includes(EventTypes.chapter_title_refresh)) {
+            emitter?.emit(EventTypes.chapter_title_refresh, data);
+          }
+          if (types.includes(EventTypes.chapter_info_refresh)) {
+            emitter?.emit(EventTypes.chapter_info_refresh, data);
+          }
+          if (types.includes(EventTypes.chapter_role_refresh)) {
+            emitter?.emit(EventTypes.chapter_role_refresh, data);
           }
         }
       };

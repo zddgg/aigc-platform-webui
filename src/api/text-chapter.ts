@@ -301,3 +301,13 @@ export interface Subtitle {
 export function getChapterSubtitle(params: ChapterParam) {
   return axios.post<Subtitle[]>('/api/textChapter/getChapterSubtitle', params);
 }
+
+export interface ChapterBatchOperator extends ChapterParam {
+  chapterInfoIds: number[];
+  operatorType: 'dialogue_markup' | 'delete';
+  booleanValue?: boolean;
+}
+
+export function batchOperator(params: ChapterBatchOperator) {
+  return axios.post('/api/textChapter/batchOperator', params);
+}
