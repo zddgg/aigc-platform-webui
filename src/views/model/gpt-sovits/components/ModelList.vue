@@ -37,8 +37,8 @@ onMounted(() => {
         <a-space size="medium" wrap>
           <a-card
               v-for="(item1, index1) in computedGsvModels
-                .filter(value => value.group === item)
-                .flatMap(value => value.list)"
+                .filter((value : any) => value.group === item)
+                .flatMap((value : any) => value.list)"
               :key="index1"
               hoverable
           >

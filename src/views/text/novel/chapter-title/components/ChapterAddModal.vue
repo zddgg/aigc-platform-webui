@@ -256,7 +256,7 @@ watch(
                 <n-scrollbar style="height: 560px; padding-right: 10px">
                   <a-table
                       :data="chapterInfos
-                    .filter((item) => (item.dialogueFlag && showDialogue) || (!item.dialogueFlag && showAside))
+                    .filter((item : any) => (item.dialogueFlag && showDialogue) || (!item.dialogueFlag && showAside))
                   "
                       :loading="dialogueParseLoading.loading.value"
                       :columns="[{ title: '文本', dataIndex: 'text' }, {title: '对话', slotName: 'dialogueFlag' }]"

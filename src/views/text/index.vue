@@ -89,7 +89,7 @@ onMounted(() => {
               </div>
             </a-card>
             <a-card
-                v-for="(item, index) in textProjects.filter((item1) => item1.projectType === TextProjectType.long_text)"
+                v-for="(item, index) in textProjects.filter((item1 : any) => item1.projectType === TextProjectType.long_text)"
                 :key="index"
                 style="width: 350px"
             >
@@ -150,7 +150,7 @@ onMounted(() => {
               </div>
             </a-card>
             <a-card
-                v-for="(item, index) in textProjects.filter((item1) => item1.projectType === TextProjectType.short_text)"
+                v-for="(item, index) in textProjects.filter((item1 : any) => item1.projectType === TextProjectType.short_text)"
                 :key="index"
                 style="width: 350px"
             >
@@ -211,7 +211,7 @@ onMounted(() => {
               </div>
             </a-card>
             <a-card
-                v-for="(item, index) in textProjects.filter((item1) => item1.projectType === TextProjectType.format_text)"
+                v-for="(item, index) in textProjects.filter((item1 : any) => item1.projectType === TextProjectType.format_text)"
                 :key="index"
                 style="width: 350px"
             >

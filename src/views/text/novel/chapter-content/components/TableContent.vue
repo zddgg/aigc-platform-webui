@@ -564,7 +564,7 @@ watch(
                 <a-dropdown>
                   <a-button
                       v-if="item.amType"
-                      class="w-full h-full flex flex-col text-left"
+                      style="width: 100%; height: 100%; display: flex; flex-direction: column; text-align: left"
                   >
                     <div style="width: 100%">
                       <a-typography-text style="display: block; white-space: nowrap" ellipsis>

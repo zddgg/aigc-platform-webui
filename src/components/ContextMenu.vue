@@ -7,7 +7,7 @@
       <div v-if="showMenu && props.menu && props.menu.length"
            class="context-menu"
            :style="{ left: x + 'px', top: y + 'px' }"
-           @click.right="(e) => e.preventDefault()"
+           @click.right="(e : any) => e.preventDefault()"
       >
         <div class="menu-list">
           <a-space>

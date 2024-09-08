@@ -393,7 +393,7 @@ watch(
               </a-descriptions-item>
               <a-descriptions-item label="语言">
                 {{
-                  langDicts.find((item) => item.enName === currentAudio?.paRoleLang)?.zhName ?? currentAudio?.paRoleLang
+                  langDicts.find((item : any) => item.enName === currentAudio?.paRoleLang)?.zhName ?? currentAudio?.paRoleLang
                 }}
               </a-descriptions-item>
             </a-descriptions>
