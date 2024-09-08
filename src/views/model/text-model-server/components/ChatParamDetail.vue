@@ -128,7 +128,7 @@ watch(
                 :wrapper-col-props="{ span: 12 }"
             >
               <a-select
-                  :options="chatTemplates.map(item => item.templateName).filter(item => !!item)"
+                  :options="chatTemplates.map((item : any) => item.templateName).filter((item : any) => !!item)"
                   allow-clear
                   @change="chatTemplateChange"
               >

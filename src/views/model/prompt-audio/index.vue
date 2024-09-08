@@ -181,7 +181,7 @@ onMounted(() => {
         <n-tab-pane v-for="(item) in groupOptions" :name="item" :tab="item">
           <a-space size="medium" wrap align="start">
             <a-card
-                v-for="(item1, index1) in computedAudios.flatMap(value => value.list)"
+                v-for="(item1, index1) in computedAudios.flatMap((value : any) => value.list)"
                 :key="index1"
                 hoverable
                 style="width: 350px;"
@@ -209,7 +209,7 @@ onMounted(() => {
                     </a-descriptions-item>
                     <a-descriptions-item label="语言">
                       {{
-                        langDicts.find((item2) => item2.enName === item1.paRoleLang)?.zhName ?? item1.paRoleLang ?? '未知'
+                        langDicts.find((item2 : any) => item2.enName === item1.paRoleLang)?.zhName ?? item1.paRoleLang ?? '未知'
                       }}
                     </a-descriptions-item>
                   </a-descriptions>
