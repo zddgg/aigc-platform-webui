@@ -356,7 +356,7 @@ watch(
 <style scoped>
 .ruby-item {
   font-size: 16px;
-  letter-spacing: 4px;
+  letter-spacing: normal;
 }
 
 .ruby-rt {
