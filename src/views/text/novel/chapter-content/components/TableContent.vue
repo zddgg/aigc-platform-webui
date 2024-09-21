@@ -17,7 +17,7 @@ import {
   chapterInfoSort,
   createAudio,
   deleteChapterInfo,
-  playAudio,
+  playAudio, startCreateAudio,
   TextContentConfig,
   updateInterval,
   updateSpeed,
@@ -398,6 +398,40 @@ const handleConditionSelect = (value: boolean) => {
   conditionSelectVisible.value = value
 }
 
+const handleStartCreateAudio = async (actionType: string, chapterInfoIds: number[]) => {
+  await startCreateAudio({
+    projectId: route.query.projectId as string,
+    chapterId: route.query.chapterId as string,
+    actionType: actionType,
+    chapterInfoIds: chapterInfoIds
+  });
+}
+
+const handleAudioGenerate = (actionType: 'all' | 'modified' | 'selected') => {
+  selectedIds.value = chapterInfos.value
+      .filter((item) => item.selected)
+      .map((item) => item.id);
+
+  if (actionType === 'selected' && !selectedIds.value.length) {
+    Modal.warning({
+      title: '没有选择操作内容',
+      content: '请选择操作内容'
+    });
+  } else {
+    Modal.warning({
+      title: actionType === 'all'
+          ? '全部重新生成？'
+          : actionType === 'modified'
+              ? '增量修改生成？'
+              : `生成选中部分(${selectedIds.value.length})？`,
+      content: '',
+      onOk() {
+        handleStartCreateAudio(actionType, selectedIds.value);
+      },
+    })
+  }
+}
+
 const onConditionSelect = (audioRoleInfo: AudioRoleInfo) => {
   chapterInfos.value = chapterInfos.value
       .map((item) => {
@@ -429,6 +463,7 @@ defineExpose({
   playAllAudio,
   handleSelectAllValue,
   handleConditionSelect,
+  handleAudioGenerate,
 
   handleBatchRoleChange,
   handleBatchModelChange,

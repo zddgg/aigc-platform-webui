@@ -5,14 +5,13 @@ import useLoading from "@/hooks/loading.ts";
 import TableContent from "./components/TableContent.vue";
 import CommonRole from "./components/CommonRole.vue";
 import TextRole from "./components/TextRole.vue";
-import {Message, Modal} from "@arco-design/web-vue";
+import {Message} from "@arco-design/web-vue";
 import {ROLE_CHANGE} from "@/types/event-types.ts";
 import {
   checkRoleInference,
   getTextChapter,
   loadRoleInference,
   roleInference,
-  startCreateAudio,
   stopCreateAudio,
   TextChapter,
   TextContentConfig
@@ -39,6 +38,7 @@ const tableContentRef = ref<
       playAllAudio: Function,
       handleSelectAllValue: Function,
       handleConditionSelect: Function,
+      handleAudioGenerate: Function,
 
       handleBatchRoleChange: Function,
       handleBatchModelChange: Function,
@@ -135,22 +135,8 @@ const onAiInference = () => {
   });
 }
 
-const handleStartCreateAudio = async (actionType: 'all' | 'modified') => {
-  await startCreateAudio({
-    projectId: route.query.projectId as string,
-    chapterId: route.query.chapterId as string,
-    actionType: actionType,
-  });
-}
-
-const onStartCreateAudio = (actionType: 'all' | 'modified') => {
-  Modal.warning({
-    title: actionType === 'all' ? '全部重新生成？' : '增量修改生成?',
-    content: '',
-    onOk() {
-      handleStartCreateAudio(actionType);
-    },
-  })
+const onStartCreateAudio = (actionType: 'all' | 'modified' | 'selected') => {
+  tableContentRef.value?.handleAudioGenerate(actionType)
 }
 
 const playAllAudio = () => {
@@ -268,7 +254,7 @@ watch(
                   </a-doption>
                   <a-doption
                       v-if="textContentConfig.edit"
-                      @click="onStartCreateAudio('modified')"
+                      @click="onStartCreateAudio('selected')"
                   >
                     生成选中部分
                   </a-doption>
