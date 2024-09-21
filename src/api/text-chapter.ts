@@ -241,7 +241,8 @@ export function createAudio(params: ChapterInfo) {
 export function startCreateAudio(params: {
   projectId: string,
   chapterId: string,
-  actionType: string
+  actionType: string,
+  chapterInfoIds: number[],
 }) {
   return axios.post<string[]>('/api/textChapter/startCreateAudio', params);
 }
