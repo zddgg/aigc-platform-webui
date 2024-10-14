@@ -17,7 +17,8 @@ import {
   chapterInfoSort,
   createAudio,
   deleteChapterInfo,
-  playAudio, startCreateAudio,
+  playAudio,
+  startCreateAudio,
   TextContentConfig,
   updateInterval,
   updateSpeed,
@@ -205,9 +206,15 @@ const playNext = () => {
   }
 };
 
-const playAllAudio = () => {
+const playAllAudio = (startIndex: string) => {
   playAll.value = true;
-  activeAudioIndex.value = -1;
+  let start = -1
+  chapterInfos.value.forEach((item, index) => {
+    if (item.index === startIndex) {
+      start = index - 1;
+    }
+  })
+  activeAudioIndex.value = start;
   playNext();
 }
 

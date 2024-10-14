@@ -24,8 +24,32 @@ const {loading, setLoading} = useLoading();
 
 const chapterPatternOptions = [
   {
-    label: '第*[章节卷集部篇回]*',
-    value: '^\\s*第.{1,9}[章节卷集部篇回].*',
+    label: '第*章*',
+    value: '^\\s*第.{1,9}[章].*',
+  },
+  {
+    label: '第*节*',
+    value: '^\\s*第.{1,9}[节].*',
+  },
+  {
+    label: '第*卷*',
+    value: '^\\s*第.{1,9}[卷].*',
+  },
+  {
+    label: '第*集*',
+    value: '^\\s*第.{1,9}[集].*',
+  },
+  {
+    label: '第*部*',
+    value: '^\\s*第.{1,9}[部].*',
+  },
+  {
+    label: '第*篇*',
+    value: '^\\s*第.{1,9}[篇].*',
+  },
+  {
+    label: '第*回*',
+    value: '^\\s*第.{1,9}[回].*',
   },
   {
     label: '占一行的纯数字章节名',
@@ -153,7 +177,7 @@ watch(
                   :label-col-props="{ span: 6 }"
                   :wrapper-col-props="{ span: 18 }"
               >
-                <a-form-item label="章节切分" field="chapterPattern" required>
+                <a-form-item label="章节切分" field="chapterPattern" :help="form.chapterPattern" required>
                   <a-select
                       v-model="form.chapterPattern"
                       allow-create

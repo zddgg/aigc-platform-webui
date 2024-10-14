@@ -42,7 +42,7 @@ const changeModelType = (item: string) => {
     </div>
     <a-divider direction="vertical" style="margin: 0 20px 0 10px" />
     <div style="width: 90%">
-      <n-scrollbar style="max-height: calc(100vh - 42px)">
+      <a-scrollbar style="max-height: calc(100vh - 42px); overflow: auto">
         <div style="padding-right: 10px">
           <div v-if="activeModelType === '文本大模型'">
             <text-model-server/>
@@ -69,7 +69,7 @@ const changeModelType = (item: string) => {
             <cosy-voice/>
           </div>
         </div>
-      </n-scrollbar>
+      </a-scrollbar>
     </div>
   </div>
 </template>

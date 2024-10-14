@@ -7,21 +7,14 @@ import CommonRole from "./components/CommonRole.vue";
 import TextRole from "./components/TextRole.vue";
 import {Message} from "@arco-design/web-vue";
 import {ROLE_CHANGE} from "@/types/event-types.ts";
-import {
-  checkRoleInference,
-  getTextChapter,
-  loadRoleInference,
-  roleInference,
-  stopCreateAudio,
-  TextChapter,
-  TextContentConfig
-} from "@/api/text-chapter.ts";
+import {getTextChapter, roleInference, stopCreateAudio, TextChapter, TextContentConfig} from "@/api/text-chapter.ts";
 import {AudioTaskState, EventTypes, TextProjectType} from "@/types/global.ts";
 import AudioPreview from "@/views/text/novel/chapter-content/components/AudioPreview.vue";
 import {getTextProject, TextProject} from "@/api/text-project.ts";
 import ChapterEditModal from "@/views/text/novel/chapter-title/components/ChapterEditModal.vue";
 import GlobalWebsocketService from "@/services/globalWebsocketService.ts";
 import emitter from "@/mitt";
+import RoleInferenceModal from "@/views/text/novel/chapter-content/components/RoleInferenceModal.vue";
 
 const route = useRoute();
 const {loading, setLoading} = useLoading();
@@ -32,6 +25,8 @@ const selectedIndexes = ref<string[]>([])
 const textContentConfig = ref<TextContentConfig>({} as TextContentConfig)
 const audioPreviewModelVisible = ref<boolean>(false);
 const chapterEditModalVisible = ref<boolean>(false);
+const roleInferenceModalVisible = ref<boolean>(false);
+const playStartIndex = ref<string>('')
 
 const tableContentRef = ref<
     {
@@ -85,7 +80,7 @@ const handleAiInferenceTimeout = () => {
   console.error('Request timed out');
 };
 
-const handleAiInference = () => {
+const handleAiInference = (param: any) => {
   try {
     setLoading(true);
     roleInference(
@@ -93,6 +88,7 @@ const handleAiInference = () => {
         {
           projectId: route.query.projectId as string,
           chapterId: route.query.chapterId as string,
+          ...param,
         },
         handleAiInferenceMessage,
         handleAiInferenceDone,
@@ -105,42 +101,15 @@ const handleAiInference = () => {
   }
 };
 
-const aiResultBool = ref<boolean>(false);
-const onCheckAiResult = async () => {
-  const {data} = await checkRoleInference({
-    projectId: route.query.projectId as string,
-    chapterId: route.query.chapterId as string,
-  });
-  aiResultBool.value = data;
-  return data;
-}
-
-const handleUseCache = async () => {
-  await loadRoleInference({
-    projectId: route.query.projectId as string,
-    chapterId: route.query.chapterId as string,
-  });
-  aiResultModalVisible.value = false;
-  refresh();
-};
-
 const aiResultModalVisible = ref<boolean>(false);
-const onAiInference = () => {
-  onCheckAiResult().then(data => {
-    if (data) {
-      aiResultModalVisible.value = true;
-    } else {
-      handleAiInference()
-    }
-  });
-}
 
 const onStartCreateAudio = (actionType: 'all' | 'modified' | 'selected') => {
   tableContentRef.value?.handleAudioGenerate(actionType)
 }
 
 const playAllAudio = () => {
-  tableContentRef.value?.playAllAudio()
+  tableContentRef.value?.playAllAudio(playStartIndex.value)
+  playStartIndex.value = ''
 }
 
 const stopLoading = ref<boolean>(false);
@@ -198,7 +167,6 @@ watch(
     () => {
       selectedIndexes.value = [];
       if (route.query.chapterId) {
-        onCheckAiResult();
         handleQueryProject();
         handleQueryChapter();
       }
@@ -227,7 +195,7 @@ watch(
                   type="primary"
                   :loading="loading"
                   size="small"
-                  @click="onAiInference"
+                  @click="() => (roleInferenceModalVisible = true)"
               >
                 角色推理
               </a-button>
@@ -350,7 +318,13 @@ watch(
                 </template>
                 <template #content>
                   <a-doption @click="playAllAudio">
-                    顺序播放
+                    <div style="display: flex; align-items: center">
+                      <a-input v-model="playStartIndex" placeholder="0-0" size="small" style="width: 100px"
+                               @click.stop/>
+                      <div style="margin-left: 10px">
+                        顺序播放
+                      </div>
+                    </div>
                   </a-doption>
                   <a-doption
                       v-if="textChapter?.audioTaskState === AudioTaskState.combined"
@@ -375,16 +349,17 @@ watch(
               </a-space>
             </div>
             <div>
-              <a-dropdown>
-                <a-button size="mini">
+              <a-dropdown-button size="small">
+                其他
+                <template #icon>
                   <icon-down/>
-                </a-button>
+                </template>
                 <template #content>
                   <a-doption>
                     <a-checkbox v-model="textContentConfig.showDialogue">标记对话</a-checkbox>
                   </a-doption>
                 </template>
-              </a-dropdown>
+              </a-dropdown-button>
             </div>
           </a-space>
         </div>
@@ -434,18 +409,10 @@ watch(
         </a-scrollbar>
       </div>
     </div>
-    <a-modal
-        v-model:visible="aiResultModalVisible"
-        title="检测到推理结果缓存"
-        :footer="false"
-    >
-      <div style="display: flex; justify-content: center; align-items: center;">
-        <a-space size="large">
-          <a-button @click="handleAiInference">重新推理</a-button>
-          <a-button type="primary" @click="handleUseCache">使用缓存</a-button>
-        </a-space>
-      </div>
-    </a-modal>
+    <role-inference-modal
+        v-model:visible="roleInferenceModalVisible"
+        @success="handleAiInference"
+    />
     <audio-preview v-model:visible="audioPreviewModelVisible"/>
     <chapter-edit-modal
         v-model:visible="chapterEditModalVisible"
@@ -455,6 +422,7 @@ watch(
 </template>
 
 <style scoped>
+
 .text-space-header {
   width: 100%;
   height: 40px;

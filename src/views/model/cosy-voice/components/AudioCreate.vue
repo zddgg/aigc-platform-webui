@@ -255,7 +255,7 @@ onMounted(async () => {
             <a-space size="medium" direction="vertical" style="width: 100%">
               <a-card :body-style="{padding: '20px 20px 0'}">
                 <a-form-item label="推理模式" field="configParam.mode">
-                  <a-radio-group v-model="form.configParam.mode">
+                  <a-radio-group v-model="form.configParam.mode" class="custom-radio-group">
                     <a-radio
                         v-for="(item, index) in [
                             {label: '预置语音生成', value: 'preset', desc: '预训练音色'},
@@ -514,5 +514,9 @@ onMounted(async () => {
 
 .custom-radio-card-checked .custom-radio-card-mask-dot {
   background-color: rgb(var(--primary-6));
+}
+
+.custom-radio-group :deep(.arco-radio) {
+  padding: 0;
 }
 </style>
