@@ -183,12 +183,22 @@ export function roleInference(url: string,
   fetchStream.startRequest();
 }
 
-export function checkRoleInference(params: { projectId: string, chapterId: string }) {
-  return axios.post<boolean>('/api/textChapter/checkRoleInference', params);
+export interface TextRoleInference {
+  textIndex: string;
+  role: string;
+  gender: string;
+  age: string;
+  mood: string;
 }
 
-export function loadRoleInference(params: { projectId: string, chapterId: string }) {
-  return axios.post('/api/textChapter/loadRoleInference', params);
+export interface RoleInferenceData {
+  content: string;
+  lines: string;
+  textRoleInferences: TextRoleInference[];
+}
+
+export function queryRoleInferenceCache(params: { projectId: string, chapterId: string }) {
+  return axios.post<RoleInferenceData>('/api/textChapter/queryRoleInferenceCache', params);
 }
 
 export interface ChapterParam {
