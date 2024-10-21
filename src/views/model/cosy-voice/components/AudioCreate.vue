@@ -307,11 +307,10 @@ onMounted(async () => {
                 <a-col :span="12">
                   <a-card :body-style="{padding: '20px 20px 0'}">
                     <a-form-item label="Seed" field="configParam.seed">
-                      <n-input-number v-model:value="form.configParam.seed" disabled/>
+                      <n-input-number v-model:value="form.configParam.seed"/>
                       <n-button
                           type="primary"
                           ghost
-                          disabled
                           style="margin-left: 10px"
                           @click="() => form.configParam.seed = getRandomInt()"
                       >

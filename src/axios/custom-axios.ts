@@ -1,4 +1,3 @@
-// src/axios/customAxios.js
 import axios, {type AxiosResponse} from 'axios';
 import {HttpResponse} from "@/types/global.ts";
 
