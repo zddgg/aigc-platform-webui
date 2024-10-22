@@ -558,18 +558,23 @@ watch(
               </a-button>
             </div>
             <div v-else style="position: relative; width: 100%; display: flex; place-items: center">
-              <div style="position: absolute; top: 0; left: 0; font-size: 12px">
+              <div style="position: absolute; top: 0; left: 0; font-size: 12px; display: flex; justify-content: space-between; width: 100px">
+                <div>
                   <span>
-                    {{ item.index }}
+                  {{ item.index }}
                   </span>
-                <icon-check-circle-fill
-                    v-if="item.audioTaskState >= AudioTaskState.created"
-                    style="color: #00B42A; margin-left: 4px"
-                />
-                <icon-info-circle
-                    v-else-if="item.audioTaskState >= AudioTaskState.modified"
-                    style="color: #FF7D00; margin-left: 4px"
-                />
+                  <icon-check-circle-fill
+                      v-if="item.audioTaskState >= AudioTaskState.created"
+                      style="color: #00B42A; margin-left: 4px"
+                  />
+                  <icon-info-circle
+                      v-else-if="item.audioTaskState >= AudioTaskState.modified"
+                      style="color: #FF7D00; margin-left: 4px"
+                  />
+                </div>
+                <div v-if="item.textMood" style="margin-left: 4px">
+                  {{ item.textMood }}
+                </div>
               </div>
               <div style="width: 100px">
                 <a-dropdown>
@@ -585,7 +590,7 @@ watch(
                   >
                     <div style="width: 100%">
                       <a-typography-text style="display: block; white-space: nowrap" ellipsis>
-                        {{ item.role }}
+                        {{ `${item.role}` }}
                       </a-typography-text>
                     </div>
                   </a-button>

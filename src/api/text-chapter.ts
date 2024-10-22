@@ -71,6 +71,7 @@ export interface ChapterInfo extends AudioRoleInfo {
   sentIndex: number;
   textId: string;
   text: string;
+  textMood: string;
   textLang: string;
   textSort: number;
   dialogueFlag: boolean;
