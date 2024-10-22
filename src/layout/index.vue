@@ -4,6 +4,10 @@ import {useRouter} from "vue-router";
 
 const router = useRouter();
 const activeIndex = ref('');
+
+const openDocPage = () => {
+  window.open('https://doc.aigc.wenliang.space', '_blank');
+}
 </script>
 
 <template>
@@ -89,6 +93,17 @@ const activeIndex = ref('');
             </div>
             <div style="text-align: center">
               <span>模型</span>
+            </div>
+          </div>
+          <div class="nav-item"
+               style="padding: 10px 18px; border-radius: 8px; cursor: pointer"
+               @click="openDocPage"
+          >
+            <div>
+              <icon-book size="30"/>
+            </div>
+            <div style="text-align: center">
+              <span>文档</span>
             </div>
           </div>
         </a-space>

@@ -2,6 +2,7 @@
 import layout from '@/layout/index.vue'
 
 import {GlobalThemeOverrides, NConfigProvider} from 'naive-ui'
+import FloatBall from "@/components/FloatBall.vue";
 
 const themeOverrides: GlobalThemeOverrides = {
   common: {},
@@ -15,6 +16,7 @@ const themeOverrides: GlobalThemeOverrides = {
 <template>
   <n-config-provider :theme-overrides="themeOverrides">
     <layout/>
+    <FloatBall />
   </n-config-provider>
 </template>
 

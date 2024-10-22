@@ -21,7 +21,6 @@ const usePinyinStore = defineStore('pinyin', () => {
   };
 
   return {
-    pinyinData,
     fetchPinyinData,
     getPinyinList,
   };

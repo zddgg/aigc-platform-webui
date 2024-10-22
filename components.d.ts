@@ -8,6 +8,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     ContextMenu: typeof import('./src/components/ContextMenu.vue')['default']
+    FloatBall: typeof import('./src/components/FloatBall.vue')['default']
     NButton: typeof import('naive-ui')['NButton']
     NCheckbox: typeof import('naive-ui')['NCheckbox']
     NInput: typeof import('naive-ui')['NInput']
