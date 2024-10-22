@@ -188,6 +188,7 @@ watch(
         :title="props.editMode === 'batch' ? `批量变更角色(${props.chapterInfoIds?.length})` : props.chapterInfo?.role ?? '未命名'"
         :unmount-on-close="true"
         :width="760"
+        draggable
         @before-ok="handleBeforeOk"
         @close="close"
         @cancel="close"
