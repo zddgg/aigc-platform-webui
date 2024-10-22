@@ -558,7 +558,8 @@ watch(
               </a-button>
             </div>
             <div v-else style="position: relative; width: 100%; display: flex; place-items: center">
-              <div style="position: absolute; top: 0; left: 0; font-size: 12px; display: flex; justify-content: space-between; width: 100px">
+              <div
+                  style="position: absolute; top: 0; left: 0; font-size: 12px; display: flex; justify-content: space-between; width: 100px">
                 <div>
                   <span>
                   {{ item.index }}
