@@ -22,6 +22,9 @@
             {{ latestVersion ?? '未知' }}
           </span>
         </div>
+        <div style="white-space: nowrap; cursor: pointer">
+          <a-link :hoverable="false" @click="openDocPage">文档地址</a-link>
+        </div>
       </template>
     </a-popover>
   </div>
@@ -184,6 +187,10 @@ const appAccessLog = async () => {
     console.error(e);
   }
 };
+
+const openDocPage = () => {
+  window.open('https://doc.aigc.wenliang.space', '_blank');
+}
 
 onMounted(() => {
   getLocalAppInfo().then(() => {
