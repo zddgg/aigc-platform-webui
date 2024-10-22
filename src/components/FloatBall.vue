@@ -186,8 +186,9 @@ const appAccessLog = async () => {
 };
 
 onMounted(() => {
-  getLocalAppInfo()
-  sendAppAccessLog()
+  getLocalAppInfo().then(() => {
+    sendAppAccessLog()
+  })
 })
 
 </script>
