@@ -6,7 +6,6 @@ import ArcoVueIcon from '@arco-design/web-vue/es/icon';
 import '@/axios/default-axios.ts';
 import '@/assets/style.css';
 import GlobalWebsocketService from "@/services/globalWebsocketService.ts";
-import {sendAppAccessLog} from "@/utils/app-log-utils.ts";
 
 const app = createApp(App);
 app.use(router)
@@ -16,4 +15,3 @@ app.mount('#app');
 
 usePinyinStore().fetchPinyinData()
 GlobalWebsocketService.connect();
-sendAppAccessLog()

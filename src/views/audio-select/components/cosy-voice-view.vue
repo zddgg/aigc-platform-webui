@@ -192,6 +192,10 @@ const handleLangDicts = async () => {
   langDicts.value = data;
 }
 
+const getZhLang = (en: string) => {
+  return langDicts.value.find((item) => en === item.enName)?.zhName ?? '未知';
+}
+
 onMounted(() => {
   handleLangDicts()
 })
@@ -330,7 +334,7 @@ watch(
                         </a-tag>
                         <a-tag color="cyan" style="display: block; width: 100%">
                           <a-typography-text ellipsis>
-                            {{ item.paRoleLang ?? '未知' }}
+                            {{ getZhLang(item.paRoleLang) }}
                           </a-typography-text>
                         </a-tag>
                       </a-space>
