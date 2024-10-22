@@ -35,7 +35,6 @@
 import {ref, watch} from 'vue';
 import {FileItem} from '@arco-design/web-vue/es/upload/interfaces';
 import {createProject} from '@/api/text-project.ts';
-import useLoading from '@/hooks/loading.ts';
 import {FormInstance} from "@arco-design/web-vue";
 
 const props = defineProps({
@@ -49,7 +48,6 @@ const props = defineProps({
 });
 
 const emits = defineEmits(['update:visible', 'close']);
-const {loading, setLoading} = useLoading();
 
 const showModal = ref(false);
 const formRef = ref<FormInstance>()
@@ -69,17 +67,12 @@ const onChange = (_: FileItem[], fileItem: FileItem) => {
 const handleBeforeOk = async (done: (closed: boolean) => void) => {
   const res = await formRef.value?.validate();
   if (!res) {
-    try {
-      setLoading(true);
-      const formData = new FormData();
-      formData.append('project', form.value.project);
-      formData.append('projectType', props.projectType as string);
-      formData.append('file', file.value?.file as Blob);
-      await createProject(formData);
-      done(true)
-    } finally {
-      setLoading(false);
-    }
+    const formData = new FormData();
+    formData.append('project', form.value.project);
+    formData.append('projectType', props.projectType as string);
+    formData.append('file', file.value?.file as Blob);
+    await createProject(formData);
+    done(true)
   }
   done(false)
 };
