@@ -41,10 +41,10 @@ const ballSize = 50; // 图片是 50x50 的大小
 const right = ref(50); // 初始距右边距离
 const bottom = ref(50); // 初始距底部距离
 const isDragging = ref(false);
-let startX, startY, offsetX, offsetY, moved;
-let animationFrameId = null;
+let startX: number, startY: number, offsetX: number, offsetY: number, moved: boolean;
+let animationFrameId: any = null;
 
-const startDrag = (event) => {
+const startDrag = (event: any) => {
   event.preventDefault();
   isDragging.value = true;
   startX = event.clientX;
@@ -60,7 +60,7 @@ const startDrag = (event) => {
   disableTextSelection();
 };
 
-const startTouchDrag = (event) => {
+const startTouchDrag = (event: any) => {
   event.preventDefault();
   const touch = event.touches[0];
   isDragging.value = true;
@@ -77,14 +77,14 @@ const startTouchDrag = (event) => {
   disableTextSelection();
 };
 
-const onMouseMove = (event) => {
+const onMouseMove = (event: any) => {
   if (animationFrameId) cancelAnimationFrame(animationFrameId);
   animationFrameId = requestAnimationFrame(() => {
     updatePosition(event.clientX, event.clientY);
   });
 };
 
-const onTouchMove = (event) => {
+const onTouchMove = (event: any) => {
   event.preventDefault();
   if (animationFrameId) cancelAnimationFrame(animationFrameId);
   const touch = event.touches[0];
@@ -93,7 +93,7 @@ const onTouchMove = (event) => {
   });
 };
 
-const updatePosition = (x, y) => {
+const updatePosition = (x:number, y:number) => {
   moved = true;
   const halfBallSize = ballSize / 2;
 
