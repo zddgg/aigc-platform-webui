@@ -380,6 +380,27 @@ const handleMarkupDialogue = (dialogueFlag: boolean) => {
   });
 }
 
+const handleTextCombine = () => {
+  handleBatchOperator(() => {
+    Modal.error({
+      title: `合并这(${selectedIds.value.length})个文本？`,
+      content: '',
+      onOk: async () => {
+        const {msg} = await batchOperator({
+          projectId: route.query.projectId as string,
+          chapterId: route.query.chapterId as string,
+          chapterInfoIds: selectedIds.value,
+          operatorType: 'text_combine',
+        });
+        Message.success(msg);
+        emitter.emit(EventTypes.chapter_title_refresh)
+        emitter.emit(EventTypes.chapter_info_refresh)
+        emitter.emit(EventTypes.chapter_role_refresh)
+      }
+    });
+  });
+}
+
 const handleBatchDelete = () => {
   handleBatchOperator(() => {
     Modal.error({
@@ -477,6 +498,7 @@ defineExpose({
   handleAudioParamsChange,
   handleCombineExport,
   handleMarkupDialogue,
+  handleTextCombine,
   handleBatchDelete
 })
 
@@ -512,13 +534,13 @@ watch(
         v-model="chapterInfos"
         :animation="150"
         handle=".handle"
-        class="flex flex-col gap-3"
+        style="display: flex; flex-direction: column; gap: 0.75rem;"
         :on-update="onDraggableEnd"
     >
       <div
           v-for="(item, index) in chapterInfos"
           :key="item.id"
-          class="flex bg-gray-500/5 rounded"
+          style="display: flex; background-color: rgba(107, 114, 128, 0.05); border-radius: 0.25rem;"
       >
         <div style="width: 100%; display: flex; align-items: center">
           <div
@@ -532,20 +554,20 @@ watch(
               <a-checkbox v-model="item.selected"/>
             </div>
             <div
-                style="height: 50%; display: flex; place-items: center; justify-content: center"
-                class="handle cursor-move"
+                style="height: 50%; display: flex; place-items: center; justify-content: center; cursor: move"
+                class="handle"
             >
               <icon-drag-arrow/>
             </div>
           </div>
           <div
-              class="flex-1 px-5 py-2.5 bg-white border rounded-sm"
+              style="flex: 1; padding: 0.625rem 1.25rem; background-color: white; border: 1px solid #e5e7eb; border-radius: 0.125rem;"
               :style="textContentConfig.showDialogue && item.dialogueFlag && {backgroundColor: '#E8F3FF'}"
           >
-            <div v-if="item.newItem" class="flex items-center">
+            <div v-if="item.newItem" style="display: flex; align-items: center;">
               <a-textarea v-model="item.text" :auto-size="{minRows: 1, maxRows: 5}" style="flex: 1"/>
               <a-button
-                  size="small" type="outline" class="ml-2.5"
+                  size="small" type="outline" style="margin-left: 0.625rem;"
                   @click="handleAddChapterInfo(index, item.text)"
               >
                 <icon-check/>

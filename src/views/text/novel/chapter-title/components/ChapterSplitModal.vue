@@ -102,7 +102,6 @@ const handleChapterSplit = async () => {
       close();
       emits('refresh')
     }
-  } else {
   }
 }
 

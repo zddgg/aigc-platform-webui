@@ -1,94 +1,77 @@
 <script setup lang="ts">
-import {ref} from "vue";
-import {useRouter} from "vue-router";
+import {onMounted, ref, watch} from "vue";
+import {useRoute, useRouter} from "vue-router";
 
+const route = useRoute();
 const router = useRouter();
-const activeIndex = ref('');
+const currentMenu = ref('')
+
+const menu = [
+  {
+    menu: 'Text',
+    text: '文本',
+    route: 'Text',
+  },
+  {
+    menu: 'Audio',
+    text: '音频',
+    route: 'Audio',
+  },
+  {
+    menu: 'Image',
+    text: '图像',
+    route: 'Image',
+  },
+  {
+    menu: 'Model',
+    text: '模型',
+    route: 'Model',
+  },
+];
+
+onMounted(() => {
+  const queryMenu = route.query.menu;
+  if (typeof queryMenu === 'string') {
+    currentMenu.value = queryMenu;
+  } else {
+    currentMenu.value = 'Text'; // Default value
+  }
+});
+
+watch(
+    () => route.query.menu,
+    (newMenu) => {
+      if (typeof newMenu === 'string') {
+        currentMenu.value = newMenu;
+      }
+    }
+);
 </script>
 
 <template>
   <div style="display: flex">
-    <div style="width: 90px; height: 100vh; background-color: #ECECEE; display: flex; flex-direction: column;">
+    <div style="width: 80px; height: 100vh; background-color: #ECECEE; display: flex; flex-direction: column;">
       <div style="width: 100%; display: flex; justify-content: center;">
         <a-space direction="vertical" align="center">
           <div style="margin: 16px 0 20px 0">
-            <img src="@/assets/logo.png" alt="" style="width: 44px; height: 44px;"/>
+            <img src="@/assets/logo.png" alt="" style="width: 40px; height: 40px;"/>
           </div>
           <div
+              v-for="(item, index) in menu"
+              :key="index"
               class="nav-item"
-              :class="activeIndex === '文本' ? 'active-item' : ''"
+              :class="currentMenu === item.menu ? 'active-item' : ''"
               style="padding: 10px 18px; border-radius: 8px; cursor: pointer"
               @click="() => {
-                 activeIndex = '文本';
-                 router.push({ name: 'Text' });
+                 currentMenu = item.menu;
+                 router.push({ name: item.route, query: { menu: item.menu } });
               }"
           >
             <div>
               <icon-file size="30"/>
             </div>
             <div style="text-align: center">
-              <span>文本</span>
-            </div>
-          </div>
-          <div
-              class="nav-item"
-              :class="activeIndex === '音频' ? 'active-item' : ''"
-              style="padding: 10px 18px; border-radius: 8px; cursor: pointer"
-              @click="() => {
-                activeIndex = '音频';
-                router.push({ name: 'Audio' });
-              }"
-          >
-            <div>
-              <icon-file-audio size="30"/>
-            </div>
-            <div style="text-align: center">
-              <span>音频</span>
-            </div>
-          </div>
-          <div
-              class="nav-item"
-              :class="activeIndex === '图像' ? 'active-item' : ''"
-              style="padding: 10px 18px; border-radius: 8px; cursor: pointer"
-              @click="() => {
-                activeIndex = '图像'
-                router.push({ name: 'Image' });
-              }"
-          >
-            <div>
-              <icon-file-image size="30"/>
-            </div>
-            <div style="text-align: center">
-              <span>图像</span>
-            </div>
-          </div>
-          <div
-              v-if="false"
-              class="nav-item"
-              :class="activeIndex === '视频' ? 'active-item' : ''"
-              style="padding: 10px 18px; border-radius: 8px; cursor: pointer"
-              @click="() => {activeIndex = '视频'}"
-          >
-            <div>
-              <icon-file-video size="30"/>
-            </div>
-            <div style="text-align: center">
-              <span>视频</span>
-            </div>
-          </div>
-          <div class="nav-item"
-               :class="activeIndex === '模型' ? 'active-item' : ''"
-               style="padding: 10px 18px; border-radius: 8px; cursor: pointer"
-               @click="() => {
-                 activeIndex = '模型';
-                 router.push({ name: 'Model' });
-               }"
-          >
-            <div>
-              <icon-robot size="30"/>
-            </div>
-            <div style="text-align: center">
-              <span>模型</span>
+              <span>{{ item.text }}</span>
             </div>
           </div>
         </a-space>
@@ -97,11 +80,11 @@ const activeIndex = ref('');
           style="margin-top: auto; display: flex; flex-direction: column; align-items: center"
       >
         <div class="nav-item"
-             :class="activeIndex === '设置' ? 'active-item' : ''"
+             :class="currentMenu === 'Settings' ? 'active-item' : ''"
              style="padding: 10px 18px; border-radius: 8px; cursor: pointer; margin-bottom: 20px"
              @click="() => {
-                 activeIndex = '设置';
-                 router.push({ name: 'Settings' });
+                 currentMenu = '设置';
+                 router.push({ name: 'Settings', query: { menu: 'Settings' } });
              }"
         >
           <div>
@@ -113,11 +96,11 @@ const activeIndex = ref('');
         </div>
       </div>
     </div>
-    <n-scrollbar style="max-height: 100vh">
-      <div>
+    <div style="flex: 1">
+      <n-scrollbar style="max-height: 100vh">
         <router-view/>
-      </div>
-    </n-scrollbar>
+      </n-scrollbar>
+    </div>
   </div>
 </template>
 

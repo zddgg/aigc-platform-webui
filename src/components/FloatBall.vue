@@ -8,7 +8,11 @@
       @touchstart="startTouchDrag"
   >
     <a-popover popup-container="#floatBall">
-      <img src="@/assets/float-ball-unbg.png" alt="">
+      <img
+          src="@/assets/float-ball-unbg.png"
+          alt=""
+          :style="{ width: `${ballSize}px`, height: `${ballSize}px` }"
+      >
       <template #content>
         <div style="white-space: nowrap;">
           当前版本:

@@ -5,9 +5,9 @@ import CacheSetting from "@/views/settings/components/cache-setting-view.vue";
 import LangDictSetting from "@/views/settings/components/lang-dict-setting-view.vue";
 
 const modelTypes = [
-  '通用设置', '缓存设置', '语言字典设置'
+  '通用设置', '缓存设置', '语言字典'
 ]
-const activeModelType = ref('文本大模型')
+const activeModelType = ref(modelTypes[0]);
 
 const changeModelType = (item: string) => {
   activeModelType.value = item
@@ -45,7 +45,7 @@ const changeModelType = (item: string) => {
           <div v-if="activeModelType === '缓存设置'">
             <cache-setting/>
           </div>
-          <div v-if="activeModelType === '语言字典设置'">
+          <div v-if="activeModelType === '语言字典'">
             <lang-dict-setting/>
           </div>
         </div>
