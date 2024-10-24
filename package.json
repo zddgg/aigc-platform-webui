@@ -12,31 +12,29 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@vueuse/core": "^11.0.3",
-    "axios": "^1.7.5",
+    "@vueuse/core": "^11.1.0",
+    "axios": "^1.7.7",
     "lodash": "^4.17.21",
     "mitt": "^3.0.1",
-    "pinia": "^2.2.2",
+    "pinia": "^2.2.4",
     "uuid": "^10.0.0",
-    "vue": "^3.4.38",
-    "vue-draggable-plus": "^0.5.3",
-    "vue-router": "^4.4.3",
-    "wavesurfer.js": "^7.8.4"
+    "vue": "^3.5.12",
+    "vue-draggable-plus": "^0.5.4",
+    "vue-router": "^4.4.5",
+    "wavesurfer.js": "^7.8.8"
   },
   "devDependencies": {
-    "@arco-design/web-vue": "^2.56.1",
+    "@arco-design/web-vue": "^2.56.2",
     "@arco-plugins/vite-vue": "^1.4.5",
-    "@types/lodash": "^4.17.7",
-    "@types/node": "^22.5.0",
+    "@types/lodash": "^4.17.12",
+    "@types/node": "^22.7.9",
     "@types/uuid": "^10.0.0",
-    "@vitejs/plugin-vue": "^5.1.2",
-    "autoprefixer": "^10.4.20",
-    "naive-ui": "^2.39.0",
-    "tailwindcss": "^3.4.10",
-    "typescript": "^5.5.4",
-    "unplugin-auto-import": "^0.18.2",
+    "@vitejs/plugin-vue": "^5.1.4",
+    "naive-ui": "^2.40.1",
+    "typescript": "^5.6.3",
+    "unplugin-auto-import": "^0.18.3",
     "unplugin-vue-components": "^0.27.4",
-    "vite": "^5.4.2",
-    "vue-tsc": "^2.0.29"
+    "vite": "^5.4.10",
+    "vue-tsc": "^2.1.6"
   }
 }

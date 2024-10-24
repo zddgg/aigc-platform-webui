@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {onBeforeUnmount, onMounted, reactive, ref, watch} from "vue";
+import {onBeforeUnmount, onMounted, reactive, ref} from "vue";
 import {useRoute, useRouter} from "vue-router";
 import ChapterSplitModal from "@/views/text/novel/chapter-title/components/ChapterSplitModal.vue";
 import {ROLE_CHANGE} from "@/types/event-types.ts";
@@ -86,12 +86,9 @@ const handleDeleteChapter = (textChapter: TextChapter) => {
     content:
         '会删除章节相关数据，包括章节文本、角色对话、模型配置、语音配置、生成的音频等',
     async onOk() {
-      try {
-        const {msg} = await deleteChapter(textChapter);
-        Message.success(msg);
-        emitter?.emit(ROLE_CHANGE)
-      } finally {
-      }
+      const {msg} = await deleteChapter(textChapter);
+      Message.success(msg);
+      emitter?.emit(ROLE_CHANGE)
     },
   });
 }
@@ -152,14 +149,6 @@ onMounted(async () => {
   }
 })
 
-watch(
-    () => route.query.chapterId,
-    async () => {
-      if (route.query.chapterId) {
-      }
-    },
-    {immediate: true}
-);
 </script>
 
 <template>
@@ -194,7 +183,7 @@ watch(
       </a-space>
     </div>
     <div style="margin-top: 10px">
-      <a-scrollbar style="height: calc(100vh - 130px); padding-right: 10px; overflow: auto">
+      <a-scrollbar style="height: calc(100vh - 120px); padding-right: 10px; overflow: auto">
         <a-space direction="vertical" style="width: 100%">
           <a-card
               :id="`chapter-title-${item.chapterId}`"
@@ -213,39 +202,40 @@ watch(
             </div>
             <div v-else>
               <div>
-                <span class="text-lg font-medium text-black">
+                <span style="font-size: 18px; font-weight: 500; color: black;">
                     {{ item.chapterName }}
                   </span>
               </div>
-              <a-row :gutter="10" class="mt-1.5 text-black">
+              <a-row :gutter="10" style="margin-top: 5px; color: black;">
                 <a-col :span="12">
                   <span>字数</span>
-                  <span class="ml-2.5">
+                  <span style="margin-left: 10px;">
                     {{ item.wordNum ?? 0 }}
                   </span>
                 </a-col>
                 <a-col :span="12">
                   <span>文本</span>
-                  <span class="ml-2.5">
+                  <span style="margin-left: 10px;">
                     {{ item.textNum ?? 0 }}
                   </span>
                 </a-col>
               </a-row>
-              <a-row :gutter="10" class="mt-1.5 text-black">
+              <a-row :gutter="10" style="margin-top: 5px; color: black;">
                 <a-col :span="12">
                   <span>对话</span>
-                  <span class="ml-2.5">
+                  <span style="margin-left: 10px;">
                     {{ item.dialogueNum ?? 0 }}
                   </span>
                 </a-col>
                 <a-col :span="12">
                   <span>角色</span>
-                  <span class="ml-2.5">
+                  <span style="margin-left: 10px;">
                     {{ item.roleNum ?? 0 }}
                   </span>
                 </a-col>
               </a-row>
-              <div class="flex justify-between items-center mt-2 whitespace-nowrap">
+              <div
+                  style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; white-space: nowrap;">
                 <div>
                   <div v-if="item.audioTaskState" style="cursor: pointer">
                     <a-tag

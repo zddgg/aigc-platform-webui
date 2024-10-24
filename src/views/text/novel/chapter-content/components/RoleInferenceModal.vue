@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import {ref, watch} from "vue";
 import {useRoute} from "vue-router";
-import {queryRoleInferenceCache, RoleInferenceData} from "@/api/text-chapter.ts";
+import {queryRoleInferenceCache, TextRoleInference} from "@/api/text-chapter.ts";
 import {PromptTemplate, queryPromptTemplates, queryTmServers, TmServer} from "@/api/tm-server.ts";
+import {AudioRoleInfo} from "@/api/model.ts";
+import {cloneDeep} from "lodash";
 
 const route = useRoute();
 
@@ -15,21 +17,34 @@ const props = defineProps({
 const emits = defineEmits(['update:visible', 'success']);
 
 const showModal = ref(false)
-const inferenceResult = ref<string>('')
-const inferenceType = ref<'online' | 'last' | 'input'>('online')
+const inferenceType = ref<'online' | 'input'>('online')
 const promptTemplates = ref<PromptTemplate[]>([])
 const tmServers = ref<TmServer[]>([])
-const roleInferenceData = ref<RoleInferenceData>({} as RoleInferenceData);
 const currentPromptTemplate = ref<PromptTemplate>({} as PromptTemplate);
 const currentTmServerId = ref<number | any>(null)
 
+const textContent = ref<string>('')
+const linesText = ref<string>('')
+const roles = ref<AudioRoleInfo[]>([])
+const rolesBack = ref<AudioRoleInfo[]>([])
+const textRoleMoods = ref<TextRoleInference[]>([])
+const textRoleMoodsBack = ref<TextRoleInference[]>([])
+
 const handleBeforeOk = async (done: (closed: boolean) => void) => {
+
   const param = {
     inferenceType: inferenceType.value,
     tmServerId: currentTmServerId.value,
     systemPrompt: currentPromptTemplate.value.systemPrompt,
     userPrompt: currentPromptTemplate.value.userPrompt,
-    inferenceResult: inferenceResult.value
+    textRoleInferences: textRoleMoods.value.map((item) => {
+      const find = roles.value.find((item1) => item1.role === item.role);
+      if (find) {
+        item.gender = find.gender
+        item.age = find.age
+      }
+      return item
+    })
   }
   emits('success', param)
   done(true)
@@ -44,7 +59,12 @@ const handleQueryRoleInferenceCache = async () => {
     projectId: route.query.projectId as string,
     chapterId: route.query.chapterId as string,
   });
-  roleInferenceData.value = data;
+  textContent.value = data?.content;
+  linesText.value = data?.lines;
+  roles.value = data?.roles;
+  rolesBack.value = cloneDeep(data?.roles);
+  textRoleMoods.value = data?.textRoleMoods;
+  textRoleMoodsBack.value = cloneDeep(data?.textRoleMoods);
 }
 
 const handleQueryPromptTemplates = async () => {
@@ -61,11 +81,47 @@ const handleQueryTmServers = async () => {
   currentTmServerId.value = data.find((item) => item.active)?.id
 }
 
+const changeRole4RoleTable = (value: string, rowIndex: number) => {
+
+  if (textRoleMoods.value && textRoleMoodsBack.value) {
+    const old = rolesBack.value[rowIndex]
+    textRoleMoods.value = textRoleMoodsBack.value
+        .map((item) => {
+          if (item.role === old.role) {
+            return {
+              ...item,
+              role: value,
+            }
+          } else {
+            return item
+          }
+        });
+    rolesBack.value = cloneDeep(roles.value)
+    textRoleMoodsBack.value = cloneDeep(textRoleMoods.value)
+  }
+}
+
+const changeRole4TextTable = (value: string) => {
+
+  if (roles.value && rolesBack.value) {
+    const find = roles.value.find((item) => item.role === value);
+    if (!find) {
+      roles.value.push({
+        role: value,
+        gender: '未知',
+        age: '未知'
+      } as any)
+    }
+    const textRoles = Array.from(new Set(textRoleMoods.value.map((item) => item.role)));
+    roles.value = roles.value.filter((item) => textRoles.includes(item.role))
+    rolesBack.value = cloneDeep(roles.value)
+  }
+}
+
 watch(() => props.visible,
     () => {
       showModal.value = props.visible
       if (props.visible) {
-        inferenceResult.value = '';
         inferenceType.value = 'online';
         promptTemplates.value = [];
         handleQueryRoleInferenceCache();
@@ -82,7 +138,7 @@ watch(() => props.visible,
     <a-modal
         v-model:visible="showModal"
         title="角色推理"
-        :width="960"
+        :width="1080"
         :unmount-on-close="true"
         draggable
         @before-ok="handleBeforeOk"
@@ -90,10 +146,7 @@ watch(() => props.visible,
         @cancel="close"
     >
       <a-space direction="vertical" size="medium" style="width: 100%">
-        <a-card>
-          <div style="font-size: 14px; margin-bottom: 8px">
-            推理方式
-          </div>
+        <a-card :bordered="false" :body-style="{padding: 0}" style="display: flex">
           <a-radio-group v-model="inferenceType" class="custom-radio-group">
             <a-radio value="online">
               <template #radio="{ checked }">
@@ -106,24 +159,6 @@ watch(() => props.visible,
                   </div>
                   <div class="custom-radio-card-title">
                     在线推理
-                  </div>
-                </a-space>
-              </template>
-            </a-radio>
-            <a-radio
-                v-if="roleInferenceData?.textRoleInferences && roleInferenceData?.textRoleInferences.length"
-                value="last"
-            >
-              <template #radio="{ checked }">
-                <a-space
-                    class="custom-radio-card"
-                    :class="{ 'custom-radio-card-checked': checked }"
-                >
-                  <div class="custom-radio-card-mask">
-                    <div class="custom-radio-card-mask-dot"/>
-                  </div>
-                  <div class="custom-radio-card-title">
-                    使用上次推理结果
                   </div>
                 </a-space>
               </template>
@@ -145,7 +180,8 @@ watch(() => props.visible,
             </a-radio>
           </a-radio-group>
         </a-card>
-        <a-card v-if="inferenceType === 'online'" style="height: 460px">
+        <a-divider :margin="0"/>
+        <a-card v-if="inferenceType === 'online'" style="height: 510px" :bordered="false" :body-style="{padding: 0}">
           <div style="display: flex; width: 100%">
             <div style="width: 30%">
               <div style="font-size: 14px; margin-bottom: 8px">
@@ -171,7 +207,7 @@ watch(() => props.visible,
               <div style="font-size: 14px; margin-bottom: 8px">
                 提示词模板
               </div>
-              <a-scrollbar type="track" style="height: 320px; overflow: auto; padding-right: 10px">
+              <a-scrollbar type="track" style="height: 410px; overflow: auto; padding-right: 10px">
                 <a-space direction="vertical" size="small" style="width: 100%">
                   <div
                       v-for="(item, index) in promptTemplates"
@@ -238,10 +274,10 @@ watch(() => props.visible,
                                 <div
                                     style="width: 300px; height: 500px; overflow: auto; white-space: pre-wrap; word-wrap: break-word;">
                                   <span v-if="item === '@{小说内容}'">
-                                    {{ roleInferenceData?.content }}
+                                    {{ textContent }}
                                   </span>
                                   <span v-if="item === '@{对话列表}'">
-                                    {{ roleInferenceData?.lines }}
+                                    {{ linesText }}
                                   </span>
                                 </div>
                               </template>
@@ -262,39 +298,91 @@ watch(() => props.visible,
                       ]"
                       type="textarea"
                       placeholder="用户指令"
-                      :autosize="{minRows: 12, maxRows: 12}"
+                      :autosize="{minRows: 16, maxRows: 16}"
                   />
                 </a-form-item>
               </a-form>
             </div>
           </div>
         </a-card>
-        <div v-if="inferenceType === 'last'" style="height: 460px">
-          <a-table
-              :data="roleInferenceData.textRoleInferences"
-              :columns="[
-                  {title: '索引', dataIndex: 'textIndex'},
-                  {title: '角色', dataIndex: 'role'},
-                  {title: '性别', dataIndex: 'gender'},
-                  {title: '年龄', dataIndex: 'age'},
-                  {title: '情感', dataIndex: 'mood'},
-              ]"
-              :bordered="{cell:true}"
-              :pagination="false"
-              :scroll="{y: '100%'}"
-              :scrollbar="true"
-          />
-        </div>
-        <div
-            v-if="inferenceType === 'input'"
-            style="height: 460px"
-        >
-          <n-input
-              v-model:value="inferenceResult"
-              type="textarea"
-              :autosize="{ minRows: 20, maxRows: 20 }"
-              :placeholder="`角色分析:\n角色名,男,青年\n角色名,女,青年\n\n台词分析:\n1-0,角色名,高兴\n2-0,角色名,难过`"
-          />
+        <div v-if="inferenceType === 'input'" style="height: 510px; display: flex;">
+          <div style="flex: 0 0 35%; overflow: auto;">
+            <a-table
+                :data="roles"
+                :columns="[
+                    {title: '角色', dataIndex: 'role', slotName: 'role'},
+                    {title: '性别', dataIndex: 'gender', slotName: 'gender', width: 110},
+                    {title: '年龄', dataIndex: 'age', slotName: 'age', width: 110},
+                ]"
+                :bordered="{cell:true}"
+                :pagination="false"
+                :scroll="{y: '100%'}"
+                :scrollbar="true"
+            >
+              <template #role="{ record, rowIndex }">
+                <a-input
+                    v-model="record.role"
+                    @change="(value) => changeRole4RoleTable(value, rowIndex)"
+                />
+              </template>
+              <template #gender="{ record }">
+                <a-select v-model="record.gender" allow-create>
+                  <a-option>男</a-option>
+                  <a-option>女</a-option>
+                  <a-option>未知</a-option>
+                </a-select>
+              </template>
+              <template #age="{ record }">
+                <a-select v-model="record.age" allow-create>
+                  <a-option>少年</a-option>
+                  <a-option>青年</a-option>
+                  <a-option>中年</a-option>
+                  <a-option>老年</a-option>
+                  <a-option>未知</a-option>
+                </a-select>
+              </template>
+            </a-table>
+          </div>
+          <div style="flex-grow: 1; margin-left: 10px; overflow: auto;">
+            <a-table
+                :data="textRoleMoods"
+                :columns="[
+                    {title: '文本', dataIndex: 'text'},
+                    {title: '角色', dataIndex: 'role', slotName: 'role', width: 140},
+                    {title: '情感', dataIndex: 'mood', slotName: 'mood', width: 120},
+                    ]"
+                :bordered="{cell:true}"
+                :pagination="false"
+                :scroll="{y: '100%'}"
+                :scrollbar="true"
+            >
+              <template #role="{ record }">
+                <a-select
+                    v-model="record.role"
+                    allow-create
+                    @change="(value) => changeRole4TextTable(value as string)"
+                >
+                  <a-option
+                      v-for="(item, index) in roles"
+                      :key="index"
+                      :label="item.role"
+                      :value="item.role"
+                  />
+                </a-select>
+              </template>
+              <template #mood="{ record }">
+                <a-select v-model="record.mood" allow-create>
+                  <a-option>中立</a-option>
+                  <a-option>开心</a-option>
+                  <a-option>吃惊</a-option>
+                  <a-option>难过</a-option>
+                  <a-option>厌恶</a-option>
+                  <a-option>生气</a-option>
+                  <a-option>恐惧</a-option>
+                </a-select>
+              </template>
+            </a-table>
+          </div>
         </div>
       </a-space>
     </a-modal>

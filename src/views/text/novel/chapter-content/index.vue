@@ -19,10 +19,11 @@ import RoleInferenceModal from "@/views/text/novel/chapter-content/components/Ro
 const route = useRoute();
 const {loading, setLoading} = useLoading();
 
-const emits = defineEmits(['refresh']);
-
 const selectedIndexes = ref<string[]>([])
-const textContentConfig = ref<TextContentConfig>({} as TextContentConfig)
+const textContentConfig = ref<TextContentConfig>({
+  edit: false,
+  showDialogue: true
+})
 const audioPreviewModelVisible = ref<boolean>(false);
 const chapterEditModalVisible = ref<boolean>(false);
 const roleInferenceModalVisible = ref<boolean>(false);
@@ -40,6 +41,7 @@ const tableContentRef = ref<
       handleAudioParamsChange: Function,
       handleCombineExport: Function,
       handleMarkupDialogue: Function,
+      handleTextCombine: Function,
       handleBatchDelete: Function,
     } | null
 >(null);
@@ -301,6 +303,9 @@ watch(
                   <a-doption @click="tableContentRef?.handleMarkupDialogue(false)">
                     取消标记
                   </a-doption>
+                  <a-doption @click="tableContentRef?.handleTextCombine()">
+                    文本合并
+                  </a-doption>
                   <a-doption @click="tableContentRef?.handleBatchDelete()">
                     批量删除
                   </a-doption>
@@ -382,7 +387,7 @@ watch(
       <a-divider direction="vertical" style="margin: 0"/>
       <div style="width: 20%; margin-left: 10px">
         <a-scrollbar
-            style="max-height: calc(100vh - 90px); overflow: auto"
+            style="max-height: calc(100vh - 100px); overflow: auto"
         >
           <a-card :bordered="false" style="border-radius: 8px" :body-style="{ padding: '0 10px 0 0' }">
             <n-tabs

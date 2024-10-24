@@ -28,7 +28,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div style="display: flex; padding: 20px">
+  <div style="display: flex; padding: 20px 20px 0 20px">
     <div
         v-show="route.query.projectType as string === TextProjectType.long_text"
         :style="!collapsed && {width: '240px'}"

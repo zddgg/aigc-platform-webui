@@ -6,15 +6,7 @@ import Components from 'unplugin-vue-components/vite';
 import { ArcoResolver, NaiveUiResolver } from 'unplugin-vue-components/resolvers';
 import { vitePluginForArco } from '@arco-plugins/vite-vue'
 
-import tailwind from 'tailwindcss'
-import autoprefixer from 'autoprefixer'
-
 export default defineConfig({
-  css: {
-    postcss: {
-      plugins: [tailwind(), autoprefixer()],
-    },
-  },
   plugins: [
     vue(),
     AutoImport({

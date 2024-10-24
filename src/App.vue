@@ -16,7 +16,7 @@ const themeOverrides: GlobalThemeOverrides = {
 <template>
   <n-config-provider :theme-overrides="themeOverrides">
     <layout/>
-    <FloatBall />
+    <float-ball />
   </n-config-provider>
 </template>
 
