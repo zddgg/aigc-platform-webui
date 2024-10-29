@@ -44,7 +44,7 @@
             >
               <n-input v-model:value="form.text" type="textarea" placeholder="每行当作一句" style="height: 450px"/>
               <div style="margin-top: 10px">
-                <a-button @click="parseText">解析</a-button>
+                <a-button type="outline" @click="parseText">解析</a-button>
               </div>
             </n-layout>
           </a-col>

@@ -184,7 +184,7 @@ onMounted(() => {
                 v-for="(item1, index1) in computedAudios.flatMap((value : any) => value.list)"
                 :key="index1"
                 hoverable
-                style="width: 350px;"
+                style="width: 360px;"
             >
               <div style="display: flex">
                 <div>

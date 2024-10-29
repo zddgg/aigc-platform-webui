@@ -9,9 +9,27 @@ import EdgeTts from "@/views/model/edge-tts/index.vue";
 import ChatTts from "@/views/model/chat-tts/index.vue";
 import CosyVoice from "@/views/model/cosy-voice/index.vue";
 
-const modelTypes = [
-  '文本大模型', '音频生成服务', '参考音频', 'gpt-sovits', 'fish-speech', 'edge-tts', 'chat-tts', 'cosy-voice'
+const menuGroups = [
+  {
+    name: '文本',
+    list: [
+      '文本大模型'
+    ]
+  },
+  {
+    name: '音频',
+    list: [
+      '音频生成服务',
+      '参考音频',
+      'gpt-sovits',
+      'fish-speech',
+      'edge-tts',
+      'chat-tts',
+      'cosy-voice'
+    ]
+  }
 ]
+
 const activeModelType = ref('文本大模型')
 
 const changeModelType = (item: string) => {
@@ -25,22 +43,30 @@ const changeModelType = (item: string) => {
       <n-scrollbar style="max-height: calc(100vh - 42px)">
         <div style="padding-right: 10px">
           <a-space style="width: 100%" direction="vertical">
-            <a-card
-                v-for="(item, index) in modelTypes"
+            <div
+                v-for="(item, index) in menuGroups"
                 :key="index"
-                style="border: 1px #cccccc solid; border-radius: 8px"
-                :style="activeModelType === item && { backgroundColor: '#C3F6F6' }"
-                @click="changeModelType(item)"
             >
-              <div style="padding: 10px 0">
-                {{ item }}
-              </div>
-            </a-card>
+              <a-divider>{{ item.name }}</a-divider>
+              <a-space style="width: 100%" direction="vertical">
+                <a-card
+                    v-for="(item1, index1) in item.list"
+                    :key="index1"
+                    style="border: 1px #cccccc solid; border-radius: 8px"
+                    :style="activeModelType === item1 && { backgroundColor: '#C3F6F6' }"
+                    @click="changeModelType(item1)"
+                >
+                  <div style="padding: 10px 0; cursor: default">
+                    {{ item1 }}
+                  </div>
+                </a-card>
+              </a-space>
+            </div>
           </a-space>
         </div>
       </n-scrollbar>
     </div>
-    <a-divider direction="vertical" style="margin: 0 20px 0 10px" />
+    <a-divider direction="vertical" style="margin: 0 20px 0 10px"/>
     <div style="width: 90%">
       <a-scrollbar style="max-height: calc(100vh - 42px); overflow: auto">
         <div style="padding-right: 10px">
