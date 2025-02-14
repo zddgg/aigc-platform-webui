@@ -132,10 +132,14 @@ watch(() => props.visible,
                               style="width: 300px; height: 500px; overflow: auto; white-space: pre-wrap; word-wrap: break-word;"
                           >
                             <span v-if="item === '@{小说内容}'">
-                              {{ 22 }}
+                              {{ "这里是文本内容" }}
                             </span>
                             <span v-if="item === '@{对话列表}'">
-                              {{ 111 }}
+                              {{
+                                '1-0: 这是第一句对话\n' +
+                                '2-0: 这是第二句对话\n' +
+                                '3-0: 这是第三句对话\n'
+                              }}
                             </span>
                           </div>
                         </template>
