@@ -322,7 +322,7 @@ watch(() => props.visible,
               <template #role="{ record, rowIndex }">
                 <a-input
                     v-model="record.role"
-                    @change="(value) => changeRole4RoleTable(value, rowIndex)"
+                    @change="(value: any) => changeRole4RoleTable(value, rowIndex)"
                 />
               </template>
               <template #gender="{ record }">
@@ -360,7 +360,7 @@ watch(() => props.visible,
                 <a-select
                     v-model="record.role"
                     allow-create
-                    @change="(value) => changeRole4TextTable(value as string)"
+                    @change="(value: any) => changeRole4TextTable(value as string)"
                 >
                   <a-option
                       v-for="(item, index) in roles"

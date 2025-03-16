@@ -62,6 +62,9 @@ const onChange = (_: FileItem[], fileItem: FileItem) => {
   file.value = {
     ...fileItem,
   };
+  if (!form.value.project) {
+    form.value.project = file.value?.name?.replace(/\.[^.]+$/, '') || '';
+  }
 };
 
 const handleBeforeOk = async (done: (closed: boolean) => void) => {

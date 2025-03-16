@@ -34,7 +34,9 @@ const form = ref({
     top_k: 15,
     top_p: 1,
     temperature: 1,
-    cut_punc: 'cut0'
+    cut_punc: 'cut0',
+    sample_steps: 32,
+    if_sr: false,
   },
 
   mcInstructText: '',
@@ -373,7 +375,7 @@ onMounted(async () => {
                 </a-col>
                 <a-col :span="6">
                   <a-card :body-style="{padding: '20px 20px 0'}">
-                    <a-form-item label="怎么切" class="slider-wrapper">
+                    <a-form-item label="怎么切">
                       <a-select v-model="form.configParam.cut_punc">
                         <a-option value="cut0">不切</a-option>
                         <a-option value="cut1">凑四句一切</a-option>
@@ -382,6 +384,28 @@ onMounted(async () => {
                         <a-option value="cut4">按英文句号.切</a-option>
                         <a-option value="cut5">按标点符号切</a-option>
                       </a-select>
+                    </a-form-item>
+                  </a-card>
+                </a-col>
+                <a-col :span="6">
+                  <a-card :body-style="{padding: '20px 20px 0'}">
+                    <a-form-item label="采样步数">
+                      <a-radio-group
+                          v-model="form.configParam.sample_steps"
+                          :options="[
+                              {label: '4', value: 4},
+                              {label: '8', value: 8},
+                              {label: '16', value: 16},
+                              {label: '32', value: 32},
+                          ]"
+                      />
+                    </a-form-item>
+                  </a-card>
+                </a-col>
+                <a-col :span="6">
+                  <a-card :body-style="{padding: '20px 20px 0'}">
+                    <a-form-item label="是否开启超分">
+                      <a-switch v-model="form.configParam.if_sr"/>
                     </a-form-item>
                   </a-card>
                 </a-col>
